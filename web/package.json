@@ -1,0 +1,47 @@
+{
+  "name": "@nexo/web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
+    "@emotion/is-prop-valid": "^1.4.0",
+    "@tanstack/react-query": "^5.62.0",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/qrcode": "^1.5.5",
+    "canvas-confetti": "^1.9.4",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "emoji-mart": "^5.6.0",
+    "framer-motion": "^11.15.0",
+    "lucide-react": "^0.468.0",
+    "prism-react-renderer": "^2.4.1",
+    "prismjs": "^1.30.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.6.0",
+    "react-virtualized-auto-sizer": "^2.0.3",
+    "react-window": "^2.2.7",
+    "socket.io-client": "^4.8.1",
+    "vite-plugin-pwa": "^1.2.0",
+    "workbox-window": "^7.4.0",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/react-window": "^1.8.8",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,41 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Binaries
+*.exe
+*.exe~
+nexo
+nexo.exe
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+database.db
+nexo.db
+pgdata/
+
+# Uploads
+uploads/
+
+# Go build cache
+/tmp/
+
+# Node.js
+node_modules/
+web/dist/
+
+# Logs
+server.log
+server2.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+.database-mcp/
