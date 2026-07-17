@@ -198,7 +198,7 @@ export default function AcceptSharedFolderModal({
           <button
             onClick={handleAdd}
             disabled={adding}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-nexo-500 to-purple-600 text-white font-medium hover:shadow-lg hover:shadow-nexo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-nexo-500 text-white font-medium hover:bg-nexo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {adding ? (
               <>

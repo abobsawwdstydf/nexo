@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Search, Tag, Edit2, Trash2, StickyNote } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import api from '../lib/api';
 
 interface ChatNotesModalProps {
@@ -126,10 +127,10 @@ export default function ChatNotesModal({ isOpen, onClose, chatId }: ChatNotesMod
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="w-full max-w-4xl h-[80vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          className="w-full max-w-4xl h-[80vh] bg-white dark:bg-gray-800 rounded-2xl shadow-lg flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-surface-secondary">
             <div className="flex items-center gap-3">
               <StickyNote className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -155,16 +156,13 @@ export default function ChatNotesModal({ isOpen, onClose, chatId }: ChatNotesMod
 
           {/* Search and filters */}
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
+              <ClearInput
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Поиск по заметкам..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                className="w-full bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 py-2"
+                leftIcon={<Search className="w-5 h-5 text-gray-400" />}
               />
-            </div>
 
             {allTags.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
@@ -254,7 +252,7 @@ export default function ChatNotesModal({ isOpen, onClose, chatId }: ChatNotesMod
                   filteredNotes.map(note => (
                     <div
                       key={note.id}
-                      className="p-4 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800 hover:shadow-lg transition-shadow"
+                      className="p-4 bg-surface-tertiary rounded-xl border border-border hover:shadow-lg transition-shadow"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold text-gray-900 dark:text-white flex-1">

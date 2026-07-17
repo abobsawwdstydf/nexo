@@ -342,7 +342,7 @@ export default function MusicPlaylistsModal({ onClose }: MusicPlaylistsModalProp
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-nexo-500 flex items-center justify-center">
                   <ListMusic size={20} className="text-white" />
                 </div>
                 <div>
@@ -380,7 +380,7 @@ export default function MusicPlaylistsModal({ onClose }: MusicPlaylistsModalProp
                         className="group relative bg-surface-tertiary/50 hover:bg-surface-tertiary rounded-xl p-4 transition-all cursor-pointer"
                         onClick={() => setSelectedPlaylist(playlist)}
                       >
-                        <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-3 bg-gradient-to-br from-nexo-500/20 to-purple-600/20">
+                      <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-3 bg-nexo-500/20">
                           {playlist.coverUrl ? (
                             <img src={playlist.coverUrl} alt="" className="w-full h-full object-cover" />
                           ) : (

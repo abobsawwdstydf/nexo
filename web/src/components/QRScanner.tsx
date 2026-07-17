@@ -154,7 +154,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
 
               {/* Animated scan line */}
               <motion.div
-                className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-nexo-400 to-transparent"
+                className="absolute left-2 right-2 h-0.5 bg-nexo-400"
                 animate={{ top: ['8%', '88%', '8%'] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
               />

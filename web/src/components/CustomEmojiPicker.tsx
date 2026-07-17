@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Upload, Pencil, Trash2, Search, Smile, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { api } from '../lib/api';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import EmojiPaintEditor from './EmojiPaintEditor';
@@ -175,16 +176,13 @@ export default function CustomEmojiPicker({ onSelect, onClose }: CustomEmojiPick
 
         {/* Search + actions */}
         <div className="px-3 py-2.5 flex items-center gap-2 border-b border-white/[0.06]">
-          <div className="flex-1 relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Поиск..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-7 pr-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder-zinc-500 outline-none focus:border-nexo-500/40 transition-colors"
-            />
-          </div>
+          <ClearInput
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Поиск..."
+            className="flex-1 rounded-xl bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder-zinc-500 outline-none focus:border-nexo-500/40 transition-colors py-1.5"
+            leftIcon={<Search size={13} className="text-zinc-500" />}
+          />
           <button
             onClick={() => setShowPaint(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-nexo-500/15 text-nexo-400 hover:bg-nexo-500/25 text-xs font-medium transition-colors border border-nexo-500/20"

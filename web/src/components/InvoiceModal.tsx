@@ -102,7 +102,7 @@ export default function InvoiceModal({ chatId, onClose }: InvoiceModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
               <Receipt size={20} className="text-white" />
             </div>
             <div>
@@ -182,7 +182,7 @@ export default function InvoiceModal({ chatId, onClose }: InvoiceModalProps) {
           </div>
 
           {/* Total */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
             <div className="flex items-center justify-between">
               <span className="text-sm text-zinc-400">Итого:</span>
               <div className="flex items-center gap-1.5">

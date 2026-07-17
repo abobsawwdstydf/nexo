@@ -432,7 +432,7 @@ export default function ChatDrawingBoard({ chatId, sessionId: initialSessionId, 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-nexo-500 hover:bg-nexo-600 text-white text-sm transition-colors disabled:opacity-50"
         >
           <Send className="w-3.5 h-3.5" />
           {saving ? 'Сохранение...' : 'Отправить'}

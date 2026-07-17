@@ -28,10 +28,10 @@ export default function Toast({ id, type, message, duration = 4000, onClose }: T
   };
 
   const colors = {
-    success: 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30',
-    error: 'from-red-500/20 to-red-600/10 border-red-500/30',
-    info: 'from-blue-500/20 to-blue-600/10 border-blue-500/30',
-    warning: 'from-amber-500/20 to-amber-600/10 border-amber-500/30',
+    success: 'bg-emerald-500/20 border-emerald-500/30',
+    error: 'bg-red-500/20 border-red-500/30',
+    info: 'bg-blue-500/20 border-blue-500/30',
+    warning: 'bg-amber-500/20 border-amber-500/30',
   };
 
   return (
@@ -40,7 +40,7 @@ export default function Toast({ id, type, message, duration = 4000, onClose }: T
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r ${colors[type]} backdrop-blur-xl border shadow-2xl min-w-[300px] max-w-[500px]`}
+      className={`flex items-center gap-3 px-4 py-3 rounded-2xl ${colors[type]} backdrop-blur-xl border shadow-2xl min-w-[300px] max-w-[500px]`}
     >
       <div className="flex-shrink-0">{icons[type]}</div>
       <div className="flex-1 text-sm font-medium text-white">{message}</div>

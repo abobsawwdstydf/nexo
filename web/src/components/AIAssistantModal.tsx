@@ -67,7 +67,7 @@ export default function AIAssistantModal({
   const header = (
     <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-nexo-500 flex items-center justify-center">
           <Bot size={16} className="text-white" />
         </div>
         <div>
@@ -102,7 +102,7 @@ export default function AIAssistantModal({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-nexo-500/20 to-purple-600/20 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-nexo-500/20 flex items-center justify-center mb-4">
               <Bot size={24} className="text-nexo-400" />
             </div>
             <h4 className="text-lg font-semibold text-white mb-2">Задайте вопрос AI</h4>
@@ -162,7 +162,7 @@ export default function AIAssistantModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
@@ -170,7 +170,7 @@ export default function AIAssistantModal({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="bg-[#1a1a1a] border border-white/10 shadow-2xl overflow-hidden rounded-2xl w-full max-w-2xl max-h-[80vh]"
+        className="bg-[#1a1a1a] border border-white/10 shadow-lg overflow-hidden rounded-2xl w-full max-w-2xl max-h-[80vh]"
         onClick={e => e.stopPropagation()}
       >
         {header}

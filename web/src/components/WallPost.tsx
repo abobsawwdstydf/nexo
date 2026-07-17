@@ -306,9 +306,12 @@ export default function WallPost({ post, onDelete }: WallPostProps) {
   return (
     <motion.div
       ref={postRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
       exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -2 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="bg-surface-secondary rounded-2xl border border-border overflow-hidden"
     >
       {/* Header */}
@@ -321,7 +324,7 @@ export default function WallPost({ post, onDelete }: WallPostProps) {
               className="w-10 h-10 rounded-full object-cover"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nexo-500/20 to-purple-600/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-nexo-500/20 flex items-center justify-center">
               <span className="text-sm font-bold text-white">
                 {post.author.displayName[0]?.toUpperCase() || post.author.username[0]?.toUpperCase()}
               </span>
@@ -547,15 +550,18 @@ export default function WallPost({ post, onDelete }: WallPostProps) {
 
       {/* Actions */}
       <div className="px-4 py-3 border-t border-border flex items-center gap-4">
-        <button
+        <motion.button
           onClick={() => handleReaction('❤️')}
           onContextMenu={openReactionPicker}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${
             localReaction
               ? 'bg-red-500/20 text-red-400'
-              : 'hover:bg-white/5 text-zinc-400'
+              : 'text-zinc-400'
           }`}
         >
           <Heart size={18} fill={localReaction ? 'currentColor' : 'none'} />
@@ -565,24 +571,30 @@ export default function WallPost({ post, onDelete }: WallPostProps) {
           {reactionsCount > 0 && (
             <span className="text-sm font-medium">{reactionsCount}</span>
           )}
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           onClick={() => setShowComments(!showComments)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/5 text-zinc-400 transition-colors"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-zinc-400"
         >
           <MessageCircle size={18} />
           {commentsCount > 0 && (
             <span className="text-sm font-medium">{commentsCount}</span>
           )}
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
           onClick={handleShare}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/5 text-zinc-400 transition-colors"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-zinc-400"
         >
           <Share2 size={18} />
-        </button>
+        </motion.button>
 
         <div className="flex items-center gap-1.5 ml-auto text-zinc-500">
           <Eye size={16} />

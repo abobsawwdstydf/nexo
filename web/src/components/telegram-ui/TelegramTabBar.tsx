@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, memo } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
+import { NotificationBadge } from '../transitions/NotificationBadge';
 
 interface TabItem {
   id: string;
@@ -98,10 +99,10 @@ function TelegramTabBar({ items, selectedId, onSelect, className = '' }: Telegra
           className={`relative rounded-[20px] liquid-glass border border-white/[0.12] shadow-[0_4px_24px_0_rgba(0,0,0,0.7)] overflow-hidden select-none touch-none ${className}`}
         >
           {/* Top highlight edge — Telegram style */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/15 z-10" />
 
           {/* Bottom subtle glow */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/[0.06] z-10" />
 
           {/* Liquid lens indicator — Telegram style with glow */}
           <motion.div
@@ -120,9 +121,9 @@ function TelegramTabBar({ items, selectedId, onSelect, className = '' }: Telegra
             {/* Base indicator */}
             <div className="w-full h-full rounded-[14px] bg-white/[0.1] border border-white/[0.08]" />
             {/* Inner glow */}
-            <div className="absolute inset-0 rounded-[14px] bg-gradient-to-b from-white/[0.06] to-transparent" />
+            <div className="absolute inset-0 rounded-[14px] bg-white/[0.06]" />
             {/* Top highlight */}
-            <div className="absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <div className="absolute inset-x-2 top-0 h-px bg-white/10" />
           </motion.div>
 
           {/* Ripple effect on touch */}
@@ -179,15 +180,10 @@ function TelegramTabBar({ items, selectedId, onSelect, className = '' }: Telegra
 
                     {/* Badge — Telegram style */}
                     {item.badge !== undefined && item.badge > 0 && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-[#ef4444] flex items-center justify-center shadow-[0_0_0_2px_#0e1621]"
-                      >
-                        <span className="text-[10px] font-bold text-white leading-none">
-                          {item.badge > 99 ? '99+' : item.badge}
-                        </span>
-                      </motion.div>
+                      <NotificationBadge
+                        count={item.badge}
+                        className="-top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-[#ef4444] flex items-center justify-center shadow-[0_0_0_2px_#0e1621] text-[10px] font-bold text-white leading-none"
+                      />
                     )}
                   </div>
 

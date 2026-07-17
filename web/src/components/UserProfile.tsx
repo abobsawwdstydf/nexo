@@ -552,7 +552,7 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
             className="relative cursor-pointer"
           >
             {isPremium && (
-              <div className="absolute -inset-1.5 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-yellow-600 opacity-70 blur-[2px] animate-[spin_6s_linear_infinite]" />
+              <div className="absolute -inset-1.5 rounded-full bg-yellow-400 opacity-70 blur-[2px] animate-[spin_6s_linear_infinite]" />
             )}
 
             <div className={`relative w-[120px] h-[120px] rounded-full overflow-hidden ${isPremium ? 'ring-[3px] ring-yellow-400/60' : 'ring-[2px] ring-white/10'}`}>
@@ -611,7 +611,7 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
               </span>
             )}
             {isPremium && (
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
                 <Star size={11} className="text-white fill-white" />
               </div>
             )}
@@ -1202,7 +1202,7 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
                             <img src={instance.card.photoUrl} className="max-w-full max-h-full object-contain" alt={instance.card.name} />
                           </div>
                         )}
-                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/95 to-transparent">
+                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-black/95">
                           <p className="text-[13px] font-bold text-white truncate">{instance.card.name}</p>
                           <p className="text-[11px] text-white/60">#{instance.serialNumber}/{instance.card.totalSupply}</p>
                         </div>

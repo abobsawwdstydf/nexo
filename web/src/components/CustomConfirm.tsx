@@ -23,9 +23,9 @@ export default function CustomConfirm({
   type = 'info',
 }: CustomConfirmProps) {
   const colors = {
-    danger: 'from-red-500/10 to-red-600/10',
-    warning: 'from-yellow-500/10 to-yellow-600/10',
-    info: 'from-blue-500/10 to-blue-600/10',
+    danger: 'bg-red-500/10',
+    warning: 'bg-yellow-500/10',
+    info: 'bg-blue-500/10',
   };
 
   const buttonColors = {
@@ -60,7 +60,7 @@ export default function CustomConfirm({
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md z-[10001]"
           >
-            <div className={`bg-gradient-to-br ${colors[type]} dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700`}>
+            <div className={`${colors[type]} dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700`}>
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-3">

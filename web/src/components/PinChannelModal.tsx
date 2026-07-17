@@ -102,7 +102,7 @@ export default function PinChannelModal({ userId, currentPinnedChannelId, onPin,
                       className="w-12 h-12 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                    <div className="w-12 h-12 rounded-full bg-nexo-500 flex items-center justify-center text-white font-bold">
                       <Hash size={20} />
                     </div>
                   )}

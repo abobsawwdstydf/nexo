@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Calendar, User, FileText, Image, Video, Music, Hash, Filter } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { api } from '../lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -115,29 +116,15 @@ export default function SearchPanel({ onClose, onSelectMessage }: SearchPanelPro
       >
         {/* Header */}
         <div className="p-4 border-b border-white/5 flex items-center gap-3">
-          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 focus-within:border-nexo-500/50 transition-colors">
-            <Search size={18} className="text-zinc-400" />
-            <input
-              type="text"
+          <ClearInput
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Поиск по сообщениям..."
-              className="flex-1 bg-transparent text-white placeholder-zinc-500 outline-none"
+              className="flex-1 bg-transparent text-white placeholder-zinc-500 border border-white/10 focus-within:border-nexo-500/50 transition-colors py-2 rounded-xl"
+              leftIcon={<Search size={18} className="text-zinc-400" />}
               autoFocus
             />
-            {query && (
-              <button
-                onClick={() => {
-                  setQuery('');
-                  setResults([]);
-                }}
-                className="p-1 rounded-lg hover:bg-white/5 transition-colors text-zinc-400 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`p-2 rounded-lg transition-colors relative ${

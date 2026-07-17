@@ -94,7 +94,7 @@ export default function InvoicePaymentModal({ invoice, onClose, onSuccess }: Inv
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
               <Receipt size={20} className="text-white" />
             </div>
             <div>
@@ -149,13 +149,13 @@ export default function InvoicePaymentModal({ invoice, onClose, onSuccess }: Inv
               ))}
               
               {!isExpanded && invoice.items.length > 3 && (
-                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-surface-secondary to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-12 bg-surface-secondary/80 pointer-events-none" />
               )}
             </div>
           </div>
 
           {/* Total */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 mb-4">
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-zinc-400">Итого к оплате:</span>
               <div className="flex items-center gap-1.5">

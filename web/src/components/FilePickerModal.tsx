@@ -242,7 +242,7 @@ export default function FilePickerModal({
                 <button
                   onClick={handleSelect}
                   disabled={selectedFiles.length === 0}
-                  className="flex-1 py-2.5 px-4 rounded-lg bg-gradient-to-r from-nexo-500 to-purple-600 hover:from-nexo-600 hover:to-purple-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-2.5 px-4 rounded-lg bg-nexo-500 hover:bg-nexo-600 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Select {selectedFiles.length > 0 && `(${selectedFiles.length})`}
                 </button>

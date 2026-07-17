@@ -81,15 +81,15 @@ export default function AttachmentBar({ attachments, isSending, onRemove, t }: A
               {att.preview ? (
                 <img src={att.preview} alt="" className="w-full h-full object-cover" />
               ) : att.type === 'video' ? (
-                <div className="w-full h-full bg-gradient-to-br from-nexo-500/30 to-purple-600/30 flex items-center justify-center">
+                <div className="w-full h-full bg-nexo-500/30 flex items-center justify-center">
                   <ImageIcon size={16} className="text-nexo-300" />
                 </div>
               ) : att.type === 'audio' ? (
-                <div className="w-full h-full bg-gradient-to-br from-emerald-500/30 to-teal-600/30 flex items-center justify-center">
+                <div className="w-full h-full bg-emerald-500/30 flex items-center justify-center">
                   <Music size={16} className="text-emerald-300" />
                 </div>
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-sky-500/30 to-blue-600/30 flex items-center justify-center">
+                <div className="w-full h-full bg-sky-500/30 flex items-center justify-center">
                   <FileText size={16} className="text-sky-300" />
                 </div>
               )}

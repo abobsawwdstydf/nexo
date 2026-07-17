@@ -157,7 +157,7 @@ export default function LocationModal({ onClose, onSend }: LocationModalProps) {
 
   const headerContent = (
     <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
+      <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
         <MapPin size={14} className="text-white" />
       </div>
       <h3 className="text-sm font-semibold text-white">Геолокация</h3>
@@ -239,7 +239,7 @@ export default function LocationModal({ onClose, onSend }: LocationModalProps) {
 
           <button
             onClick={handleSend}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
           >
             <MapPin size={14} />
             Отправить местоположение

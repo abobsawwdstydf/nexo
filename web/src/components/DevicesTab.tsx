@@ -122,10 +122,10 @@ export default function DevicesTab({ onClose }: DevicesTabProps) {
       <div className="absolute inset-0 bg-surface/95 backdrop-blur-3xl backdrop-saturate-150" />
       
       {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/10 via-transparent to-purple-500/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-nexo-500/5 pointer-events-none" />
       
       {/* Border top shine */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-white/15 pointer-events-none" />
       
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full">

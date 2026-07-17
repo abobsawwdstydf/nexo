@@ -196,9 +196,9 @@ export default function CollaborativePlaylistModal({ isOpen, onClose, chatId }: 
           className="w-full max-w-3xl h-[85vh] min-h-[550px] bg-[#0d0d14]/95 backdrop-blur-3xl border border-white/[0.15] rounded-[2rem] shadow-[0_0_80px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-8 py-5 border-b border-white/[0.08] bg-gradient-to-r from-nexo-500/5 to-purple-500/5 flex-shrink-0">
+          <div className="flex items-center justify-between px-8 py-5 border-b border-white/[0.08] bg-surface-secondary flex-shrink-0">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-nexo-500/30 to-purple-500/30 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-nexo-500/20 flex items-center justify-center">
                 <Music className="w-6 h-6 text-nexo-400" />
               </div>
               <div>
@@ -221,11 +221,11 @@ export default function CollaborativePlaylistModal({ isOpen, onClose, chatId }: 
 
           {/* Current Track Player */}
           {currentTrack && (
-            <div className="px-8 py-5 bg-gradient-to-r from-nexo-500/10 via-nexo-500/5 to-purple-500/10 border-b border-white/[0.08] flex-shrink-0">
+            <div className="px-8 py-5 bg-surface-tertiary border-b border-white/[0.08] flex-shrink-0">
               <div className="flex items-center gap-5">
                 <button
                   onClick={handlePlayPause}
-                  className="w-14 h-14 rounded-2xl bg-gradient-to-br from-nexo-500 to-nexo-600 hover:from-nexo-600 hover:to-nexo-700 flex items-center justify-center transition-all shadow-lg shadow-nexo-500/30 active:scale-[0.95]"
+                  className="w-14 h-14 rounded-2xl bg-nexo-500 hover:bg-nexo-600 flex items-center justify-center transition-all shadow-lg active:scale-[0.95]"
                 >
                   {playlist?.isPlaying ? (
                     <Pause className="w-6 h-6 text-white" />

@@ -105,7 +105,7 @@ export default function CollaborativeDocModal({ isOpen, onClose, chatId, docId }
           className="w-full max-w-6xl h-[90vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-surface-secondary">
             <div className="flex items-center gap-3 flex-1">
               <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               <input

@@ -63,8 +63,8 @@ export function НексоLoader({ size = 'md', theme = 'dark' }: { size?: 'sm' 
   const dotColor = isDark ? 'rgba(255,255,255,0.2)' : '#d0d0d0';
   const trackBg = isDark ? 'rgba(255,255,255,0.08)' : '#eaeaea';
   const barGradient = isDark
-    ? 'linear-gradient(90deg, #6366f1, #a855f7)'
-    : 'linear-gradient(90deg, #4f46e5, #7c3aed)';
+    ? '#6366f1'
+    : '#4f46e5';
   const pctSub = isDark ? 'rgba(255,255,255,0.35)' : '#bbb';
   const pctMain = isDark ? '#ffffff' : '#1a1a1a';
 
@@ -202,7 +202,7 @@ export function ProgressBar({ progress = 0, className = '' }: { progress?: numbe
   return (
     <div className={`w-full h-1 bg-white/10 rounded-full overflow-hidden ${className}`}>
       <motion.div
-        className="h-full bg-gradient-to-r from-nexo-500 to-purple-600 rounded-full"
+        className="h-full bg-nexo-500 rounded-full"
         initial={{ width: 0 }}
         animate={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         transition={{ duration: 0.3 }}
@@ -216,7 +216,7 @@ export function IndeterminateProgress({ className = '' }: { className?: string }
   return (
     <div className={`w-full h-1 bg-white/10 rounded-full overflow-hidden ${className}`}>
       <motion.div
-        className="h-full w-1/3 bg-gradient-to-r from-nexo-500 to-purple-600 rounded-full"
+        className="h-full w-1/3 bg-nexo-500 rounded-full"
         animate={{
           x: ['-100%', '400%'],
         }}

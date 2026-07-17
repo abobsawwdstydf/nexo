@@ -13,6 +13,7 @@ import Avatar from './Avatar';
 import UserTag from './UserTag';
 import HiddenChatModal from './HiddenChatModal';
 import VerifiedBadge from './VerifiedBadge';
+import { NotificationBadge } from './transitions/NotificationBadge';
 import type { Chat } from '../lib/types';
 
 interface ChatListItemProps {
@@ -179,7 +180,7 @@ function ChatListItem({ chat, isActive, onClick }: ChatListItemProps) {
         {/* Аватар */}
         <div className="relative flex-shrink-0">
           {isFavorites ? (
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <div className="w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
               <Bookmark size={18} className="text-white" />
             </div>
           ) : (
@@ -249,9 +250,11 @@ function ChatListItem({ chat, isActive, onClick }: ChatListItemProps) {
               </p>
             </div>
             {chat.unreadCount > 0 && !isActive && (
-              <span className="ml-2 flex-shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-nexo-500 flex items-center justify-center text-[10px] text-white font-bold">
-                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-              </span>
+              <NotificationBadge
+                count={chat.unreadCount}
+                className="ml-2 flex-shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-nexo-500 flex items-center justify-center text-[10px] text-white font-bold"
+                style={{ position: 'relative', top: 0, right: 0 }}
+              />
             )}
           </div>
         </div>

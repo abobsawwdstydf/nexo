@@ -61,7 +61,7 @@ export function SecretChatModal({ isOpen, onClose, userId, username, onChatCreat
           className="bg-surface rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
+          <div className="bg-nexo-600 p-6 text-white">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -146,7 +146,7 @@ export function SecretChatModal({ isOpen, onClose, userId, username, onChatCreat
                     onClick={() => setSelfDestructTimer(option.value)}
                     className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       selfDestructTimer === option.value
-                        ? 'bg-accent text-white shadow-lg shadow-accent/30'
+                        ? 'bg-accent text-white shadow-lg'
                         : 'bg-surface-hover text-text hover:bg-surface-active'
                     }`}
                   >
@@ -180,7 +180,7 @@ export function SecretChatModal({ isOpen, onClose, userId, username, onChatCreat
               <button
                 onClick={handleCreate}
                 disabled={isCreating}
-                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium transition-all disabled:opacity-50 shadow-lg shadow-purple-500/30"
+                className="flex-1 px-4 py-3 rounded-xl bg-nexo-600 hover:bg-nexo-700 text-white font-medium transition-all disabled:opacity-50"
               >
                 {isCreating ? 'Создание...' : 'Создать'}
               </button>

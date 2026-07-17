@@ -744,7 +744,7 @@ export default function GroupCallModal({ isOpen, onClose, chatId, chatName, call
         >
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-emerald-500/30 animate-call-wave" />
-            <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+            <div className="relative w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
               {participantList.length + 1}
             </div>
           </div>
@@ -858,7 +858,7 @@ export default function GroupCallModal({ isOpen, onClose, chatId, chatName, call
                     <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
                   ) : (
                     <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl mb-2">
+                            <div className="w-16 h-16 rounded-full bg-nexo-500 flex items-center justify-center text-white font-bold text-xl mb-2">
                         {t('you')?.charAt(0).toUpperCase() || 'Я'}
                       </div>
                       {isMuted && <MicOff size={14} className="text-red-400" />}
@@ -894,7 +894,7 @@ export default function GroupCallModal({ isOpen, onClose, chatId, chatName, call
                           {p.avatar ? (
                             <img src={p.avatar} alt="" className="w-16 h-16 rounded-full object-cover mb-2" />
                           ) : (
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl mb-2">
+                      <div className="w-16 h-16 rounded-full bg-nexo-500 flex items-center justify-center text-white font-bold text-xl mb-2">
                               {initials}
                             </div>
                           )}

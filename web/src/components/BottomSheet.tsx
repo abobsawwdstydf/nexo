@@ -95,7 +95,7 @@ export default function BottomSheet({
             onClick={(e) => e.stopPropagation()}
           >
             <motion.div
-              className="bg-[#1a1a1a] border-t border-white/10 shadow-2xl flex flex-col"
+              className="bg-[#1a1a1a] border-t border-white/10 shadow-lg flex flex-col"
               animate={{
                 maxHeight: isExpanded ? '100vh' : maxHeight,
                 height: isExpanded ? '100vh' : undefined,

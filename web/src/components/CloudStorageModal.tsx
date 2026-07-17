@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ClearInput } from './ClearInput';
 import {
   X, Cloud, Upload, Folder, File, Image, Video, Music, FileText,
   Star, StarOff, Trash2, Download, Search, FolderPlus, MoreVertical,
@@ -223,14 +224,13 @@ export default function CloudStorageModal({ onClose, onSelectFile, embedded }: C
 
         {/* Search + breadcrumbs */}
         <div className="px-3 py-2 flex items-center gap-2 border-b border-white/10">
-          <div className="flex-1 relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Поиск файлов..."
+          <div className="flex-1">
+            <ClearInput
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder-zinc-500 outline-none"
+              placeholder="Поиск файлов..."
+              className="w-full rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder-zinc-500 outline-none py-1.5"
+              leftIcon={<Search size={14} className="text-zinc-500" />}
             />
           </div>
           {!search && (

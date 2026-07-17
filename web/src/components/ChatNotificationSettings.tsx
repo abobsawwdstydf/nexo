@@ -46,7 +46,7 @@ export default function ChatNotificationSettingsModal({ chatId, chatName, onClos
       >
         <div className="p-4 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell size={20} className="text-indigo-400" />
+            <Bell size={20} className="text-nexo-400" />
             <h3 className="text-lg font-semibold text-white">Уведомления</h3>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 transition-colors text-zinc-400 hover:text-white">
@@ -60,7 +60,7 @@ export default function ChatNotificationSettingsModal({ chatId, chatName, onClos
           {/* Mute toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {muted ? <BellOff size={20} className="text-red-400" /> : <Bell size={20} className="text-indigo-400" />}
+              {muted ? <BellOff size={20} className="text-red-400" /> : <Bell size={20} className="text-nexo-400" />}
               <div>
                 <p className="text-white text-sm font-medium">Отключить уведомления</p>
                 <p className="text-zinc-500 text-xs">{muted ? 'Уведомления отключены' : 'Уведомления включены'}</p>

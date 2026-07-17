@@ -3,6 +3,7 @@ import type React from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Smile, Package, Image, Search, Plus, ChevronLeft, Upload, Trash2, Globe, Lock, Check, X } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { useLang } from '../lib/i18n';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -528,16 +529,13 @@ export default function MediaPicker({
               ) : (
                 <div className="flex flex-col flex-1 min-h-0">
                   <div className="px-3 pt-2 pb-1 flex-shrink-0">
-                    <div className="relative">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                      <input
-                        type="text"
-                        value={stickerSearch}
-                        onChange={e => handleStickerSearch(e.target.value)}
-                        placeholder="Поиск стикеров..."
-                        className="w-full pl-7 pr-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-xs text-white placeholder-zinc-500 outline-none focus:border-nexo-500/40"
-                      />
-                    </div>
+                    <ClearInput
+                      value={stickerSearch}
+                      onChange={e => handleStickerSearch(e.target.value)}
+                      placeholder="Поиск стикеров..."
+                      className="w-full rounded-xl bg-white/[0.06] border border-white/[0.08] text-xs text-white placeholder-zinc-500 outline-none focus:border-nexo-500/40 py-1.5"
+                      leftIcon={<Search size={13} className="text-zinc-500" />}
+                    />
                   </div>
                 <div
                   ref={packsScrollRef}

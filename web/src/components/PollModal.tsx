@@ -167,7 +167,7 @@ export default function PollModal({ onClose, onSend }: PollModalProps) {
       <button
         onClick={handleSend}
         disabled={!canSend}
-        className="w-full py-3 rounded-xl bg-gradient-to-r from-nexo-500 to-purple-600 text-white font-medium hover:from-nexo-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-nexo-500/25"
+        className="w-full py-3 rounded-xl bg-nexo-500 text-white font-medium hover:bg-nexo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-nexo-500/25"
       >
         Отправить опрос
       </button>
@@ -180,7 +180,7 @@ export default function PollModal({ onClose, onSend }: PollModalProps) {
         <div className="flex flex-col h-full">
           {/* Custom header with icon */}
           <div className="flex items-center gap-3 px-5 py-3 border-b border-white/5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center">
               <BarChart3 size={18} className="text-white" />
             </div>
             <h3 className="text-lg font-semibold text-white">Создать опрос</h3>
@@ -208,7 +208,7 @@ export default function PollModal({ onClose, onSend }: PollModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center">
               <BarChart3 size={18} className="text-white" />
             </div>
             <h3 className="text-lg font-semibold text-white">Создать опрос</h3>

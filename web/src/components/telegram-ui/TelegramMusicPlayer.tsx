@@ -187,7 +187,7 @@ function TelegramFullScreenPlayer({
             <div className="absolute inset-0 bg-black/60" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a2e] to-[#0a0a14]" />
+          <div className="absolute inset-0 bg-[#1a1a2e]" />
         )}
       </div>
 

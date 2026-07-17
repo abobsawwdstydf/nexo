@@ -96,7 +96,7 @@ function AvatarInner({ src, name, size = 'md', className = '', online, isVerifie
           )
         ) : (
           <div
-            className={`${sizeClass} rounded-full bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-medium select-none`}
+            className={`${sizeClass} rounded-full ${gradientClass} flex items-center justify-center text-white font-medium select-none`}
           >
             {initials}
           </div>

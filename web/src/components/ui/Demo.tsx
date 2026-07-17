@@ -70,7 +70,7 @@ export const UIDemo: React.FC = () => {
       {/* Buttons Section */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Кнопки</span>
+          <span className="text-nexo-400">Кнопки</span>
         </h2>
         
         <div className="flex flex-wrap gap-4">
@@ -120,7 +120,7 @@ export const UIDemo: React.FC = () => {
       {/* Modal Section */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Модальные окна</span>
+          <span className="text-nexo-400">Модальные окна</span>
         </h2>
         
         <div className="flex gap-4">
@@ -184,7 +184,7 @@ export const UIDemo: React.FC = () => {
       {/* Inputs Section */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Поля ввода</span>
+          <span className="text-nexo-400">Поля ввода</span>
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
@@ -235,7 +235,7 @@ export const UIDemo: React.FC = () => {
       {/* Toast Section */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Уведомления</span>
+          <span className="text-nexo-400">Уведомления</span>
         </h2>
         
         <div className="flex flex-wrap gap-4">
@@ -287,7 +287,7 @@ export const UIDemo: React.FC = () => {
       {/* Sync Section */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Синхронизация</span>
+          <span className="text-nexo-400">Синхронизация</span>
         </h2>
         
         <div className="flex flex-wrap gap-6 items-center">
@@ -325,7 +325,7 @@ export const UIDemo: React.FC = () => {
       {/* Cards Section */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Карточки</span>
+          <span className="text-nexo-400">Карточки</span>
         </h2>
         
         <CardGrid columns={4} gap="lg">
@@ -410,7 +410,7 @@ export const UIDemo: React.FC = () => {
       {/* Text Animations */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Текстовые анимации</span>
+          <span className="text-nexo-400">Текстовые анимации</span>
         </h2>
         
         <div className="space-y-4">
@@ -439,7 +439,7 @@ export const UIDemo: React.FC = () => {
             className="text-2xl font-bold text-white"
           />
           
-          <div className="text-2xl font-bold bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
+          <div className="text-2xl font-bold text-nexo-400 animate-pulse">
             Градиентный анимированный текст
           </div>
         </div>
@@ -448,7 +448,7 @@ export const UIDemo: React.FC = () => {
       {/* Different Card Variants */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white">
-          <span className="bg-gradient-to-r from-nexo-400 to-purple-400 bg-clip-text text-transparent">Варианты карточек</span>
+          <span className="text-nexo-400">Варианты карточек</span>
         </h2>
         
         <CardGrid columns={2} gap="lg">

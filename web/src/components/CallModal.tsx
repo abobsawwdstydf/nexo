@@ -1749,30 +1749,28 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
             bottom: widgetPosition ? undefined : '120px',
             right: widgetPosition ? undefined : '24px',
           }}
-          className="z-[100] flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-nexo-500/95 to-purple-600/95 backdrop-blur-xl shadow-2xl shadow-nexo-500/40 border border-white/20 cursor-grab active:cursor-grabbing select-none"
+          className="z-[100] flex items-center gap-3 px-4 py-3 rounded-2xl bg-nexo-500/95 backdrop-blur-xl shadow-lg border border-white/20 cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleDragStart}
           onClick={handleWidgetClick}
         >
-          {/* Avatar with pulse */}
-          <div className="relative flex-shrink-0">
-            <div className="absolute inset-0 rounded-full bg-emerald-500/50 animate-ping opacity-75" />
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 animate-pulse" />
+          {/* Avatar */}
+          <div className="flex-shrink-0">
             {displayAvatar ? (
-              <img src={displayAvatar} alt="" className="relative w-11 h-11 rounded-full object-cover border-2 border-white/40" />
+              <img src={displayAvatar} alt="" className="w-11 h-11 rounded-full object-cover border-2 border-white/40" />
             ) : (
-              <div className="relative w-11 h-11 rounded-full bg-gradient-to-br from-white to-zinc-200 flex items-center justify-center text-nexo-700 font-bold text-sm shadow-lg">
+              <div className="w-11 h-11 rounded-full bg-nexo-500 flex items-center justify-center text-white font-bold text-sm">
                 {initials}
               </div>
             )}
             {/* Online indicator */}
-            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-nexo-500 shadow-lg" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-nexo-500" />
           </div>
           
           {/* Info */}
           <div className="min-w-0 flex-1">
             <p className="text-sm text-white font-semibold truncate max-w-[140px] drop-shadow-lg">{displayName}</p>
             <p className="text-xs text-white/90 font-medium flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse" />
+              <span className="w-1.5 h-1.5 bg-emerald-300 rounded-full" />
               {formatDuration(duration)}
             </p>
           </div>
@@ -1781,10 +1779,10 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={toggleMic}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-lg ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                 isMuted 
-                  ? 'bg-red-500/90 text-white hover:bg-red-600 shadow-red-500/40' 
-                  : 'bg-white/25 text-white hover:bg-white/35 shadow-white/20'
+                  ? 'bg-red-500/90 text-white hover:bg-red-600' 
+                  : 'bg-white/25 text-white hover:bg-white/35'
               }`}
               title={isMuted ? 'Включить микрофон' : 'Выключить микрофон'}
             >
@@ -1792,7 +1790,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
             </button>
             <button
               onClick={() => setIsMinimized(false)}
-              className="w-8 h-8 rounded-full bg-white/25 hover:bg-white/35 flex items-center justify-center text-white transition-all shadow-lg shadow-white/20"
+              className="w-8 h-8 rounded-full bg-white/25 hover:bg-white/35 flex items-center justify-center text-white transition-all"
               title="Развернуть"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -1801,7 +1799,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
             </button>
             <button
               onClick={endCallSafe}
-              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all shadow-lg shadow-red-500/40"
+              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all"
               title="Завершить"
             >
               <PhoneOff size={14} />
@@ -1822,27 +1820,15 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
         className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
         onClick={() => { setShowCameraMenu(false); setShowVolumeSlider(false); setShowMicMenu(false); }}
       >
-        {/* Telegram-style gradient background */}
+        {/* Solid background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className={`absolute inset-0 transition-all duration-1000 ${
             callState === 'connected'
-              ? 'bg-gradient-to-br from-[#ACBD65] via-[#459F8D] to-[#53A4D1]'
+              ? 'bg-[#ACBD65]'
               : callState === 'ended'
-                ? 'bg-gradient-to-br from-[#568FD6] via-[#626ED5] to-[#A667D5]'
-                : 'bg-gradient-to-br from-[#568FD6] via-[#626ED5] to-[#A667D5]'
+                ? 'bg-[#568FD6]'
+                : 'bg-[#568FD6]'
           }`} />
-          <motion.div
-            className="absolute w-[400px] h-[400px] rounded-full bg-white/[0.08] blur-[100px]"
-            animate={{ x: [0, 60, -40, 0], y: [0, -50, 30, 0] }}
-            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ top: '10%', left: '20%' }}
-          />
-          <motion.div
-            className="absolute w-[350px] h-[350px] rounded-full bg-white/[0.06] blur-[80px]"
-            animate={{ x: [0, -50, 40, 0], y: [0, 40, -60, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ top: '30%', right: '15%' }}
-          />
         </div>
 
         <motion.div
@@ -1850,14 +1836,14 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className={`relative w-full mx-4 rounded-[2.5rem] overflow-hidden border border-white/[0.08] shadow-2xl shadow-black/50 ${showVideoArea ? 'max-w-5xl' : 'max-w-md'
+          className={`relative w-full mx-4 rounded-[2.5rem] overflow-hidden border border-white/[0.08] shadow-lg ${showVideoArea ? 'max-w-5xl' : 'max-w-md'
             }`}
         >
           {/* Mic selector popup */}
           {showMicMenu && microphones.length > 0 && (
             <>
               <div className="fixed inset-0 z-[200]" onClick={() => setShowMicMenu(false)} />
-              <div className="fixed z-[201] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] rounded-xl bg-zinc-800/95 backdrop-blur-md border border-zinc-600 shadow-2xl py-2">
+              <div className="fixed z-[201] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] rounded-xl bg-zinc-800 border border-zinc-600 py-2">
                 <div className="px-3 py-1.5 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-700 mb-1">{t('selectMicrophone')}</div>
                 {microphones.map((mic, i) => (
                   <button
@@ -1879,7 +1865,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
             <>
               {/* Backdrop to close on click outside */}
               <div className="fixed inset-0 z-[200]" onClick={() => setShowCameraMenu(false)} />
-              <div className="fixed z-[201] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] rounded-xl bg-zinc-800/95 backdrop-blur-md border border-zinc-600 shadow-2xl py-2">
+              <div className="fixed z-[201] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] rounded-xl bg-zinc-800 border border-zinc-600 py-2">
                 <div className="px-3 py-1.5 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-700 mb-1">{t('switchCamera')}</div>
                 {cameras.map((cam, i) => (
                   <button
@@ -1900,7 +1886,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
           {showVolumeSlider && (
             <>
               <div className="fixed inset-0 z-[200]" onClick={() => setShowVolumeSlider(false)} />
-              <div className="fixed z-[201] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] rounded-xl bg-zinc-800/95 backdrop-blur-md border border-zinc-600 shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
+              <div className="fixed z-[201] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] rounded-xl bg-zinc-800 border border-zinc-600 p-4" onClick={(e) => e.stopPropagation()}>
                 <div className="text-xs text-zinc-400 uppercase tracking-wider mb-3">{t('volume')}</div>
                 <div className="flex items-center gap-3">
                   <Volume2 size={16} className="text-zinc-400 shrink-0" />
@@ -1956,7 +1942,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
               {/* PIP video (local by default, remote when swapped) */}
               {!swapVideo ? (
                 hasLocalVideo && (
-                  <div className="absolute bottom-3 right-3 w-48 rounded-xl overflow-hidden border-2 border-white/20 shadow-lg bg-black z-10"
+                  <div className="absolute bottom-3 right-3 w-48 rounded-xl overflow-hidden border border-white/20 bg-black z-10"
                     style={{ aspectRatio: '16 / 9' }}
                   >
                     <video
@@ -1970,7 +1956,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
                 )
               ) : (
                 hasRemoteVideo && (
-                  <div className="absolute bottom-3 right-3 w-48 rounded-xl overflow-hidden border-2 border-white/20 shadow-lg bg-black z-10"
+                  <div className="absolute bottom-3 right-3 w-48 rounded-xl overflow-hidden border border-white/20 bg-black z-10"
                     style={{ aspectRatio: '16 / 9' }}
                   >
                     <video
@@ -1988,7 +1974,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
               {/* Swap button */}
               <button
                 onClick={() => setSwapVideo(!swapVideo)}
-                className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm z-10 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+                className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/50 z-10 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
                 title="Поменять местами видео"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2001,7 +1987,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
               <FloatingReactions reactions={sentReactions} />
 
               {/* Duration badge */}
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-black/50 backdrop-blur-sm z-10">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-black/50 z-10">
                 <span className="text-sm text-white font-mono">{formatDuration(duration)}</span>
               </div>
 
@@ -2009,14 +1995,14 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
               <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
                 <button
                   onClick={() => setIsMinimized(true)}
-                  className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white/70 hover:text-white transition-colors"
                   title={t('minimize')}
                 >
                   <Minimize2 size={16} />
                 </button>
                 <button
                   onClick={toggleFullscreen}
-                  className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white/70 hover:text-white transition-colors"
                 >
                   {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
                 </button>
@@ -2059,7 +2045,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
                       whileTap={{ scale: 0.88 }}
                       onClick={toggleScreenShare}
                       className={`w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all duration-200 ${
-                        isScreenSharing ? 'bg-[var(--color-accent)] text-white' : 'bg-white/[0.15] text-white backdrop-blur-sm'
+                        isScreenSharing ? 'bg-[var(--color-accent)] text-white' : 'bg-white/[0.15] text-white'
                       }`}
                     >
                       {isScreenSharing ? <MonitorOff size={18} /> : <Monitor size={18} />}
@@ -2070,7 +2056,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
                       whileTap={{ scale: 0.88 }}
                       onClick={toggleNoiseSuppression}
                       className={`w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all duration-200 ${
-                        noiseSuppression ? 'bg-emerald-500/30 text-emerald-400' : 'bg-white/[0.15] text-white backdrop-blur-sm'
+                        noiseSuppression ? 'bg-emerald-500/30 text-emerald-400' : 'bg-white/[0.15] text-white'
                       }`}
                     >
                       {noiseSuppression ? <ShieldCheck size={18} /> : <ShieldOff size={18} />}
@@ -2081,7 +2067,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
                       <motion.button
                         whileTap={{ scale: 0.88 }}
                         onClick={() => setShowReactions(!showReactions)}
-                        className="w-[44px] h-[44px] rounded-full bg-white/[0.15] text-white flex items-center justify-center backdrop-blur-sm"
+                        className="w-[44px] h-[44px] rounded-full bg-white/[0.15] text-white flex items-center justify-center"
                       >
                         <Smile size={18} />
                       </motion.button>
@@ -2097,7 +2083,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
                       <motion.button
                         whileTap={{ scale: 0.88 }}
                         onClick={() => setShowVideoShare(true)}
-                        className="w-[44px] h-[44px] rounded-full bg-white/[0.15] text-white flex items-center justify-center backdrop-blur-sm"
+                        className="w-[44px] h-[44px] rounded-full bg-white/[0.15] text-white flex items-center justify-center"
                       >
                         <Film size={18} />
                       </motion.button>
@@ -2107,7 +2093,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
                     <motion.button
                       whileTap={{ scale: 0.88 }}
                       onClick={() => setIsMinimized(true)}
-                      className="w-[44px] h-[44px] rounded-full bg-white/[0.15] text-white flex items-center justify-center backdrop-blur-sm"
+                      className="w-[44px] h-[44px] rounded-full bg-white/[0.15] text-white flex items-center justify-center"
                     >
                       <Minimize2 size={18} />
                     </motion.button>

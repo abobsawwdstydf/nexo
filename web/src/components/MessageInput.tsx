@@ -819,54 +819,65 @@ export default function MessageInput({ chatId }: MessageInputProps) {
           )}
 
           {/* Formatting toolbar — visible when typing */}
-          {text.length > 0 && (
-            <div className="max-w-3xl mx-auto px-4 pb-1 flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
-              {[
-                { label: 'B', title: 'Жирный', prefix: '**', suffix: '**', mono: true },
-                { label: 'I', title: 'Курсив', prefix: '*', suffix: '*', mono: true },
-                { label: 'S', title: 'Зачёркнутый', prefix: '~', suffix: '~', mono: true },
-                { label: 'C', title: 'Код', prefix: '`', suffix: '`', mono: true },
-                { label: 'H', title: 'Заголовок', prefix: '## ', suffix: '' },
-                { label: '—', title: 'Линия', insert: '\n---\n' },
-                { label: '> ', title: 'Цитата', prefix: '> ', suffix: '' },
-                { label: '- ', title: 'Список', prefix: '- ', suffix: '' },
-                { label: '1.', title: 'Нумерованный', prefix: '1. ', suffix: '' },
-                { label: '⊞', title: 'Таблица', insert: '| Колонка 1 | Колонка 2 |\n|----------|----------|\n| Ячейка 1 | Ячейка 2 |' },
-              ].map(({ label, title, prefix, suffix, insert, mono }) => (
-                <button
-                  key={title}
-                  onClick={() => {
-                    const el = inputRef.current;
-                    if (!el) return;
-                    const start = el.selectionStart;
-                    const end = el.selectionEnd;
-                    const selected = text.substring(start, end);
-                    if (insert) {
-                      setText(text.substring(0, start) + insert + text.substring(end));
-                      setTimeout(() => { el.focus(); el.setSelectionRange(start + insert.length, start + insert.length); }, 0);
-                      return;
-                    }
-                    const before = text.substring(0, start);
-                    const after = text.substring(end);
-                    const newText = before + (prefix || '') + (selected || 'текст') + (suffix || '') + after;
-                    setText(newText);
-                    setTimeout(() => {
-                      el.focus();
-                      if (selected) {
-                        el.setSelectionRange(start + (prefix || '').length, start + (prefix || '').length + selected.length);
-                      } else {
-                        el.setSelectionRange(start + (prefix || '').length, start + (prefix || '').length + 4);
+          <AnimatePresence>
+            {text.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="max-w-3xl mx-auto px-4 pb-1 flex items-center gap-0.5 overflow-x-auto scrollbar-hide"
+              >
+                {[
+                  { label: 'B', title: 'Жирный', prefix: '**', suffix: '**', mono: true },
+                  { label: 'I', title: 'Курсив', prefix: '*', suffix: '*', mono: true },
+                  { label: 'S', title: 'Зачёркнутый', prefix: '~', suffix: '~', mono: true },
+                  { label: 'C', title: 'Код', prefix: '`', suffix: '`', mono: true },
+                  { label: 'H', title: 'Заголовок', prefix: '## ', suffix: '' },
+                  { label: '—', title: 'Линия', insert: '\n---\n' },
+                  { label: '> ', title: 'Цитата', prefix: '> ', suffix: '' },
+                  { label: '- ', title: 'Список', prefix: '- ', suffix: '' },
+                  { label: '1.', title: 'Нумерованный', prefix: '1. ', suffix: '' },
+                  { label: '⊞', title: 'Таблица', insert: '| Колонка 1 | Колонка 2 |\n|----------|----------|\n| Ячейка 1 | Ячейка 2 |' },
+                ].map(({ label, title, prefix, suffix, insert, mono }) => (
+                  <motion.button
+                    key={title}
+                    onClick={() => {
+                      const el = inputRef.current;
+                      if (!el) return;
+                      const start = el.selectionStart;
+                      const end = el.selectionEnd;
+                      const selected = text.substring(start, end);
+                      if (insert) {
+                        setText(text.substring(0, start) + insert + text.substring(end));
+                        setTimeout(() => { el.focus(); el.setSelectionRange(start + insert.length, start + insert.length); }, 0);
+                        return;
                       }
-                    }, 0);
-                  }}
-                  title={title}
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors flex-shrink-0 ${mono ? 'font-mono' : ''}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+                      const before = text.substring(0, start);
+                      const after = text.substring(end);
+                      const newText = before + (prefix || '') + (selected || 'текст') + (suffix || '') + after;
+                      setText(newText);
+                      setTimeout(() => {
+                        el.focus();
+                        if (selected) {
+                          el.setSelectionRange(start + (prefix || '').length, start + (prefix || '').length + selected.length);
+                        } else {
+                          el.setSelectionRange(start + (prefix || '').length, start + (prefix || '').length + 4);
+                        }
+                      }, 0);
+                    }}
+                    whileHover={{ scale: 1.15, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                    title={title}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium text-white/40 hover:text-white/70 flex-shrink-0 ${mono ? 'font-mono' : ''}`}
+                  >
+                    {label}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Liquid Glass Input Bar */}
           <div className="max-w-3xl mx-auto px-0 sm:px-0 pb-1 sm:pb-0">

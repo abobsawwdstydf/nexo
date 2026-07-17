@@ -137,7 +137,7 @@ export default function ReactionAnimation({ emoji, onComplete }: ReactionAnimati
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 0.3, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="absolute inset-0 bg-gradient-to-t from-orange-500/20 via-red-500/10 to-transparent"
+          className="absolute inset-0 bg-orange-500/20"
         />
       )}
 
@@ -146,7 +146,7 @@ export default function ReactionAnimation({ emoji, onComplete }: ReactionAnimati
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 0.2, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="absolute inset-0 bg-gradient-to-t from-pink-500/20 via-red-500/10 to-transparent"
+          className="absolute inset-0 bg-pink-500/20"
         />
       )}
     </motion.div>

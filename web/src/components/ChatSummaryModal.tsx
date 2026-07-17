@@ -105,8 +105,8 @@ export default function ChatSummaryModal({ isOpen, onClose, chatId, chatName }: 
             className="flex flex-col items-center gap-4 py-10"
           >
             <div className="relative">
-              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                <Sparkles size={24} className="text-blue-400 animate-pulse" />
+              <div className="w-14 h-14 rounded-2xl bg-nexo-500/10 flex items-center justify-center">
+                <Sparkles size={24} className="text-nexo-400" />
               </div>
             </div>
             <p className="text-sm text-zinc-400">Анализирую переписку...</p>
@@ -226,7 +226,7 @@ export default function ChatSummaryModal({ isOpen, onClose, chatId, chatName }: 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-nexo-500 flex items-center justify-center">
               <FileText size={16} className="text-white" />
             </div>
             <div>

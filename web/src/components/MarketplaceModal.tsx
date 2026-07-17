@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Star, Shield, TrendingUp, Filter, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -125,7 +126,7 @@ export default function MarketplaceModal({ isOpen, onClose }: MarketplaceModalPr
           className="w-full max-w-6xl h-[85vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-surface-secondary">
             <div className="flex items-center gap-3">
               <Shield className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -168,16 +169,13 @@ export default function MarketplaceModal({ isOpen, onClose }: MarketplaceModalPr
               <div className="p-6">
                 {/* Search and Filters */}
                 <div className="mb-6 space-y-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Поиск услуг..."
-                      className="w-full pl-10 pr-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
+                  <ClearInput
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Поиск услуг..."
+                    className="w-full bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 py-3"
+                    leftIcon={<Search className="w-5 h-5 text-gray-400" />}
+                  />
 
                   {/* Categories */}
                   <div className="flex gap-2 overflow-x-auto pb-2">
@@ -283,7 +281,7 @@ export default function MarketplaceModal({ isOpen, onClose }: MarketplaceModalPr
               <div className="p-6">
                 <button
                   onClick={() => setShowCreateService(true)}
-                  className="w-full mb-6 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-medium"
+                  className="w-full mb-6 px-4 py-3 bg-nexo-500 text-white rounded-lg hover:bg-nexo-600 transition-all font-medium"
                 >
                   + Создать услугу
                 </button>
@@ -459,7 +457,7 @@ export default function MarketplaceModal({ isOpen, onClose }: MarketplaceModalPr
                       </div>
                       <button
                         onClick={() => handlePurchase(selectedService.id)}
-                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-medium"
+                        className="px-6 py-3 bg-nexo-500 text-white rounded-lg hover:bg-nexo-600 transition-all font-medium"
                       >
                         Заказать
                       </button>

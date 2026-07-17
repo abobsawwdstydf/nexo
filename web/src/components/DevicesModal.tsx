@@ -92,21 +92,15 @@ export default function DevicesModal({ onClose }: DevicesModalProps) {
           onClick={(e) => e.stopPropagation()}
           className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-3xl"
         >
-          {/* Liquid glass background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[rgba(18,18,24,0.92)] via-[rgba(12,12,18,0.95)] to-[rgba(20,20,28,0.93)] backdrop-blur-3xl backdrop-saturate-150" />
-          
-          {/* Glow effects */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/5 pointer-events-none" />
-          
-          {/* Border shine */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+          {/* Background */}
+          <div className="absolute inset-0 bg-surface/95" />
           
           {/* Content */}
           <div className="relative z-10">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/[0.08]">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-2xl bg-nexo-500 flex items-center justify-center shadow-lg">
                   <Smartphone className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -144,7 +138,7 @@ export default function DevicesModal({ onClose }: DevicesModalProps) {
                       animate={{ opacity: 1, y: 0 }}
                       className={`p-4 rounded-2xl border transition-all ${
                         device.isCurrent
-                          ? 'bg-gradient-to-br from-purple-500/15 to-blue-500/15 border-purple-500/30'
+                          ? 'bg-nexo-500/15 border-nexo-500/30'
                           : 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.12] hover:bg-white/[0.06]'
                       }`}
                     >
@@ -153,7 +147,7 @@ export default function DevicesModal({ onClose }: DevicesModalProps) {
                           {/* Icon */}
                           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
                             device.isCurrent
-                              ? 'bg-gradient-to-br from-purple-500 to-blue-600'
+                              ? 'bg-nexo-500'
                               : 'bg-white/[0.08] border border-white/[0.1]'
                           }`}>
                             {getDeviceIcon(device.deviceType, device.platform)}

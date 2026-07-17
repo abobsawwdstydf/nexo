@@ -119,15 +119,15 @@ export default function PlaylistEmbedPreview({ playlistId }: PlaylistEmbedPrevie
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="my-2 p-3 rounded-xl bg-gradient-to-br from-purple-900/30 to-purple-800/20 border border-purple-500/30 backdrop-blur-sm"
+      className="my-2 p-3 rounded-xl bg-surface-tertiary border border-nexo-500/30"
     >
       {/* Заголовок плейлиста */}
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+        <div className="w-12 h-12 rounded-xl bg-nexo-500/20 flex items-center justify-center flex-shrink-0">
           {playlist.coverUrl ? (
             <img src={playlist.coverUrl} alt="" className="w-full h-full rounded-xl object-cover" />
           ) : (
-            <Music className="w-6 h-6 text-purple-400" />
+            <Music className="w-6 h-6 text-nexo-400" />
           )}
         </div>
         <div className="flex-1 min-w-0">

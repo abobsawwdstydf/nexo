@@ -84,7 +84,7 @@ export default function AIImageGenerator({ isOpen, onClose, onSend }: AIImageGen
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-nexo-500 flex items-center justify-center">
               <Wand2 size={16} className="text-white" />
             </div>
             <div>
@@ -106,7 +106,7 @@ export default function AIImageGenerator({ isOpen, onClose, onSend }: AIImageGen
               onChange={e => setPrompt(e.target.value)}
               placeholder="Опишите что хотите сгенерировать..."
               rows={3}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 resize-none"
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-nexo-500/50 resize-none"
               onKeyDown={e => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate();
               }}
@@ -123,7 +123,7 @@ export default function AIImageGenerator({ isOpen, onClose, onSend }: AIImageGen
                   onClick={() => setSelectedStyle(selectedStyle === s.value ? '' : s.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     selectedStyle === s.value
-                      ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
+                      ? 'bg-nexo-500/30 text-nexo-300 border border-nexo-500/50'
                       : 'bg-white/5 text-zinc-400 border border-white/10 hover:bg-white/10'
                   }`}
                 >
@@ -143,10 +143,9 @@ export default function AIImageGenerator({ isOpen, onClose, onSend }: AIImageGen
                 className="flex flex-col items-center gap-3 py-8"
               >
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                    <Sparkles size={28} className="text-purple-400 animate-pulse" />
+                  <div className="w-16 h-16 rounded-2xl bg-surface-tertiary flex items-center justify-center">
+                    <Sparkles size={28} className="text-nexo-400" />
                   </div>
-                  <div className="absolute inset-0 rounded-2xl border-2 border-purple-500/30 animate-ping" />
                 </div>
                 <p className="text-sm text-zinc-400">Генерирую изображение...</p>
               </motion.div>
@@ -182,7 +181,7 @@ export default function AIImageGenerator({ isOpen, onClose, onSend }: AIImageGen
             <button
               onClick={generate}
               disabled={!prompt.trim() || isGenerating}
-              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl bg-nexo-500 hover:bg-nexo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
             >
               {isGenerating ? (
                 <Loader2 size={16} className="animate-spin" />

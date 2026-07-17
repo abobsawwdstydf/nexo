@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ClearInput, type ClearInputHandle } from './ClearInput';
 import {
   Phone,
   MoreVertical,
@@ -153,7 +154,7 @@ export default function ChatView({ onStartCall, onStartGroupCall }: { onStartCal
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<ClearInputHandle>(null);
   const topMenuRef = useRef<HTMLDivElement>(null);
   const deleteMenuRef = useRef<HTMLDivElement>(null);
 
@@ -429,10 +430,9 @@ export default function ChatView({ onStartCall, onStartGroupCall }: { onStartCal
   if (!activeChat || !chat) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-surface-secondary relative z-0">
-        {/* Slowly pulsing purple background */}
+        {/* Subtle background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-[10000ms]">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-nexo-600/10 rounded-full blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-purple-600/15 rounded-full blur-[100px] animate-[pulse_12s_ease-in-out_infinite_reverse]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-nexo-600/10 rounded-full blur-[120px]" />
         </div>
 
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMSkvPjwvc3ZnPg==')] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] opacity-20 pointer-events-none" />
@@ -450,7 +450,7 @@ export default function ChatView({ onStartCall, onStartGroupCall }: { onStartCal
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-nexo-400 via-fuchsia-400 to-indigo-400 mb-4 drop-shadow-lg tracking-tight select-none"
+            className="text-3xl font-bold text-nexo-400 mb-4 tracking-tight select-none"
           >
             Нексо
           </motion.h2>
@@ -684,13 +684,12 @@ export default function ChatView({ onStartCall, onStartGroupCall }: { onStartCal
                     exit={{ width: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <input
+                    <ClearInput
                       ref={searchInputRef}
-                      type="text"
                       placeholder={t('searchMessages')}
                       value={searchText}
                       onChange={(e) => setSearchText(e.target.value)}
-                      className="w-full px-2.5 py-1 rounded-lg bg-white/5 text-xs text-white placeholder-zinc-500 border border-white/10 focus:border-nexo-500/50"
+                      className="w-full py-1 rounded-lg bg-white/5 text-xs text-white placeholder-zinc-500 border border-white/10 focus:border-nexo-500/50"
                     />
                   </motion.div>
                 )}
@@ -896,7 +895,7 @@ export default function ChatView({ onStartCall, onStartGroupCall }: { onStartCal
               }}
             >
               {isFavorites ? (
-                <div className="w-full h-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                <div className="w-full h-full bg-amber-500 flex items-center justify-center">
                   <Bookmark size={18} className="text-white" />
                 </div>
               ) : (

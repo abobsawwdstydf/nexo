@@ -237,7 +237,7 @@ export default function VoiceRecorder({ chatId, replyToId, onSent, onCancel }: V
           {liveBars.map((height, i) => (
             <div
               key={i}
-              className="w-1 bg-gradient-to-t from-red-500 via-orange-400 to-yellow-300 rounded-full transition-all duration-75"
+              className="w-1 bg-nexo-500 rounded-full transition-all duration-75"
               style={{
                 height: `${Math.max(20, height)}%`,
                 opacity: 0.7 + (height / 200)
@@ -250,7 +250,7 @@ export default function VoiceRecorder({ chatId, replyToId, onSent, onCancel }: V
       <button
         onClick={stopRecording}
         disabled={isSending}
-        className="p-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white transition-all shadow-lg shadow-emerald-500/30 hover:scale-105 flex-shrink-0 disabled:opacity-50 disabled:scale-100"
+        className="p-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white transition-all hover:scale-105 flex-shrink-0 disabled:opacity-50 disabled:scale-100"
       >
         {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
       </button>

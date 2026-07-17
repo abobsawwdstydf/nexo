@@ -193,7 +193,7 @@ export default function MusicPlayer() {
                       className="w-full h-full object-cover rounded-xl"
                     />
                   ) : (
-                    <div className="w-full h-full rounded-xl bg-gradient-to-br from-nexo-500/40 to-purple-600/40 flex items-center justify-center">
+                    <div className="w-full h-full rounded-xl bg-nexo-500/40 flex items-center justify-center">
                       <Music2 size={18} className="text-nexo-400" />
                     </div>
                   )}
@@ -336,7 +336,7 @@ export default function MusicPlayer() {
                 {currentTrack.coverUrl ? (
                   <img src={normalizeMediaUrl(currentTrack.coverUrl)} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full rounded-lg bg-gradient-to-br from-nexo-500/30 to-purple-600/30 flex items-center justify-center">
+                  <div className="w-full h-full rounded-lg bg-nexo-500/30 flex items-center justify-center">
                     <Music2 size={14} className="text-nexo-400" />
                   </div>
                 )}

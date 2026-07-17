@@ -2,6 +2,7 @@
 import type React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquare, Users, Megaphone, Search, Check, UserPlus, Loader2, Sparkles, Hash, Globe, Camera } from 'lucide-react';
+import { ClearInput, type ClearInputHandle } from './ClearInput';
 import { api } from '../lib/api';
 import { useChatStore } from '../stores/chatStore';
 import { useLang } from '../lib/i18n';
@@ -27,7 +28,7 @@ export default function NewChatModal({ onClose }: NewChatModalProps) {
   const [channelDescription, setChannelDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<ClearInputHandle>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -250,27 +251,15 @@ export default function NewChatModal({ onClose }: NewChatModalProps) {
               className="space-y-3"
             >
               {/* Search */}
-              <div className="relative group">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors z-10" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Поиск по имени или username..."
-                  className="w-full pl-12 pr-12 py-3.5 text-sm text-white placeholder-zinc-500 rounded-2xl outline-none transition-all"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-                />
-                {query && (
-                  <button
-                    onClick={() => { setQuery(''); setUsers([]); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-xl text-zinc-400 hover:text-white flex items-center justify-center"
-                    style={{ background: 'rgba(255,255,255,0.06)' }}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
+              <ClearInput
+                ref={inputRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Поиск по имени или username..."
+                className="w-full py-3.5 text-sm text-white placeholder-zinc-500 rounded-2xl outline-none transition-all"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                leftIcon={<Search size={18} className="text-zinc-500" />}
+              />
 
               {/* Users list */}
               {isLoading ? (
@@ -423,17 +412,14 @@ export default function NewChatModal({ onClose }: NewChatModalProps) {
                     </span>
                   )}
                 </label>
-                <div className="relative group">
-                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors z-10" />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    placeholder="Поиск участников..."
-                    className="w-full pl-12 pr-4 py-3.5 text-sm text-white placeholder-zinc-500 rounded-2xl outline-none transition-all"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-                  />
-                </div>
+                <ClearInput
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Поиск участников..."
+                  className="w-full py-3.5 text-sm text-white placeholder-zinc-500 rounded-2xl outline-none transition-all"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  leftIcon={<Search size={16} className="text-zinc-500" />}
+                />
 
                 {/* Selected users */}
                 {selectedUsers.size > 0 && (

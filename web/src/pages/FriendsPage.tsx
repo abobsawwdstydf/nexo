@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, UserPlus, Check, X, Search, Loader2, Clock } from 'lucide-react';
+import { ClearInput } from '../components/ClearInput';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import { useLang } from '../lib/i18n';
@@ -220,9 +221,12 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {friends.map(friend => (
-                    <div
+                  {friends.map((friend, index) => (
+                    <motion.div
                       key={friend.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05, type: 'spring', stiffness: 300, damping: 25 }}
                       className="flex items-center gap-3 p-3 rounded-2xl glass-subtle group"
                     >
                       <div className="relative">
@@ -250,7 +254,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                       >
                         <X size={14} />
                       </motion.button>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -366,16 +370,13 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
               transition={{ duration: 0.2 }}
             >
               {/* Поле поиска */}
-              <div className="relative mb-4">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Поиск по имени или username..."
-                  className="w-full pl-10 pr-4 py-3 rounded-2xl text-sm text-white placeholder-zinc-500 glass-input"
-                />
-              </div>
+              <ClearInput
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Поиск по имени или username..."
+                className="w-full mb-4 rounded-2xl text-sm text-white placeholder-zinc-500 glass-input py-3"
+                leftIcon={<Search size={16} className="text-zinc-500" />}
+              />
 
               {/* Результаты */}
               {isLoading ? (

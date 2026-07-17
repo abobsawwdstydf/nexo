@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { motion } from 'framer-motion';
 
 interface UserTagProps {
   text: string;
@@ -63,12 +64,15 @@ function UserTagInner({ text, color = '#6366f1', style = 'solid', size = 'sm' }:
   };
 
   return (
-    <span
+    <motion.span
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
       className={`inline-flex items-center font-bold tracking-wide uppercase select-none flex-shrink-0 ${sizeClasses[size]}`}
       style={getTagStyle()}
     >
       {text}
-    </span>
+    </motion.span>
   );
 }
 

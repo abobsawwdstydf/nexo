@@ -388,7 +388,7 @@ export default function EmojiPaintEditor({ onSave, onClose, initialImage, size =
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-nexo-500 flex items-center justify-center">
             <Pencil size={16} className="text-white" />
           </div>
           <input

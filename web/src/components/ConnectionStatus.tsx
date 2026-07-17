@@ -24,10 +24,10 @@ export default function ConnectionStatus() {
           className="fixed top-0 left-0 right-0 z-[300] flex items-center justify-center gap-2 py-2 px-4 text-sm font-medium"
           style={{
             background: status === 'disconnected'
-              ? 'linear-gradient(135deg, #dc2626, #b91c1c)'
+              ? '#dc2626'
               : status === 'reconnecting'
-              ? 'linear-gradient(135deg, #d97706, #b45309)'
-              : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              ? '#d97706'
+              : '#6366f1',
           }}
         >
           {status === 'disconnected' ? (

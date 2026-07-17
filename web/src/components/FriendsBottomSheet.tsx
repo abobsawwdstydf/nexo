@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useMotionValue, AnimatePresence, type PanInfo } from 'framer-motion';
 import { Users, UserPlus, Search, Loader2 } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import Avatar from './Avatar';
@@ -201,7 +202,7 @@ export default function FriendsBottomSheet({ isOpen, onClose, isMobile }: Friend
             {/* Header */}
             <div className="flex-shrink-0 px-4 pb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-lg bg-nexo-500 flex items-center justify-center">
                   <Users size={13} className="text-white" />
                 </div>
                 <h2 className="text-sm font-bold text-white">Друзья</h2>
@@ -375,16 +376,13 @@ export default function FriendsBottomSheet({ isOpen, onClose, isMobile }: Friend
 
               {activeTab === 'search' && (
                 <div className="pt-1">
-                  <div className="relative mb-2">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="Найти пользователей..."
-                      className="w-full pl-8 pr-3 py-2 rounded-xl text-xs text-white placeholder-zinc-500 bg-white/5 border border-white/10 focus:outline-none focus:border-nexo-500/50 transition-colors"
-                    />
-                  </div>
+                  <ClearInput
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Найти пользователей..."
+                    className="w-full mb-2 rounded-xl text-xs text-white placeholder-zinc-500 bg-white/5 border border-white/10 focus:outline-none focus:border-nexo-500/50 transition-colors py-2"
+                    leftIcon={<Search size={13} className="text-zinc-500" />}
+                  />
                   {isLoading ? (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 size={18} className="text-nexo-400 animate-spin" />
@@ -457,7 +455,7 @@ function DesktopFriendsContent({
     <>
       <div className="px-4 py-3 flex items-center justify-between border-b border-white/5 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-nexo-500 flex items-center justify-center">
             <Users size={13} className="text-white" />
           </div>
           <h2 className="text-sm font-bold text-white">Друзья</h2>

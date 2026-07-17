@@ -222,7 +222,7 @@ export default function LiveStreamModal({ isOpen, onClose, streamId }: LiveStrea
                           initial={{ x: 100, opacity: 0 }}
                           animate={{ x: 0, opacity: 1 }}
                           exit={{ x: 100, opacity: 0 }}
-                          className="bg-gradient-to-r from-yellow-500/90 to-orange-500/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg"
+                          className="bg-amber-500 px-4 py-2 rounded-lg shadow-lg"
                         >
                           <div className="flex items-center gap-2">
                             <Gift className="w-4 h-4 text-white" />
@@ -304,7 +304,7 @@ export default function LiveStreamModal({ isOpen, onClose, streamId }: LiveStrea
               <div className="p-4 border-t border-gray-800 space-y-2">
                 <button
                   onClick={() => setShowDonation(true)}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg hover:from-yellow-700 hover:to-orange-700 transition-all font-medium flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all font-medium flex items-center justify-center gap-2"
                 >
                   <Gift className="w-4 h-4" />
                   Отправить донат
@@ -403,7 +403,7 @@ export default function LiveStreamModal({ isOpen, onClose, streamId }: LiveStrea
                       <button
                         onClick={handleSendDonation}
                         disabled={!donationAmount || parseInt(donationAmount) <= 0}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg hover:from-yellow-700 hover:to-orange-700 transition-all disabled:opacity-50 font-medium"
+                        className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all disabled:opacity-50 font-medium"
                       >
                         Отправить
                       </button>

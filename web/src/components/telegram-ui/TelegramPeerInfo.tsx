@@ -156,7 +156,7 @@ function TelegramPeerInfo({
           >
             {/* Premium glow ring */}
             {isPremium && (
-              <div className="absolute -inset-1.5 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-yellow-600 opacity-70 blur-[2px] animate-[spin_6s_linear_infinite]" />
+              <div className="absolute -inset-1.5 rounded-full bg-yellow-400 opacity-70 blur-[2px] animate-[spin_6s_linear_infinite]" />
             )}
 
             <div className={`relative w-[120px] h-[120px] rounded-full overflow-hidden ${isPremium ? 'ring-[3px] ring-yellow-400/60' : 'ring-[2px] ring-[#6ab2f2]/20'}`}>
@@ -206,7 +206,7 @@ function TelegramPeerInfo({
               </div>
             )}
             {isPremium && (
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
                 <Star size={11} className="text-white fill-white" />
               </div>
             )}

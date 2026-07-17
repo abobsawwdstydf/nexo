@@ -337,7 +337,7 @@ function renderTable(rows: string[][]): React.ReactNode {
     <div className="overflow-x-auto my-2 -mx-1 px-1">
       <table className="border-collapse text-xs w-full rounded-xl overflow-hidden shadow-lg shadow-black/20">
         <thead>
-          <tr className="bg-gradient-to-r from-nexo-600/30 to-nexo-500/20">
+          <tr className="bg-nexo-600/30">
             {header.map((cell, i) => (
               <th key={i} className={`px-3 py-2 font-semibold text-left text-white/90 border-b border-white/10 ${i === 0 ? 'rounded-tl-xl' : ''} ${i === header.length - 1 ? 'rounded-tr-xl' : ''}`}>
                 <RichText text={cell.trim()} />

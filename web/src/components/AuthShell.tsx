@@ -82,9 +82,9 @@ export function AuthCard({ children, className = '', scrollable = false }: AuthC
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`bg-[#141418]/85 backdrop-blur-2xl rounded-[2rem] p-5 sm:p-7 border border-white/[0.07] shadow-2xl shadow-black/60 relative overflow-hidden max-w-full ${className}`}
+      className={`bg-[#141418] rounded-[2rem] p-5 sm:p-7 border border-white/[0.07] shadow-lg relative overflow-hidden max-w-full ${className}`}
     >
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#6366f1]/40 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/10" />
       <div className={scrollable ? 'max-h-[calc(100dvh-6rem)] sm:max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-hide -mr-2 pr-2' : ''}>
         {children}
       </div>
@@ -102,11 +102,11 @@ export function AuthLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
       transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
       className="relative"
     >
-      <div className={`absolute inset-0 ${glowClass} bg-[#6366f1]/30 blur-xl`} />
+      <div className={`absolute inset-0 ${glowClass} bg-nexo-500/20`} />
       <motion.img
         src="/logo.png"
         alt="Нексо"
-        className={`relative ${sizeClass} shadow-lg shadow-[#6366f1]/25 object-cover`}
+        className={`relative ${sizeClass} object-cover`}
         style={
           size === 'lg'
             ? { boxShadow: '0 0 60px rgba(99,102,241,0.3), 0 25px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)' }

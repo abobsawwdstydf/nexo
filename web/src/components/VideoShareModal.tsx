@@ -181,7 +181,7 @@ export default function VideoShareModal({
               onPause={() => setPlaying(false)}
               muted={muted}
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+            <div className="absolute bottom-0 left-0 right-0 bg-black/80 p-4">
               <input
                 type="range"
                 min={0}

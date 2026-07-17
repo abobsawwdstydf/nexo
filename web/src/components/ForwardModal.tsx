@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Send, Check, Forward } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { getSocket } from '../lib/socket';
@@ -119,17 +120,14 @@ export default function ForwardModal({ messages, onClose }: ForwardModalProps) {
 
   const search = (
     <div className="px-4 py-3 border-b border-white/5">
-      <div className="relative">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-        <input
-          type="text"
+        <ClearInput
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Поиск чатов..."
-          className="w-full pl-10 pr-4 py-2.5 bg-[#222] rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full bg-[#222] rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary py-2.5"
+          leftIcon={<Search size={18} className="text-zinc-400" />}
           autoFocus
         />
-      </div>
     </div>
   );
 

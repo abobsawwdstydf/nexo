@@ -277,7 +277,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
       onClose={onClose}
       embedded={embedded}
       title={view === 'list' ? 'Плейлисты' : view === 'create' ? 'Новый плейлист' : selectedPlaylist?.name || 'Плейлист'}
-      icon={<Music size={15} className="text-purple-400" />}
+      icon={<Music size={15} className="text-nexo-400" />}
       showBack={view !== 'list'}
     >
       <div className="flex flex-col h-full">
@@ -287,14 +287,14 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
             <div className="space-y-2">
               <button
                 onClick={() => setView('create')}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors text-sm font-medium mb-3"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-nexo-500/20 text-nexo-300 hover:bg-nexo-500/30 transition-colors text-sm font-medium mb-3"
               >
                 <Plus className="w-4 h-4" />
                 Создать плейлист
               </button>
               {loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-2 border-nexo-500/30 border-t-nexo-500 rounded-full animate-spin" />
                 </div>
               ) : playlists.length === 0 ? (
                 <div className="text-center py-12">
@@ -302,7 +302,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                   <p className="text-white/40 mb-4">Нет плейлистов</p>
                   <button
                     onClick={() => setView('create')}
-                    className="px-4 py-2 rounded-xl bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors text-sm"
+                    className="px-4 py-2 rounded-xl bg-nexo-500/20 text-nexo-300 hover:bg-nexo-500/30 transition-colors text-sm"
                   >
                     Создать первый
                   </button>
@@ -318,7 +318,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                       {playlist.coverUrl ? (
                         <img src={playlist.coverUrl} alt="" className="w-full h-full rounded-xl object-cover" />
                       ) : (
-                        <Music className="w-6 h-6 text-purple-400" />
+                        <Music className="w-6 h-6 text-nexo-400" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -335,7 +335,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                           className="p-1.5 rounded-lg hover:bg-purple-500/20 transition-colors"
                           title="Поделиться ссылкой"
                         >
-                          <Share2 className="w-4 h-4 text-purple-400" />
+                          <Share2 className="w-4 h-4 text-nexo-400" />
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); deletePlaylist(playlist.id); }}
@@ -361,7 +361,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   placeholder="Мой плейлист"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-nexo-500"
                   maxLength={100}
                 />
               </div>
@@ -372,14 +372,14 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                   onChange={e => setNewDesc(e.target.value)}
                   placeholder="Необязательно"
                   rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500 resize-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-nexo-500 resize-none"
                   maxLength={500}
                 />
               </div>
               <button
                 onClick={createPlaylist}
                 disabled={creating || !newName.trim()}
-                className="w-full py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:opacity-50 text-sm font-medium"
+                className="w-full py-2.5 rounded-xl bg-nexo-500 hover:bg-nexo-600 text-white transition-colors disabled:opacity-50 text-sm font-medium"
               >
                 {creating ? 'Создание...' : 'Создать плейлист'}
               </button>
@@ -391,13 +391,13 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
             <div className="flex flex-col h-full">
               {/* Player */}
               {selectedPlaylist.tracks.length > 0 && (
-                <div className="p-4 bg-gradient-to-b from-purple-900/20 to-transparent border-b border-white/5">
+                <div className="p-4 bg-surface-tertiary border-b border-white/5">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-nexo-500/20 flex items-center justify-center flex-shrink-0">
                       {currentTrack?.coverUrl ? (
                         <img src={currentTrack.coverUrl} alt="" className="w-full h-full rounded-xl object-cover" />
                       ) : (
-                        <Music className="w-6 h-6 text-purple-400" />
+                        <Music className="w-6 h-6 text-nexo-400" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -412,7 +412,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                     const ratio = (e.clientX - rect.left) / rect.width;
                     audioRef.current.currentTime = ratio * (audioRef.current.duration || 0);
                   }}>
-                    <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                    <div className="h-full bg-nexo-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
                   </div>
                   {/* Controls */}
                   <div className="flex items-center justify-center gap-4">
@@ -421,7 +421,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                     </button>
                     <button
                       onClick={togglePlay}
-                      className="w-10 h-10 rounded-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center transition-colors"
+                      className="w-10 h-10 rounded-full bg-nexo-500 hover:bg-nexo-600 flex items-center justify-center transition-colors"
                     >
                       {isPlaying ? <Pause className="w-5 h-5 text-white" /> : <Play className="w-5 h-5 text-white ml-0.5" />}
                     </button>
@@ -439,14 +439,14 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                     key={track.id}
                     className={`flex items-center gap-3 p-2.5 rounded-xl transition-colors cursor-pointer ${
                       index === currentTrackIndex && isPlaying
-                        ? 'bg-purple-500/20 border border-purple-500/30'
+                        ? 'bg-nexo-500/20 border border-nexo-500/30'
                         : 'hover:bg-white/5'
                     }`}
                     onClick={() => playTrack(index)}
                   >
                     <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 text-xs text-white/40">
                       {index === currentTrackIndex && isPlaying ? (
-                        <Volume2 className="w-4 h-4 text-purple-400 animate-pulse" />
+                        <Volume2 className="w-4 h-4 text-nexo-400 animate-pulse" />
                       ) : (
                         index + 1
                       )}
@@ -492,30 +492,30 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                         value={trackTitle}
                         onChange={e => setTrackTitle(e.target.value)}
                         placeholder="Название трека *"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-nexo-500"
                       />
                       <input
                         type="text"
                         value={trackArtist}
                         onChange={e => setTrackArtist(e.target.value)}
                         placeholder="Исполнитель"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-nexo-500"
                       />
                       <input
                         type="url"
                         value={trackUrl}
                         onChange={e => setTrackUrl(e.target.value)}
                         placeholder="URL аудио (https://...) или загрузите файл"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-nexo-500"
                       />
                       {/* Кнопка загрузки файла */}
                       <button
                         onClick={() => trackFileRef.current?.click()}
                         disabled={uploadingTrack}
-                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 transition-colors text-sm disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-nexo-500/10 border border-nexo-500/20 text-nexo-300 hover:bg-nexo-500/20 transition-colors text-sm disabled:opacity-50"
                       >
                         {uploadingTrack ? (
-                          <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-nexo-400 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Upload className="w-4 h-4" />
                         )}
@@ -532,7 +532,7 @@ export default function CollabPlaylistModal({ chatId, onClose, embedded }: Colla
                         <button
                           onClick={addTrack}
                           disabled={addingTrack || !trackTitle.trim() || !trackUrl.trim()}
-                          className="flex-1 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:opacity-50 text-sm"
+                          className="flex-1 py-2 rounded-xl bg-nexo-500 hover:bg-nexo-600 text-white transition-colors disabled:opacity-50 text-sm"
                         >
                           {addingTrack ? 'Добавление...' : 'Добавить'}
                         </button>

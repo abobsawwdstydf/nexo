@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, TrendingUp, Plus, MessageCircle, ThumbsUp, ThumbsDown, Award, Users, Filter } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -170,7 +171,7 @@ export default function CommunitiesModal({ isOpen, onClose }: CommunitiesModalPr
           className="w-full max-w-6xl h-[85vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-surface-secondary">
             <div className="flex items-center gap-3">
               <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -213,16 +214,13 @@ export default function CommunitiesModal({ isOpen, onClose }: CommunitiesModalPr
               <div className="p-6">
                 {/* Filters */}
                 <div className="mb-6 space-y-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
+                    <ClearInput
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Поиск постов..."
-                      className="w-full pl-10 pr-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 py-3"
+                      leftIcon={<Search className="w-5 h-5 text-gray-400" />}
                     />
-                  </div>
 
                   <div className="flex items-center justify-between">
                     <div className="flex gap-2">
@@ -357,16 +355,13 @@ export default function CommunitiesModal({ isOpen, onClose }: CommunitiesModalPr
               <div className="p-6">
                 {/* Search */}
                 <div className="mb-6">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Поиск сообществ..."
-                      className="w-full pl-10 pr-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
+                  <ClearInput
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Поиск сообществ..."
+                    className="w-full bg-gray-100 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 py-3"
+                    leftIcon={<Search className="w-5 h-5 text-gray-400" />}
+                  />
                 </div>
 
                 {/* Communities Grid */}

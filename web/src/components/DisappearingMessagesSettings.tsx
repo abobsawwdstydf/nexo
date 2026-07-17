@@ -66,7 +66,7 @@ export default function DisappearingMessagesSettings({ isOpen, onClose, chatId }
           className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-surface-secondary">
             <div className="flex items-center gap-3">
               <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -157,7 +157,7 @@ export default function DisappearingMessagesSettings({ isOpen, onClose, chatId }
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50 font-medium"
+                className="flex-1 px-4 py-3 bg-nexo-500 text-white rounded-xl hover:bg-nexo-600 transition-all disabled:opacity-50 font-medium"
               >
                 {loading ? 'Сохранение...' : 'Сохранить'}
               </button>

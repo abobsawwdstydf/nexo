@@ -225,8 +225,8 @@ export default function App() {
                       transition={{ duration: 0.2 }}
                       className="flex-1 min-h-0 flex items-center justify-center relative"
                     >
-                      {/* Blur backdrop */}
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={() => navigateTo('chat')} />
+                      {/* Backdrop */}
+                      <div className="absolute inset-0 bg-black/40" onClick={() => navigateTo('chat')} />
                       {/* Centered profile modal */}
                       <motion.div
                         initial={{ scale: 0.95, y: 20 }}

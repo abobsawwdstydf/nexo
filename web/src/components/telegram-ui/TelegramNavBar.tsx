@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, memo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, MoreVertical, Search, X } from 'lucide-react';
+import { ClearInput, type ClearInputHandle } from '../ClearInput';
 
 interface NavButton {
   icon?: ReactNode;
@@ -38,7 +39,7 @@ function TelegramNavBar({
 }: TelegramNavBarProps) {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<ClearInputHandle>(null);
 
   useEffect(() => {
     if (isSearchActive && searchInputRef.current) {
@@ -78,7 +79,7 @@ function TelegramNavBar({
       } ${className}`}
     >
       {/* Edge effect - top highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/15" />
 
       <AnimatePresence mode="wait">
         {isSearchActive ? (
@@ -96,26 +97,18 @@ function TelegramNavBar({
             >
               <ChevronLeft size={20} className="text-white/70" />
             </button>
-            <div className="flex-1 relative">
-              <input
+            <div className="flex-1">
+              <ClearInput
                 ref={searchInputRef}
-                type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
+                onClear={() => {
+                  setSearchQuery('');
+                  onSearch?.('');
+                }}
                 placeholder={searchPlaceholder}
-                className="w-full h-9 px-3 pr-8 rounded-full bg-white/[0.08] border border-white/[0.06] text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[var(--color-accent)]/50 focus:bg-white/[0.12] transition-all"
+                className="w-full h-9 rounded-full bg-white/[0.08] border border-white/[0.06] text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[var(--color-accent)]/50 focus:bg-white/[0.12] transition-all"
               />
-              {searchQuery && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    onSearch?.('');
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/20 flex items-center justify-center"
-                >
-                  <X size={12} className="text-white/70" />
-                </button>
-              )}
             </div>
           </motion.div>
         ) : (

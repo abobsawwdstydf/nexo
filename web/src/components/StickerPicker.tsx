@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Plus, Package, Smile, Image as ImageIcon, ChevronLeft, Upload, Trash2, Globe, Lock, Check, Scissors, Pencil } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import StickerCropper from './StickerCropper';
@@ -330,11 +331,10 @@ export default function StickerPicker({ onSendSticker, onInsertSticker, onSendGi
       {/* Header with search */}
       <div className="flex items-center border-b border-white/10 px-3 py-2 gap-2">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
+          <ClearInput
             placeholder="Поиск..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/5 text-sm text-white placeholder-zinc-500 border border-white/10 focus:border-nexo-500/50 outline-none"
+            className="w-full rounded-lg bg-white/5 text-sm text-white placeholder-zinc-500 border border-white/10 focus:border-nexo-500/50 outline-none py-1.5"
+            leftIcon={<Search size={14} className="text-zinc-500" />}
           />
         </div>
         {!isMobile && (
@@ -500,13 +500,12 @@ export default function StickerPicker({ onSendSticker, onInsertSticker, onSendGi
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
             <div className="px-3 py-2 border-b border-white/10">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  type="text"
+                <ClearInput
                   value={gifQuery}
                   onChange={e => handleGifSearch(e.target.value)}
                   placeholder="Поиск GIF..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-nexo-500/50"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-nexo-500/50 py-2"
+                  leftIcon={<Search size={14} className="text-zinc-500" />}
                 />
               </div>
             </div>

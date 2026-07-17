@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ClearInput } from './ClearInput';
 import {
   Search,
   Plus,
@@ -34,6 +35,8 @@ import FolderModal from './FolderModal';
 import SearchPanel from './SearchPanel';
 import ShareFolderModal from './ShareFolderModal';
 import VerifiedBadge from './VerifiedBadge';
+import { AvatarGroup } from './transitions/AvatarGroup';
+import { NotificationBadge } from './transitions/NotificationBadge';
 
 // Типы навигации
 type NavTab = 'chats' | 'friends' | 'settings' | 'profile';
@@ -89,16 +92,10 @@ function NavButton({
         />
 
         {badge && badge > 0 && (
-          <span
-            className={cn(
-              'absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full',
-              'bg-nexo-500 text-white text-[10px] font-bold',
-              'flex items-center justify-center',
-              'ring-2 ring-surface'
-            )}
-          >
-            {badge > 99 ? '99+' : badge}
-          </span>
+          <NotificationBadge
+            count={badge}
+            className="top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-nexo-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-surface"
+          />
         )}
       </motion.button>
 
@@ -485,9 +482,9 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
             {/* Поиск */}
             <div className="relative px-3 pb-2.5">
               <div className="relative group">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-nexo-400 transition-colors duration-200 pointer-events-none z-10" />
-                <input
-                  type="text"
+                <ClearInput
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={
                     activeTab === 'friends'
                       ? 'Имя или @username'
@@ -495,25 +492,15 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
                         ? 'Уточните запрос...'
                         : 'Поиск чатов, людей...'
                   }
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2 rounded-xl text-[13px] text-white placeholder-white/30 outline-none transition-all duration-200"
+                  className="w-full py-2 rounded-xl text-[13px] text-white placeholder-white/30 outline-none transition-all duration-200"
                   style={{ background: '#252525', border: '1px solid #2a2a2a' }}
+                  leftIcon={<Search size={14} className="text-white/30" />}
                 />
-                {searchQuery ? (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-all duration-150"
-                    title="Очистить"
-                    aria-label="Очистить"
-                  >
-                    <X size={11} />
-                  </button>
-                ) : isSearching ? (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {!searchQuery && isSearching && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
                     <Spinner size="sm" />
                   </div>
-                ) : null}
+                )}
               </div>
 
               {searchQuery.trim() && (
@@ -552,40 +539,42 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
                     <span className="text-[10px] text-zinc-500 truncate w-14 text-center">{t('newStory')}</span>
                   </button>
 
-                  {storyGroups.map((group, idx) => {
-                    const avatarUrl = group.user.avatar ? normalizeMediaUrl(group.user.avatar) : null;
-                    const isMine = group.user.id === user?.id;
-                    return (
-                      <button
-                        key={group.user.id}
-                        onClick={() => setStoryViewerIndex(idx)}
-                        className="flex flex-col items-center gap-1 flex-shrink-0 group"
-                      >
-                        <div className={`w-14 h-14 rounded-full p-[2px] transition-transform group-hover:scale-105 ${
-                          group.hasUnviewed
-                            ? 'bg-gradient-to-tr from-nexo-400 via-purple-500 to-pink-500 shadow-lg shadow-nexo-500/20'
-                            : isMine
-                              ? 'bg-gradient-to-tr from-zinc-500 to-zinc-600'
-                              : 'bg-zinc-700'
-                        }`}>
-                          <div className="w-full h-full rounded-full overflow-hidden border-2" style={{ borderColor: '#111' }}>
-                            <Avatar
-                              src={avatarUrl}
-                              name={group.user.displayName || group.user.username}
-                              size="lg"
-                              className="w-full h-full"
-                              isVerified={(group.user as any).isVerified}
-                              verifiedBadgeUrl={(group.user as any).verifiedBadgeUrl}
-                              verifiedBadgeType={(group.user as any).verifiedBadgeType}
-                            />
+                  <AvatarGroup
+                    items={storyGroups.map((group, idx) => {
+                      const avatarUrl = group.user.avatar ? normalizeMediaUrl(group.user.avatar) : null;
+                      const isMine = group.user.id === user?.id;
+                      return (
+                        <button
+                          key={group.user.id}
+                          onClick={() => setStoryViewerIndex(idx)}
+                          className="flex flex-col items-center gap-1 flex-shrink-0 group"
+                        >
+                          <div className={`w-14 h-14 rounded-full p-[2px] transition-transform group-hover:scale-105 ${
+                            group.hasUnviewed
+                              ? 'bg-nexo-500 shadow-lg shadow-nexo-500/20'
+                              : isMine
+                                ? 'bg-zinc-500'
+                                : 'bg-zinc-700'
+                          }`}>
+                            <div className="w-full h-full rounded-full overflow-hidden border-2" style={{ borderColor: '#111' }}>
+                              <Avatar
+                                src={avatarUrl}
+                                name={group.user.displayName || group.user.username}
+                                size="lg"
+                                className="w-full h-full"
+                                isVerified={(group.user as any).isVerified}
+                                verifiedBadgeUrl={(group.user as any).verifiedBadgeUrl}
+                                verifiedBadgeType={(group.user as any).verifiedBadgeType}
+                              />
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-[10px] text-zinc-400 truncate w-14 text-center">
-                          {isMine ? t('myStory') : (group.user.displayName || group.user.username).split(' ')[0]}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span className="text-[10px] text-zinc-400 truncate w-14 text-center">
+                            {isMine ? t('myStory') : (group.user.displayName || group.user.username).split(' ')[0]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  />
                 </div>
               </div>
             )}

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
+import { ClearInput } from './ClearInput';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Trash2, Edit2 } from 'lucide-react';
 import { api } from '../lib/api';
@@ -85,16 +86,13 @@ export default function BookmarksModal({ onClose }: BookmarksModalProps) {
 
       {/* Search */}
       <div className="p-4 border-b border-white/10">
-        <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск закладок..."
-            className="w-full bg-white/10 border border-white/20 text-white rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-nexo-500"
-          />
-        </div>
+        <ClearInput
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск закладок..."
+          className="w-full bg-white/10 border border-white/20 text-white rounded-lg py-2 text-sm focus:outline-none focus:border-nexo-500"
+          leftIcon={<Search size={18} className="text-white/40" />}
+        />
       </div>
 
       {/* Bookmarks list */}

@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Search, Loader2, Check } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { api } from '../lib/api';
 import { useToastStore } from '../stores/toastStore';
 import type { Chat } from '../lib/types';
@@ -123,16 +124,13 @@ export default function SharePostModal({ postId, postContent, onClose }: SharePo
 
         {/* Search */}
         <div className="p-4 border-b border-border">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              placeholder="Поиск чатов..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-border focus:border-accent transition-colors"
-            />
-          </div>
+          <ClearInput
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Поиск чатов..."
+            className="w-full rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-border focus:border-accent transition-colors py-2.5"
+            leftIcon={<Search size={16} className="text-zinc-500" />}
+          />
         </div>
 
         {/* Chats list */}
@@ -165,7 +163,7 @@ export default function SharePostModal({ postId, postContent, onClose }: SharePo
                         className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-nexo-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                         {(chat.name || chat.username || '?')[0].toUpperCase()}
                       </div>
                     )}

@@ -36,7 +36,7 @@ export default function CallReactions({ isActive, onSendReaction, onClose }: Cal
         initial={{ opacity: 0, y: 20, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.9 }}
-        className="bg-black/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden"
+        className="bg-black/80 rounded-3xl border border-white/10 shadow-lg overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">

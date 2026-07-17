@@ -71,7 +71,7 @@ export default function PremiumBadgeUpload() {
   };
 
   return (
-    <div className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
+    <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
       <div className="flex items-center gap-2 mb-3">
         <Crown size={16} className="text-yellow-400" />
         <h4 className="text-sm font-semibold text-white">Премиум значок</h4>

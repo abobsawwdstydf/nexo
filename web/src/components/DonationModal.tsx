@@ -90,7 +90,7 @@ export default function DonationModal({ isOpen, onClose, recipientId, recipientN
           className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-pink-50 to-red-50 dark:from-pink-900/20 dark:to-red-900/20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-surface-secondary">
             <div className="flex items-center gap-3">
               <Heart className="w-6 h-6 text-pink-600 dark:text-pink-400" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -211,7 +211,7 @@ export default function DonationModal({ isOpen, onClose, recipientId, recipientN
                   <button
                     onClick={handleSend}
                     disabled={sending || !amount || parseInt(amount) <= 0}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-pink-600 to-red-600 text-white rounded-lg hover:from-pink-700 hover:to-red-700 transition-all disabled:opacity-50 font-medium"
+                    className="w-full px-4 py-3 bg-nexo-500 text-white rounded-lg hover:bg-nexo-600 transition-all disabled:opacity-50 font-medium"
                   >
                     {sending ? 'Отправка...' : 'Отправить донат'}
                   </button>
@@ -268,7 +268,7 @@ export default function DonationModal({ isOpen, onClose, recipientId, recipientN
                   goals.map(goal => (
                     <div
                       key={goal.id}
-                      className="p-4 bg-gradient-to-br from-pink-50 to-red-50 dark:from-pink-900/20 dark:to-red-900/20 rounded-xl border border-pink-200 dark:border-pink-800"
+                      className="p-4 bg-surface-tertiary rounded-xl border border-border"
                     >
                       <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
                         {goal.title}
@@ -287,7 +287,7 @@ export default function DonationModal({ isOpen, onClose, recipientId, recipientN
                         </div>
                         <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-pink-600 to-red-600 transition-all duration-500"
+                            className="h-full bg-nexo-500 transition-all duration-500"
                             style={{ width: `${Math.min(goal.progress, 100)}%` }}
                           />
                         </div>

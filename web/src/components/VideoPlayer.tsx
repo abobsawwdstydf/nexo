@@ -371,7 +371,7 @@ export default function VideoPlayer({ src, poster, onClose }: VideoPlayerProps) 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent"
+            className="absolute bottom-0 left-0 right-0 p-4 bg-black/90"
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           >

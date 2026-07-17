@@ -338,7 +338,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
       <div className="relative overflow-hidden flex-shrink-0">
         <div className="absolute inset-0 bg-white/[0.03] pointer-events-none" />
         <div className="absolute inset-0 backdrop-blur-xl bg-white/[0.04] pointer-events-none" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-white/10 pointer-events-none" />
         <div className="relative p-5 pb-4">
           <div className="flex items-start justify-between mb-4">
             <div className="relative group cursor-pointer" onClick={() => changeView('profile')}>
@@ -367,20 +367,25 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
             <span className="text-xs text-zinc-500">{user?.username}</span>
           </div>
         </div>
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+        <div className="h-px bg-white/[0.06]" />
       </div>
 
       {/* Menu items — жидкое стекло */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
         {menuItems.map((item, i) => {
-          if ('divider' in item) return <div key={i} className="my-2 mx-3 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />;
+          if ('divider' in item) return <div key={i} className="my-2 mx-3 h-px bg-white/[0.08]" />;
           const Icon = item.icon!;
           const isHighlight = 'highlight' in item && item.highlight;
           return (
-            <button
+            <motion.button
               key={i}
               onClick={item.onClick}
-              className={`group w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left transition-all duration-300 active:scale-[0.98] backdrop-blur-sm border liquid-glass-subtle ${
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.03, type: 'spring', stiffness: 300, damping: 25 }}
+              whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.04)' }}
+              whileTap={{ scale: 0.98 }}
+              className={`group w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left backdrop-blur-sm border liquid-glass-subtle ${
                 isHighlight
                   ? 'border-yellow-500/20 hover:border-yellow-500/30'
                   : 'hover:border-white/[0.06]'
@@ -414,7 +419,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                   isHighlight ? 'text-yellow-600 group-hover:text-yellow-500' : 'text-zinc-700 group-hover:text-zinc-500'
                 }`} />
               )}
-            </button>
+            </motion.button>
           );
         })}
       </div>
@@ -840,7 +845,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                     {other?.avatar ? (
                        <img src={other.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
                      ) : (
-                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                       <div className="w-10 h-10 rounded-full bg-nexo-500 flex items-center justify-center text-white font-bold text-sm">
                          {(other?.displayName || other?.username || '?')[0].toUpperCase()}
                       </div>
                     )}
@@ -935,10 +940,10 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
             {/* Liquid glass background layers */}
             <div className="absolute inset-0 liquid-glass-strong rounded-t-[32px] sm:rounded-3xl" />
             <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent pointer-events-none" />
-            <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/10 via-white/5 to-transparent pointer-events-none" />
-            <div className="absolute top-0 right-0 bottom-0 w-px bg-gradient-to-b from-white/10 via-white/5 to-transparent pointer-events-none" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-white/15 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-white/8 pointer-events-none" />
+            <div className="absolute top-0 left-0 bottom-0 w-px bg-white/10 pointer-events-none" />
+            <div className="absolute top-0 right-0 bottom-0 w-px bg-white/10 pointer-events-none" />
             {/* Grabber handle - mobile only */}
             <div className="relative flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
               <div className="w-12 h-1.5 bg-white/20 rounded-full" />
@@ -1020,9 +1025,9 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="absolute right-0 top-0 bottom-0 w-full max-w-lg overflow-hidden"
             >
-              {/* Liquid glass background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[rgba(18,18,24,0.95)] via-[rgba(12,12,18,0.98)] to-[rgba(20,20,28,0.96)] backdrop-blur-3xl backdrop-saturate-150" />
-              <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/15 via-white/8 to-transparent pointer-events-none" />
+              {/* Background */}
+              <div className="absolute inset-0 bg-surface/95" />
+              <div className="absolute top-0 left-0 bottom-0 w-px bg-white/15 pointer-events-none" />
               <div className="relative z-10 h-full">
                 <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />
               </div>

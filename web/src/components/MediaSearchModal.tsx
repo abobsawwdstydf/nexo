@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Image, FileText, Video, Music, Link, Filter, Download } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { api } from '../lib/api';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import { useChatStore } from '../stores/chatStore';
@@ -117,13 +118,12 @@ export default function MediaSearchModal({ chatId, onClose }: MediaSearchModalPr
           <div className="flex flex-col max-h-[85vh]">
             {/* Header with search + close */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-              <Search size={18} className="text-zinc-500" />
-              <input
-                type="text"
-                placeholder="Поиск по медиа..."
+              <ClearInput
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-white placeholder-zinc-500 text-sm outline-none"
+                placeholder="Поиск по медиа..."
+                className="flex-1 bg-transparent text-white placeholder-zinc-500 text-sm"
+                leftIcon={<Search size={18} className="text-zinc-500" />}
                 autoFocus
               />
               <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/10 transition-colors">
@@ -311,13 +311,12 @@ export default function MediaSearchModal({ chatId, onClose }: MediaSearchModalPr
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-              <Search size={18} className="text-zinc-500" />
-              <input
-                type="text"
-                placeholder="Поиск по медиа..."
+              <ClearInput
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-white placeholder-zinc-500 text-sm outline-none"
+                placeholder="Поиск по медиа..."
+                className="flex-1 bg-transparent text-white placeholder-zinc-500 text-sm"
+                leftIcon={<Search size={18} className="text-zinc-500" />}
                 autoFocus
               />
               <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/10 transition-colors">

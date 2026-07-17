@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Link2, QrCode, Send, Search, Loader2, Check, Copy, ArrowLeft, Share2 } from 'lucide-react';
+import { ClearInput } from './ClearInput';
 import { api } from '../lib/api';
 import { useToastStore } from '../stores/toastStore';
 import QRCodeModal from './QRCodeModal';
@@ -155,7 +156,7 @@ function MenuStep({
     <>
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-nexo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-nexo-500 flex items-center justify-center flex-shrink-0">
             <Share2 size={16} className="text-white" />
           </div>
           <h3 className="text-sm font-semibold text-white truncate">Поделиться профилем</h3>
@@ -174,7 +175,7 @@ function MenuStep({
           onClick={onCopy}
           className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-white/[0.12] transition-all active:scale-[0.98] text-left"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-nexo-500/20 to-purple-500/20 flex items-center justify-center text-nexo-300 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-nexo-500/20 flex items-center justify-center text-nexo-300 flex-shrink-0">
             {copied ? <Check size={18} className="text-emerald-400" /> : <Link2 size={18} />}
           </div>
           <div className="flex-1 min-w-0">
@@ -187,7 +188,7 @@ function MenuStep({
           onClick={onShowQR}
           className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-white/[0.12] transition-all active:scale-[0.98] text-left"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-purple-300 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 flex-shrink-0">
             <QrCode size={18} />
           </div>
           <div className="flex-1 min-w-0">
@@ -200,7 +201,7 @@ function MenuStep({
           onClick={onOpenChats}
           className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-white/[0.12] transition-all active:scale-[0.98] text-left"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center text-emerald-300 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-300 flex-shrink-0">
             <Send size={18} />
           </div>
           <div className="flex-1 min-w-0">
@@ -324,16 +325,13 @@ function ChatsStep({
       </div>
 
       <div className="p-3 border-b border-white/5 flex-shrink-0">
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
-            placeholder="Поиск чатов..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-white/5 focus:border-nexo-500/50 transition-colors outline-none"
-          />
-        </div>
+        <ClearInput
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Поиск чатов..."
+          className="w-full rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-white/5 focus:border-nexo-500/50 transition-colors outline-none py-2.5"
+          leftIcon={<Search size={15} className="text-zinc-500" />}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -360,7 +358,7 @@ function ChatsStep({
                 {chat.avatar ? (
                   <img src={chat.avatar} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-nexo-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     {(chat.name || chat.username || '?')[0]?.toUpperCase()}
                   </div>
                 )}
@@ -387,7 +385,7 @@ function ChatsStep({
         <button
           onClick={handleSend}
           disabled={sending || selectedChats.size === 0}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-nexo-500 to-purple-500 hover:from-nexo-400 hover:to-purple-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-nexo-500/20"
+          className="w-full py-3 rounded-xl bg-nexo-500 hover:bg-nexo-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-nexo-500/20"
         >
           {sending ? (
             <>

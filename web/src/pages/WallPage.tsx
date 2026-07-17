@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, X, Hash, FileText } from 'lucide-react';
+import { ClearInput } from '../components/ClearInput';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { useToastStore } from '../stores/toastStore';
@@ -365,54 +366,42 @@ export default function WallPage({ highlightPostId, onHighlightCleared }: WallPa
             
             {/* Поиск */}
             <div className="mt-3 flex items-center gap-2">
-              <div className="flex-1 relative">
-                <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  type="text"
-                  placeholder="Поиск по #тегам..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      setSelectedHashtag(searchQuery.replace('#', ''));
-                    }
-                  }}
-                  className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-border focus:border-accent transition-colors"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      if (viewMode === 'search') {
-                        setViewMode('feed');
-                        loadFeed(true);
-                      }
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
+              <ClearInput
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    setSelectedHashtag(searchQuery.replace('#', ''));
+                  }
+                }}
+                onClear={() => {
+                  setSearchQuery('');
+                  if (viewMode === 'search') {
+                    setViewMode('feed');
+                    loadFeed(true);
+                  }
+                }}
+                placeholder="Поиск по #тегам..."
+                className="flex-1 rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-border focus:border-accent transition-colors py-2.5"
+                leftIcon={<Hash size={16} className="text-zinc-500" />}
+              />
               
-              <div className="relative">
-                <FileText size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                <input
-                  type="text"
-                  placeholder="Поиск по содержимому..."
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      const query = (e.target as HTMLInputElement).value;
-                      if (query.trim()) {
-                        handleSearch();
-                        setViewMode('search');
-                      }
+              <ClearInput
+                value={searchQuery}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const query = (e.target as HTMLInputElement).value;
+                    if (query.trim()) {
+                      handleSearch();
+                      setViewMode('search');
                     }
-                  }}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-64 pl-9 pr-3 py-2.5 rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-border focus:border-accent transition-colors"
-                />
-              </div>
+                  }
+                }}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Поиск по содержимому..."
+                className="w-64 rounded-xl bg-surface-tertiary text-sm text-white placeholder-zinc-500 border border-border focus:border-accent transition-colors py-2.5"
+                leftIcon={<FileText size={16} className="text-zinc-500" />}
+              />
             </div>
 
             {/* Hashtag Panel */}

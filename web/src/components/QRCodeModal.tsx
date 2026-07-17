@@ -275,7 +275,7 @@ export default function QRCodeModal({ user, onClose }: QRCodeModalProps) {
 
           <div className="flex flex-col items-center -mt-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 rounded-full bg-gradient-to-b from-nexo-500 to-purple-500" />
+              <div className="w-1 h-5 rounded-full bg-nexo-500" />
               <h3 className="text-base font-bold text-white tracking-wide">Мой QR-код</h3>
             </div>
 

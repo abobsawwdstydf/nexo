@@ -226,7 +226,7 @@ export default function WallPostComments({ postId, onCommentAdded }: WallPostCom
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-nexo-500/20 to-purple-600/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-nexo-500/20 flex items-center justify-center">
               <span className="text-xs font-bold text-white">
                 {comment.author.displayName[0]?.toUpperCase() || comment.author.username[0]?.toUpperCase()}
               </span>

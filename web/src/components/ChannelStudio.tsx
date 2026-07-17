@@ -305,7 +305,7 @@ export default function ChannelStudio({ channelId, onClose }: ChannelStudioProps
                 </div>
                 <div className="bg-surface-tertiary rounded-2xl p-4 border border-border">
                   <div className="flex items-center gap-2 mb-2">
-                    <MessageSquare size={16} className="text-purple-400" />
+                    <MessageSquare size={16} className="text-nexo-400" />
                     <span className="text-xs text-zinc-400">Посты</span>
                   </div>
                   <p className="text-2xl font-bold text-white">{formatNumber(analytics.posts)}</p>
@@ -376,7 +376,7 @@ export default function ChannelStudio({ channelId, onClose }: ChannelStudioProps
                             initial={{ height: 0 }}
                             animate={{ height: `${height}%` }}
                             transition={{ delay: idx * 0.05, duration: 0.5 }}
-                            className="w-full bg-gradient-to-t from-nexo-500/30 to-nexo-400 rounded-t-lg relative group"
+                            className="w-full bg-nexo-500 rounded-t-lg relative group"
                           >
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                               +{item.count}
@@ -464,7 +464,7 @@ export default function ChannelStudio({ channelId, onClose }: ChannelStudioProps
                         {member.user.avatar ? (
                           <img src={member.user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+                          <div className="w-10 h-10 rounded-full bg-nexo-500 flex items-center justify-center text-white text-sm font-bold">
                             {(member.user.displayName || member.user.username || '?')[0].toUpperCase()}
                           </div>
                         )}
@@ -502,11 +502,11 @@ export default function ChannelStudio({ channelId, onClose }: ChannelStudioProps
                   <div className="flex flex-col items-center py-4">
                     <div className="relative group">
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-nexo-500/20 rounded-full blur-[30px] pointer-events-none" />
-                      <div className="relative z-10 p-1.5 rounded-full bg-gradient-to-br from-white/10 to-transparent backdrop-blur-md border border-white/10 shadow-2xl">
+                      <div className="relative z-10 p-1.5 rounded-full border border-white/10 shadow-2xl">
                         {channel.avatar ? (
                           <img src={channel.avatar} alt="" className="w-24 h-24 rounded-full object-cover shadow-inner" />
                         ) : (
-                          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center text-white font-bold text-3xl shadow-inner">
+                          <div className="w-24 h-24 rounded-full bg-nexo-500 flex items-center justify-center text-white font-bold text-3xl shadow-inner">
                             {(channel.name || 'C')[0].toUpperCase()}
                           </div>
                         )}

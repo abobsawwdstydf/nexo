@@ -243,13 +243,13 @@ export default function CameraModal({ onClose, onCapture }: CameraModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] bg-black/70 flex items-center justify-center p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-lg bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-2xl border border-white/10"
+        className="w-full max-w-lg bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg border border-white/10"
       >
         {headerContent}
         {cameraContent}

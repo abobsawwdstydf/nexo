@@ -142,7 +142,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             opacity: [0.08, 0.18, 0.08],
           }}
           transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] md:w-[700px] md:h-[700px] rounded-full bg-gradient-to-r from-nexo-600/25 to-purple-600/25 blur-[100px]"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] md:w-[700px] md:h-[700px] rounded-full bg-nexo-600/25 blur-[100px]"
         />
         <motion.div
           animate={{
@@ -150,7 +150,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             opacity: [0.05, 0.12, 0.05],
           }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          className="absolute top-1/3 left-1/3 w-[400px] h-[400px] rounded-full bg-gradient-to-br from-indigo-500/15 to-pink-500/15 blur-[80px]"
+          className="absolute top-1/3 left-1/3 w-[400px] h-[400px] rounded-full bg-indigo-500/15 blur-[80px]"
         />
       </div>
 
@@ -218,7 +218,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
                 transition={{ duration: 0.8, type: 'spring', bounce: 0.45, delay: 0.1 }}
                 className="relative"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/30 to-purple-600/30 blur-2xl rounded-full scale-150" />
+                <div className="absolute inset-0 bg-nexo-500/30 blur-2xl rounded-full scale-150" />
                 <img
                   src="/logo.png"
                   alt="Нексо"
@@ -267,7 +267,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
                     setPhase('done');
                     setTimeout(() => onComplete(), 50);
                   }}
-                  className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-nexo-500 to-purple-600 text-white font-semibold text-base shadow-xl shadow-nexo-500/30 transition-shadow"
+                  className="flex-1 py-3.5 px-6 rounded-2xl bg-nexo-500 text-white font-semibold text-base shadow-xl shadow-nexo-500/30 transition-shadow"
                 >
                   Регистрация
                 </motion.button>
