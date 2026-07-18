@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ExternalLink, Globe } from 'lucide-react';
 
@@ -31,6 +31,7 @@ function getDomain(url: string): string {
  */
 export default function LinkEmbedPreview({ content }: LinkEmbedPreviewProps) {
   const [hovered, setHovered] = useState(false);
+  const [faviconFailed, setFaviconFailed] = useState(false);
   const urls = extractUrls(content);
 
   // Пропускаем YouTube ссылки - они обрабатываются отдельно
@@ -59,19 +60,16 @@ export default function LinkEmbedPreview({ content }: LinkEmbedPreviewProps) {
       <div className="flex items-center gap-3 px-3 py-2.5">
         {/* Иконка сайта */}
         <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
-            alt=""
-            className="w-5 h-5 object-contain"
-            onError={(e) => {
-              // Если favicon не загрузился, показываем Globe
-              (e.target as HTMLImageElement).style.display = 'none';
-              const parent = (e.target as HTMLImageElement).parentElement;
-              if (parent && !parent.querySelector('svg')) {
-                parent.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-zinc-500"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
-              }
-            }}
-          />
+          {faviconFailed ? (
+            <Globe size={18} className="text-zinc-500" />
+          ) : (
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+              alt=""
+              className="w-5 h-5 object-contain"
+              onError={() => setFaviconFailed(true)}
+            />
+          )}
         </div>
 
         {/* Информация о ссылке */}

@@ -20,7 +20,9 @@ export function playKeyboardSound() {
     keyboardAudio.currentTime = 0;
     const p = keyboardAudio.play();
     if (p) keyboardAudioPromise = p.catch(() => {});
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[sounds] Keyboard sound failed:', e);
+  }
 }
 
 let sendAudio: HTMLAudioElement | null = null;
@@ -33,7 +35,9 @@ export function playSendSound() {
     }
     sendAudio.currentTime = 0;
     sendAudio.play().catch(() => {});
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[sounds] Send sound failed:', e);
+  }
 }
 
 let uvedAudio: HTMLAudioElement | null = null;
@@ -46,7 +50,9 @@ export function playUvedSound() {
     }
     uvedAudio.currentTime = 0;
     uvedAudio.play().catch(() => {});
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[sounds] Notification sound failed:', e);
+  }
 }
 
 export function playNotificationSound() {

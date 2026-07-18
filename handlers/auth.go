@@ -508,8 +508,13 @@ func SearchUsers(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Query must be at least 2 characters"})
 	}
 
+	// SECURITY FIX: Escape SQL LIKE wildcards to prevent data leak
+	escapedQuery := strings.ReplaceAll(query, "%", "\\%")
+	escapedQuery = strings.ReplaceAll(escapedQuery, "_", "\\_")
+
 	var users []models.User
-	db.GetDB().Where("username LIKE ? OR display_name LIKE ?", "%"+query+"%", "%"+query+"%").
+	db.GetDB().Where("username LIKE ? ESCAPE '\\\\' OR display_name LIKE ? ESCAPE '\\\\'",
+		"%"+escapedQuery+"%", "%"+escapedQuery+"%").
 		Limit(20).Find(&users)
 
 	return c.JSON(users)

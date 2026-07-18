@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"log"
+	"sync"
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -14,7 +15,10 @@ import (
 )
 
 // activeWSConnections tracks active WebSocket connections per user to prevent duplicate sessions.
-var activeWSConnections = make(map[string]int)
+var (
+	activeWSConnections   = make(map[string]int)
+	activeWSConnectionsMu sync.Mutex
+)
 
 func HandleWebSocket(c *websocket.Conn) {
 	token := c.Query("token")
@@ -35,13 +39,18 @@ func HandleWebSocket(c *websocket.Conn) {
 	userID := claims.UserID
 
 	// Dedup: count connections per user; allow max 3 concurrent
+	activeWSConnectionsMu.Lock()
 	activeWSConnections[userID]++
 	connCount := activeWSConnections[userID]
+	activeWSConnectionsMu.Unlock()
+
 	defer func() {
+		activeWSConnectionsMu.Lock()
 		activeWSConnections[userID]--
 		if activeWSConnections[userID] <= 0 {
 			delete(activeWSConnections, userID)
 		}
+		activeWSConnectionsMu.Unlock()
 	}()
 
 	if connCount > 3 {
@@ -99,8 +108,16 @@ func HandleWebSocket(c *websocket.Conn) {
 			ChatID string `json:"chatId"`
 		}
 		if err := json.Unmarshal(msg, &envelope); err == nil && envelope.ChatID != "" {
-			// Route to specific chat members
-			ws.HubInstance.SendToChat(envelope.ChatID, msg, "")
+			// SECURITY FIX: Verify sender is a member of the target chat before broadcasting
+			var memberCount int64
+			db.GetDB().Model(&models.ChatMember{}).
+				Where("chat_id = ? AND user_id = ?", envelope.ChatID, userID).
+				Count(&memberCount)
+			if memberCount > 0 {
+				ws.HubInstance.SendToChat(envelope.ChatID, msg, "")
+			} else {
+				log.Printf("WS message rejected: user=%s is not a member of chat=%s", userID, envelope.ChatID)
+			}
 		} else {
 			// Fallback: broadcast to all (for backwards compatibility)
 			ws.HubInstance.Broadcast(msg)

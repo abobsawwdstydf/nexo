@@ -146,19 +146,35 @@ export default function LiveStreamModal({ isOpen, onClose, streamId }: LiveStrea
   };
 
   const showDonationAnimation = (donation: Donation) => {
-    // Создаём элемент анимации
+    // SECURITY FIX: Safe DOM construction — no innerHTML with user data
     const animEl = document.createElement('div');
     animEl.className = 'donation-animation';
-    animEl.innerHTML = `
-      <div class="donation-popup">
-        <div class="donation-user">${donation.displayName}</div>
-        <div class="donation-amount">
-          <img src="/beaver-coin.png" class="w-6 h-6" />
-          ${donation.amount}
-        </div>
-        ${donation.message ? `<div class="donation-message">${donation.message}</div>` : ''}
-      </div>
-    `;
+
+    const popup = document.createElement('div');
+    popup.className = 'donation-popup';
+
+    const userDiv = document.createElement('div');
+    userDiv.className = 'donation-user';
+    userDiv.textContent = donation.displayName;
+    popup.appendChild(userDiv);
+
+    const amountDiv = document.createElement('div');
+    amountDiv.className = 'donation-amount';
+    const img = document.createElement('img');
+    img.src = '/beaver-coin.png';
+    img.className = 'w-6 h-6';
+    amountDiv.appendChild(img);
+    amountDiv.appendChild(document.createTextNode(` ${donation.amount}`));
+    popup.appendChild(amountDiv);
+
+    if (donation.message) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'donation-message';
+      msgDiv.textContent = donation.message;
+      popup.appendChild(msgDiv);
+    }
+
+    animEl.appendChild(popup);
     document.body.appendChild(animEl);
     setTimeout(() => animEl.remove(), 5000);
   };
