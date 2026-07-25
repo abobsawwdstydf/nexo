@@ -1,0 +1,188 @@
+import { getApiUrl } from '../../config';
+
+export const getApiBase = (): string => {
+  const url = getApiUrl();
+  return url ? url + '/api' : '/api';
+};
+
+export class ApiClient {
+  /** @internal */ csrfToken: string | null = null;
+  /** @internal */ refreshPromise: Promise<boolean> | null = null;
+  /** @internal */ onAuthFailed?: () => void;
+
+  setCsrfToken(token: string | null) {
+    this.csrfToken = token;
+  }
+
+  setOnAuthFailed(callback: () => void) {
+    this.onAuthFailed = callback;
+  }
+
+  /** @internal */
+  getStoredAccessToken(): string | null {
+    try {
+      return localStorage.getItem('nexo_access_token');
+    } catch {
+      return null;
+    }
+  }
+
+  /** @internal */
+  getStoredRefreshToken(): string | null {
+    try {
+      return localStorage.getItem('nexo_refresh_token');
+    } catch {
+      return null;
+    }
+  }
+
+  /** @internal */
+  setStoredRefreshToken(token: string | null) {
+    try {
+      if (token) {
+        localStorage.setItem('nexo_refresh_token', token);
+      } else {
+        localStorage.removeItem('nexo_refresh_token');
+      }
+    } catch {}
+  }
+
+  /** @internal */
+  async doRefresh(): Promise<boolean> {
+    try {
+      const refreshToken = this.getStoredRefreshToken();
+      if (!refreshToken) return false;
+
+      const refreshController = new AbortController();
+      const refreshTimer = setTimeout(() => refreshController.abort(), 10_000);
+      const refreshResponse = await fetch(`${getApiBase()}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        signal: refreshController.signal,
+      });
+      clearTimeout(refreshTimer);
+
+      if (!refreshResponse.ok) return false;
+
+      const data = await refreshResponse.json();
+
+      if (data.accessToken) {
+        localStorage.setItem('nexo_access_token', data.accessToken);
+      }
+      if (data.refreshToken) {
+        this.setStoredRefreshToken(data.refreshToken);
+      }
+      if (data.csrfToken) {
+        this.csrfToken = data.csrfToken;
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** @internal Core request method — handles auth, CSRF, timeout, and refresh. */
+  async request<T>(endpoint: string, options: RequestInit & { timeout?: number } = {}): Promise<T> {
+    const { timeout = 30_000, ...fetchOptions } = options;
+    const controller = new AbortController();
+    const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : undefined;
+
+    const isFormData = fetchOptions.body instanceof FormData;
+    const isMutation = fetchOptions.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(fetchOptions.method);
+
+    const storedToken = this.getStoredAccessToken();
+    
+    const headers: HeadersInit = {
+      ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
+      ...(this.csrfToken && isMutation ? { 'X-CSRF-Token': this.csrfToken } : {}),
+      ...(storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {}),
+      ...fetchOptions.headers,
+    };
+
+    let response: Response;
+    try {
+      response = await fetch(`${getApiBase()}${endpoint}`, {
+        ...fetchOptions,
+        headers,
+        signal: controller.signal,
+        credentials: 'include',
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new Error('Время ожидания запроса истекло');
+      }
+      if (err instanceof TypeError && err.message === 'Failed to fetch') {
+        throw new Error('Сервер недоступен. Проверьте подключение к интернету и повторите попытку.');
+      }
+      throw err;
+    }
+    clearTimeout(timer);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Ошибка сервера' }));
+      
+      if (response.status === 401) {
+        const isAuthEndpoint = endpoint.startsWith('/auth/');
+
+        if (!isAuthEndpoint) {
+          if (!this.refreshPromise) {
+            this.refreshPromise = this.doRefresh().finally(() => {
+              this.refreshPromise = null;
+            });
+          }
+
+          const refreshOk = await this.refreshPromise;
+
+          if (refreshOk) {
+            return this.request<T>(endpoint, options);
+          }
+        }
+      }
+      
+      throw new Error(error.error || 'Ошибка запроса');
+    }
+
+    const data = await response.json();
+    
+    if (data.csrfToken) {
+      this.csrfToken = data.csrfToken;
+    }
+    
+    return data;
+  }
+
+  // ─── Generic HTTP helpers ──────────────────────────────────────────
+
+  async delete<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async put<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async post<T = any>(endpoint: string, data: any): Promise<T> {
+    if (data instanceof FormData) {
+      return this.request<T>(endpoint, { method: 'POST', body: data, headers: {} });
+    }
+    return this.request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async get<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  async patch<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+}
