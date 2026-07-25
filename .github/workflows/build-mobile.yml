@@ -74,7 +74,7 @@ jobs:
           npx cap sync ios
           
       - name: Build iOS App
-        working-directory: frontend/ios
+        working-directory: frontend/ios/App
         run: |
           xcodebuild -project App.xcodeproj -scheme App -sdk iphoneos -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
           
