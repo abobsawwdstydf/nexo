@@ -1,0 +1,91 @@
+name: Build Nexo Mobile Apps (APK & IPA)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+        
+      - name: Build web app
+        working-directory: frontend
+        run: npm run build
+        
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Install Capacitor Android
+        working-directory: frontend
+        run: |
+          npx cap sync android
+          
+      - name: Build Android APK
+        working-directory: frontend/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-Android-APK
+          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+        
+      - name: Build web app
+        working-directory: frontend
+        run: npm run build
+        
+      - name: Install Capacitor iOS
+        working-directory: frontend
+        run: |
+          npx cap sync ios
+          
+      - name: Build iOS App
+        working-directory: frontend/ios
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+          
+      - name: Create IPA
+        run: |
+          mkdir -p build
+          cd frontend/ios/App/build/iphoneos
+          zip -r ../../../build/Nexo.ipa .
+          
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-iOS-IPA
+          path: build/Nexo.ipa
