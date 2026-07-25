@@ -159,7 +159,7 @@ export default function BackgroundPickerModal({
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-[9991]"
             onClick={e => e.stopPropagation()}
           >
-            <div className="bg-[#0f0f14] rounded-2xl border border-white/10 shadow-lg overflow-hidden">
+            <div className="liquid-glass rounded-2xl overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
                 <div className="flex items-center gap-3">

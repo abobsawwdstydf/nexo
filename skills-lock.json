@@ -6,6 +6,18 @@
       "sourceType": "github",
       "skillPath": "skill/SKILL.md",
       "computedHash": "102ce14478137d455efba854c1c5c2dc81e4a7ab4ad8fc2b5bfc6b35987a8a0a"
+    },
+    "security-scanning-security-sast": {
+      "source": "FrancoStino/opencode-skills-collection",
+      "sourceType": "github",
+      "skillPath": "bundled-skills/security-scanning-security-sast/SKILL.md",
+      "computedHash": "6a9250098d843ac0ef79b2c5b4f6fac596f82b4b4ed75fa3df3c417253698781"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "ce0af583006d2fd4731663adc50c0a5df1121f0d49a5bb9c308eca4ee295c60a"
     }
   }
 }

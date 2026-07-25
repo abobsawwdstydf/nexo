@@ -28,7 +28,7 @@ const WallPage = lazy(() => import('./pages/WallPage'));
 const HashtagPage = lazy(() => import('./pages/HashtagPage'));
 const DeviceAuthPage = lazy(() => import('./pages/DeviceAuthPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
-const YooKassaInfoPage = lazy(() => import('./pages/YooKassaInfoPage'));
+const YooKassaInfoPage = null; // Removed
 const AcceptSharedFolderModal = lazy(() => import('./components/AcceptSharedFolderModal'));
 
 type AppView = 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag';
@@ -80,10 +80,10 @@ export default function App() {
     return <Suspense fallback={<НексоLoader />}><PaymentSuccessPage /></Suspense>;
   }
 
-  // Страница ЮKassa info
-  if (window.location.pathname === '/yookassainfo') {
-    return <Suspense fallback={<НексоLoader />}><YooKassaInfoPage standalone /></Suspense>;
-  }
+  // Страница ЮKassa info — removed
+  // if (window.location.pathname === '/yookassainfo') {
+  //   return <Suspense fallback={<НексоLoader />}><YooKassaInfoPage standalone /></Suspense>;
+  // }
 
   // Device auth page
   if (window.location.pathname.startsWith('/device')) {

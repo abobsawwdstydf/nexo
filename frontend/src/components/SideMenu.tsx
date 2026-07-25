@@ -61,12 +61,11 @@ import StatisticsPage from '../pages/StatisticsPage';
 import CloudStoragePage from '../pages/CloudStoragePage';
 import ThemeSettings from './ThemeSettings';
 
-import YooMoneyInfoPage from './YooKassaInfoPage';
 import BadgesModal from './BadgesModal';
 import UserProfile from './UserProfile';
 import type { User as UserType, UserPresence, FriendRequest, FriendWithId } from '../lib/types';
 
-type SideView = 'main' | 'profile' | 'settings' | 'about' | 'friends' | 'calls' | 'premium' | 'statistics' | 'wallet' | 'badges' | 'cloud';
+type SideView = 'main' | 'profile' | 'settings' | 'about' | 'friends' | 'calls' | 'premium' | 'statistics' | 'badges' | 'cloud';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -76,8 +75,20 @@ interface SideMenuProps {
 export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const { user, updateUser, logout } = useAuthStore();
   const { clearStore } = useChatStore();
-  const [showYooKassaInfo, setShowYooKassaInfo] = useState(false);
-  const [showBadges, setShowBadges] = useState(false);
+
+  // Reset view to 'main' whenever the menu closes so tabs work on next open
+  const prevIsOpen = useRef(isOpen);
+  useEffect(() => {
+    if (prevIsOpen.current && !isOpen) {
+      setView('main');
+      setLegalPage(null);
+      setShowDevices(false);
+      setIsEditing(false);
+      setFriendSearch('');
+      setFriendSearchResults([]);
+    }
+    prevIsOpen.current = isOpen;
+  }, [isOpen]);
   const [notificationSettings, setNotificationSettings] = useState<{
     notifyAll: boolean;
     notifyMessages: boolean;
@@ -326,7 +337,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
     <motion.div key="main" className="relative z-[1] flex flex-col h-full min-h-0" initial={false} animate="center" exit="exit" variants={viewVariants} custom={-1} transition={{ duration: 0.2 }}>
       {/* Header — жидкое стекло */}
       <div className="relative overflow-hidden flex-shrink-0">
-        <div className="absolute inset-0" style={{ background: 'rgba(18,18,24,0.65)', backdropFilter: 'blur(20px)' }} />
+        <div className="absolute inset-0 glass-strong" />
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(123,97,255,0.04) 0%, transparent 50%)' }} />
         <div className="absolute top-0 left-0 right-0 h-px bg-white/[0.06] pointer-events-none" />
         <div className="relative p-5 pb-4">
@@ -343,7 +354,7 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                   </div>
                 )}
               </div>
-              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-[#0a0a0f]" />
+              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-surface" />
             </div>
             <button onClick={onClose} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all">
               <X size={18} />
@@ -899,12 +910,6 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
           >
             🔒 Политика конфиденциальности
           </button>
-          <button
-            onClick={() => window.open('/yookassainfo', '_blank')}
-            className="w-full py-2.5 px-4 rounded-xl liquid-glass-subtle hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/[0.1] text-zinc-400 hover:text-white text-sm transition-all"
-          >
-            💳 Пополнение через YooKassa
-          </button>
         </div>
       </div>
     </motion.div>
@@ -922,14 +927,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
             transition={{ type: 'spring', damping: 30, stiffness: 320 }}
             className="fixed inset-x-0 bottom-[68px] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[380px] sm:max-w-[calc(100vw-24px)] z-50 flex flex-col overflow-hidden rounded-t-[32px] sm:rounded-[2rem] max-h-[calc(85vh-68px)] sm:max-h-[88vh]"
           >
-            {/* Glass panel background — matches auth style */}
-            <div className="absolute inset-0 bg-[#141418] sm:hidden rounded-t-[32px]" />
-            <div className="absolute inset-0 hidden sm:block bg-[#141418] rounded-[2rem]" />
-            {/* Gradient border glow */}
-            <div className="absolute -inset-px rounded-t-[32px] sm:rounded-[2rem] bg-gradient-to-b from-white/[0.1] via-white/[0.04] to-transparent pointer-events-none" />
-            {/* Top accent */}
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/10 pointer-events-none" />
-            <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
+            {/* Unified liquid-glass background — same system as Sidebar & AuthPage */}
+            <div className="absolute inset-0 liquid-glass sm:rounded-[2rem] rounded-t-[32px]" />
             {/* Grabber handle - mobile only */}
             <div className="relative flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
               <div className="w-12 h-1.5 bg-white/20 rounded-full" />
@@ -1002,11 +1001,8 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                 transition={{ type: 'spring', damping: 30, stiffness: 350 }}
                 className="relative w-full max-w-lg h-[80vh] overflow-hidden rounded-[2rem]"
               >
-                {/* Glass background matching auth style */}
-                <div className="absolute inset-0 bg-[#141418]" />
-                <div className="absolute -inset-px rounded-[2rem] bg-gradient-to-b from-white/[0.1] via-white/[0.04] to-transparent pointer-events-none" />
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/10 pointer-events-none" />
-                <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
+                {/* Unified liquid-glass background */}
+                <div className="absolute inset-0 liquid-glass rounded-[2rem]" />
                 <div className="relative z-10 h-full">
                   <LegalPage type={legalPage} onClose={() => setLegalPage(null)} />
                 </div>

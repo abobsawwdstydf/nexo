@@ -27,7 +27,7 @@ export default function LegalPage({ onClose, type }: LegalPageProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="h-full flex flex-col bg-[#0a0a0f]"
+      className="h-full flex flex-col bg-surface"
     >
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.08] flex-shrink-0 bg-white/[0.03] backdrop-blur-xl">
         <button

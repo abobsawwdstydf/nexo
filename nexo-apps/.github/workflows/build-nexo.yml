@@ -1,0 +1,118 @@
+name: Build Nexo Messenger
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Build Windows App
+        uses: tw93/pake-action@v3
+        with:
+          url: 'https://nexo.hakerone.ru'
+          appName: 'Nexo'
+          appIcon: './icon.png'
+          windowsTitleBarStyle: 'overlay'
+          windowsWidth: 1200
+          windowsHeight: 800
+          pakeArgs: '--hide-title-bar'
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-Windows
+          path: outputs/*.msi
+          if-no-files-found: warn
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Build macOS App
+        uses: tw93/pake-action@v3
+        with:
+          url: 'https://nexo.hakerone.ru'
+          appName: 'Nexo'
+          appIcon: './icon.png'
+          macTitleBarStyle: 'overlay'
+          macWidth: 1200
+          macHeight: 800
+          pakeArgs: '--hide-title-bar'
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-macOS
+          path: outputs/*.dmg
+          if-no-files-found: warn
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Build Linux App
+        uses: tw93/pake-action@v3
+        with:
+          url: 'https://nexo.hakerone.ru'
+          appName: 'Nexo'
+          appIcon: './icon.png'
+          linuxWidth: 1200
+          linuxHeight: 800
+          pakeArgs: '--hide-title-bar'
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-Linux
+          path: outputs/*.deb
+          if-no-files-found: warn
+
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: Nexo Messenger v1.0.0
+          body: |
+            # Nexo Messenger - Desktop Apps
+            
+            Cross-platform messenger built with Pake (Tauri).
+            
+            ## Downloads
+            - **Windows**: `Nexo-Windows/Nexo_x64.msi`
+            - **macOS**: `Nexo-macOS/Nexo.dmg`
+            - **Linux**: `Nexo-Linux/Nexo_x86_64.deb`
+            
+            Website: https://nexo.hakerone.ru
+          files: artifacts/**/*
+          draft: false
+          prerelease: false

@@ -12,7 +12,7 @@ export default function ConnectionStatus() {
     return onConnectionStatusChange(setStatus);
   }, []);
 
-  const isVisible = status === 'disconnected' || status === 'reconnecting' || status === 'connecting';
+  const isVisible = status === 'disconnected' || status === 'reconnecting';
 
   return (
     <AnimatePresence>

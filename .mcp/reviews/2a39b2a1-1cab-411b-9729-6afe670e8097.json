@@ -1,0 +1,59 @@
+{
+  "id": "2a39b2a1-1cab-411b-9729-6afe670e8097",
+  "createdAt": "2026-07-18T06:54:56.880Z",
+  "updatedAt": "2026-07-18T06:54:56.897Z",
+  "mode": "folder_by_folder",
+  "remediationMode": "auto_apply",
+  "targets": [
+    ".",
+    "handlers",
+    "middleware",
+    "models",
+    "web/src",
+    "ws",
+    "db"
+  ],
+  "requiredSteps": [
+    "scan_strategy",
+    "threat_model",
+    "checklist",
+    "run_pr_gate"
+  ],
+  "steps": {
+    "start_review": {
+      "status": "completed",
+      "updatedAt": "2026-07-18T06:54:56.880Z",
+      "details": {
+        "mode": "folder_by_folder",
+        "remediationMode": "auto_apply",
+        "targets": [
+          ".",
+          "handlers",
+          "middleware",
+          "models",
+          "web/src",
+          "ws",
+          "db"
+        ]
+      }
+    },
+    "scan_strategy": {
+      "status": "completed",
+      "updatedAt": "2026-07-18T06:54:56.897Z",
+      "details": {
+        "mode": "folder_by_folder",
+        "targets": [
+          ".",
+          "handlers",
+          "middleware",
+          "models",
+          "web/src",
+          "ws",
+          "db"
+        ],
+        "baseRef": "origin/main",
+        "headRef": "HEAD"
+      }
+    }
+  }
+}

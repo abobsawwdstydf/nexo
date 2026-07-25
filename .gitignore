@@ -13,6 +13,8 @@ nexo.exe
 *.db
 *.db-shm
 *.db-wal
+*.db-journal
+*.db.backup
 database.db
 nexo.db
 pgdata/
@@ -22,14 +24,14 @@ uploads/
 
 # Go build cache
 /tmp/
+backend/tmp/
 
 # Node.js
 node_modules/
-web/dist/
+frontend/dist/
 
 # Logs
-server.log
-server2.log
+*.log
 
 # IDE
 .vscode/
@@ -38,4 +40,17 @@ server2.log
 # OS
 .DS_Store
 Thumbs.db
+
+# Tool configs (managed separately)
 .database-mcp/
+.codegraph/
+.omo/
+.gsap-skills/
+
+# Temporary files
+*~
+*.tmp
+*.bak
+
+# Installers
+*.exe
