@@ -76,16 +76,19 @@ jobs:
       - name: Build iOS App
         working-directory: frontend/ios/App
         run: |
-          xcodebuild -project App.xcodeproj -scheme App -sdk iphoneos -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+          xcodebuild -project App.xcodeproj -scheme App -sdk iphoneos -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO -derivedDataPath build
           
       - name: Create IPA
+        working-directory: frontend/ios/App
         run: |
-          mkdir -p build
-          cd frontend/ios/App/build/iphoneos
-          zip -r ../../../build/Nexo.ipa .
+          mkdir -p Payload
+          APP_PATH=$(find build -name "App.app" -type d | head -1)
+          cp -r "$APP_PATH" Payload/
+          zip -r Nexo.ipa Payload
+          rm -rf Payload
           
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: Nexo-iOS-IPA
-          path: build/Nexo.ipa
+          path: frontend/ios/App/Nexo.ipa
