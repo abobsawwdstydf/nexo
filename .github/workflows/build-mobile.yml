@@ -24,6 +24,15 @@ jobs:
         working-directory: frontend
         run: npm run build
         
+      - name: Strip heavy static assets from dist (app loads from server)
+        working-directory: frontend
+        run: |
+          rm -rf dist/animated-emojis
+          rm -rf dist/stickers
+          rm -rf dist/auth-gifs
+          echo "dist size after cleanup:"
+          du -sh dist/
+          
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -68,6 +77,15 @@ jobs:
         working-directory: frontend
         run: npm run build
         
+      - name: Strip heavy static assets from dist (app loads from server)
+        working-directory: frontend
+        run: |
+          rm -rf dist/animated-emojis
+          rm -rf dist/stickers
+          rm -rf dist/auth-gifs
+          echo "dist size after cleanup:"
+          du -sh dist/
+          
       - name: Install Capacitor iOS
         working-directory: frontend
         run: |
