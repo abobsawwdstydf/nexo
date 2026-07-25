@@ -112,7 +112,7 @@ export default function SearchPanel({ onClose, onSelectMessage }: SearchPanelPro
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
         transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-        className="relative w-full max-w-3xl h-[80vh] rounded-[1.5rem] bg-[#141418] border border-white/[0.07] shadow-[0_0_80px_rgba(123,97,255,0.06)] overflow-hidden flex flex-col"
+        className="relative w-full max-w-3xl h-[80vh] rounded-[1.5rem] bg-surface border border-white/[0.07] shadow-[0_0_80px_rgba(123,97,255,0.06)] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top accent line */}

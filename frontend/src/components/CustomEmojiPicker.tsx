@@ -160,7 +160,7 @@ export default function CustomEmojiPicker({ onSelect, onClose }: CustomEmojiPick
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-md bg-[#0a0a0f]/95 backdrop-blur-3xl rounded-3xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_80px_rgba(99,102,241,0.08)] overflow-hidden flex flex-col"
+        className="w-full max-w-md liquid-glass-ultra rounded-3xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_80px_rgba(99,102,241,0.08)] overflow-hidden flex flex-col"
         style={{ maxHeight: '80vh' }}
       >
         {/* Header */}

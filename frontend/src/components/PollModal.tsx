@@ -203,7 +203,7 @@ export default function PollModal({ onClose, onSend }: PollModalProps) {
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-md bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+        className="w-full max-w-md bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">

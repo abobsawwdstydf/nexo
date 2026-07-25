@@ -82,7 +82,7 @@ export function AuthCard({ children, className = '', scrollable = false }: AuthC
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`bg-[#141418] rounded-[2rem] p-5 sm:p-7 border border-white/[0.07] shadow-lg relative overflow-hidden max-w-full ${className}`}
+      className={`bg-surface rounded-[2rem] p-5 sm:p-7 border border-white/[0.07] shadow-lg relative overflow-hidden max-w-full ${className}`}
     >
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/10" />
       <div className={scrollable ? 'max-h-[calc(100dvh-6rem)] sm:max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-hide -mr-2 pr-2' : ''}>

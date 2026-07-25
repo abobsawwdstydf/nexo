@@ -1,8 +1,8 @@
-/**
- * SidePanelWrapper — единый стиль для всех окон боковой панели.
- * На ПК: фиксированная панель слева (рядом с сайдбаром).
- * На мобильном: полный экран.
- * embedded=true — встроенный режим внутри SideMenu (без оверлея и fixed).
+﻿/**
+ * SidePanelWrapper вЂ” РµРґРёРЅС‹Р№ СЃС‚РёР»СЊ РґР»СЏ РІСЃРµС… РѕРєРѕРЅ Р±РѕРєРѕРІРѕР№ РїР°РЅРµР»Рё.
+ * РќР° РџРљ: С„РёРєСЃРёСЂРѕРІР°РЅРЅР°СЏ РїР°РЅРµР»СЊ СЃР»РµРІР° (СЂСЏРґРѕРј СЃ СЃР°Р№РґР±Р°СЂРѕРј).
+ * РќР° РјРѕР±РёР»СЊРЅРѕРј: РїРѕР»РЅС‹Р№ СЌРєСЂР°РЅ.
+ * embedded=true вЂ” РІСЃС‚СЂРѕРµРЅРЅС‹Р№ СЂРµР¶РёРј РІРЅСѓС‚СЂРё SideMenu (Р±РµР· РѕРІРµСЂР»РµСЏ Рё fixed).
  */
 import { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,7 +15,7 @@ interface SidePanelWrapperProps {
   children: ReactNode;
   showBack?: boolean;
   zIndex?: number;
-  /** Встроенный режим — без оверлея, рендерится внутри SideMenu */
+  /** Р’СЃС‚СЂРѕРµРЅРЅС‹Р№ СЂРµР¶РёРј вЂ” Р±РµР· РѕРІРµСЂР»РµСЏ, СЂРµРЅРґРµСЂРёС‚СЃСЏ РІРЅСѓС‚СЂРё SideMenu */
   embedded?: boolean;
 }
 
@@ -28,7 +28,7 @@ export default function SidePanelWrapper({
   zIndex = 9990,
   embedded = false,
 }: SidePanelWrapperProps) {
-  // Встроенный режим — просто шапка + контент без оверлея
+  // Р’СЃС‚СЂРѕРµРЅРЅС‹Р№ СЂРµР¶РёРј вЂ” РїСЂРѕСЃС‚Рѕ С€Р°РїРєР° + РєРѕРЅС‚РµРЅС‚ Р±РµР· РѕРІРµСЂР»РµСЏ
   if (embedded) {
     return (
       <div className="flex flex-col h-full w-full overflow-hidden">
@@ -66,7 +66,7 @@ export default function SidePanelWrapper({
         onClick={onClose}
       />
 
-      {/* Панель */}
+      {/* РџР°РЅРµР»СЊ */}
       <motion.div
         key="side-panel"
         initial={{ x: -340, opacity: 0 }}
@@ -77,7 +77,7 @@ export default function SidePanelWrapper({
         className={[
           'fixed inset-0',
           'sm:inset-auto sm:left-3 sm:top-3 sm:bottom-3 sm:w-[340px] sm:max-w-[calc(100vw-24px)]',
-          'bg-[#0a0a0f]/95 backdrop-blur-3xl',
+          'liquid-glass-ultra',
           'border-0 sm:border sm:border-white/[0.12]',
           'rounded-none sm:rounded-3xl',
           'shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_80px_rgba(99,102,241,0.08)]',

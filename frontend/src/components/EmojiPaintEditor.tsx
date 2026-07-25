@@ -383,7 +383,7 @@ export default function EmojiPaintEditor({ onSave, onClose, initialImage, size =
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-4xl bg-[#0f0f14] rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-4xl bg-surface rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
         style={{ maxHeight: '95vh' }}
       >
         {/* Header */}
@@ -445,7 +445,7 @@ export default function EmojiPaintEditor({ onSave, onClose, initialImage, size =
           {/* Canvas area */}
           <div
             ref={containerRef}
-            className="flex-1 flex items-center justify-center bg-[#0a0a0f] overflow-auto"
+            className="flex-1 flex items-center justify-center bg-bg overflow-auto"
             style={{
               backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)',
               backgroundSize: '20px 20px',

@@ -374,7 +374,7 @@ export default function NewPostModal({ onClose, onPostCreated }: NewPostModalPro
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={e => e.stopPropagation()}
-        className="bg-[#1F1F23] rounded-2xl border border-white/5 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-surface-secondary rounded-2xl border border-white/5 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
       >
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           <h2 className="text-lg font-semibold text-white">Новый пост</h2>

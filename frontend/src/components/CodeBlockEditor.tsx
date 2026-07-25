@@ -72,12 +72,12 @@ export default function CodeBlockEditor({ onClose, onSend }: CodeBlockEditorProp
         value={code}
         onChange={(e) => setCode(e.target.value)}
         placeholder="Вставьте ваш код здесь..."
-        className="flex-1 bg-[#1F1F23] text-white font-mono text-sm p-4 border-b border-white/10 resize-none focus:outline-none"
+        className="flex-1 bg-surface-secondary text-white font-mono text-sm p-4 border-b border-white/10 resize-none focus:outline-none"
       />
 
       {/* Preview */}
       {code && (
-        <div className="max-h-32 overflow-y-auto bg-[#1F1F23] border-b border-white/10 p-4">
+        <div className="max-h-32 overflow-y-auto bg-surface-secondary border-b border-white/10 p-4">
           <Highlight theme={themes.dracula} code={code} language={language}>
             {({ className, style, tokens, getLineProps, getTokenProps }: any) => (
               <pre className={className} style={style}>

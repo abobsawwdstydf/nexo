@@ -179,7 +179,7 @@ export default function AIAssistantModal({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="bg-[#1F1F23] border border-white/10 shadow-lg overflow-hidden rounded-2xl w-full max-w-2xl max-h-[80vh]"
+        className="bg-surface-secondary border border-white/10 shadow-lg overflow-hidden rounded-2xl w-full max-w-2xl max-h-[80vh]"
         onClick={e => e.stopPropagation()}
       >
         {header}

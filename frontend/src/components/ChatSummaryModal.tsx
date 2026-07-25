@@ -220,7 +220,7 @@ export default function ChatSummaryModal({ isOpen, onClose, chatId, chatName }: 
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+        className="w-full max-w-lg bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

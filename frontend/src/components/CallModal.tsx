@@ -2159,7 +2159,7 @@ export default function CallModal({ isOpen, onClose, targetUser, callType: initi
                             initial={{ opacity: 0, y: 8, scale: 0.9 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 8, scale: 0.9 }}
-                            className="absolute bottom-full mb-2 right-0 bg-[#141418] border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl min-w-[140px]"
+                            className="absolute bottom-full mb-2 right-0 bg-surface border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl min-w-[140px]"
                           >
                             <div className="px-3 py-2 border-b border-white/[0.06]">
                               <span className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">Качество</span>

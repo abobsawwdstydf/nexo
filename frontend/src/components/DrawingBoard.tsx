@@ -190,7 +190,7 @@ export default function DrawingBoard({ callId, onClose, onSave }: DrawingBoardPr
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className="flex-1 cursor-crosshair bg-[#1F1F23]"
+        className="flex-1 cursor-crosshair bg-surface-secondary"
       />
 
       {/* Toolbar */}

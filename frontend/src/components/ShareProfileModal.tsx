@@ -118,7 +118,7 @@ export default function ShareProfileModal({ user, onClose }: ShareProfileModalPr
             exit={{ y: 30, opacity: 0, scale: 0.97 }}
             transition={{ type: 'spring', damping: 26, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            className="relative w-full max-w-md bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
             {currentStep}
           </motion.div>

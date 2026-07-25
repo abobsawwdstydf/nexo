@@ -179,7 +179,7 @@ export default function HiddenChatModal({ isOpen, onClose, mode, chatId, onUnloc
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="w-full max-w-sm bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+          className="w-full max-w-sm bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {header}

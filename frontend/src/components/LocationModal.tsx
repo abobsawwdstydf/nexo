@@ -277,7 +277,7 @@ export default function LocationModal({ onClose, onSend }: LocationModalProps) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-full max-w-sm bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+        className="w-full max-w-sm bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">

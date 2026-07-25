@@ -78,7 +78,7 @@ export default function AIImageGenerator({ isOpen, onClose, onSend }: AIImageGen
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-[#0a0a0f] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+        className="w-full max-w-lg bg-bg rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

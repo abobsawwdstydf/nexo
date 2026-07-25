@@ -176,7 +176,7 @@ export default function ContactCardModal({ chatId, onClose, onSend }: ContactCar
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="fixed inset-0 sm:inset-auto sm:right-3 sm:top-3 sm:bottom-3 sm:w-[500px] sm:h-[600px] bg-[#1F1F23] backdrop-blur-xl rounded-2xl border border-white/10 flex flex-col z-50"
+      className="fixed inset-0 sm:inset-auto sm:right-3 sm:top-3 sm:bottom-3 sm:w-[500px] sm:h-[600px] bg-surface-secondary backdrop-blur-xl rounded-2xl border border-white/10 flex flex-col z-50"
     >
       {header}
       {content}

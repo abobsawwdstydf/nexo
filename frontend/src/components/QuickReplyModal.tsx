@@ -241,7 +241,7 @@ export default function QuickReplyModal({ onClose, onSelect }: QuickReplyModalPr
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        className="relative w-full max-w-2xl max-h-[80vh] rounded-2xl bg-[#1F1F23] border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl max-h-[80vh] rounded-2xl bg-surface-secondary border border-white/10 shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {header}

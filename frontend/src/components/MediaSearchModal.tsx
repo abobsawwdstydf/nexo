@@ -307,7 +307,7 @@ export default function MediaSearchModal({ chatId, onClose }: MediaSearchModalPr
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-lg bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            className="w-full max-w-lg bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">

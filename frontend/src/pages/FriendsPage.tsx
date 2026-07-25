@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, UserPlus, Check, X, Search, Loader2, Clock } from 'lucide-react';
 import { ClearInput } from '../components/ClearInput';
@@ -21,14 +21,14 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  /** Загрузка друзей */
+  /** Р—Р°РіСЂСѓР·РєР° РґСЂСѓР·РµР№ */
   const loadFriends = () => {
     api.getFriends()
       .then((data: any) => setFriends(data.map((f: any) => ({ ...f.friend, friendshipId: f.id }))))
       .catch(console.error);
   };
 
-  /** Загрузка запросов в друзья */
+  /** Р—Р°РіСЂСѓР·РєР° Р·Р°РїСЂРѕСЃРѕРІ РІ РґСЂСѓР·СЊСЏ */
   const loadRequests = () => {
     Promise.all([
       api.getFriendRequests(),
@@ -46,7 +46,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
     loadRequests();
   }, []);
 
-  /** Поиск пользователей */
+  /** РџРѕРёСЃРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ */
   useEffect(() => {
     if (!searchQuery.trim() || searchQuery.trim().length < 2) {
       setSearchResults([]);
@@ -56,7 +56,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
       setIsLoading(true);
       try {
         const results = await api.searchUsers(searchQuery);
-        // Исключаем уже друзей и себя
+        // РСЃРєР»СЋС‡Р°РµРј СѓР¶Рµ РґСЂСѓР·РµР№ Рё СЃРµР±СЏ
         const friendIds = new Set(friends.map(f => f.id));
         setSearchResults(results.filter(u => u.id !== user?.id && !friendIds.has(u.id)));
       } catch (e) {
@@ -68,7 +68,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
     return () => clearTimeout(timer);
   }, [searchQuery, friends, user]);
 
-  /** Отправить запрос в друзья */
+  /** РћС‚РїСЂР°РІРёС‚СЊ Р·Р°РїСЂРѕСЃ РІ РґСЂСѓР·СЊСЏ */
   const sendRequest = async (userId: string) => {
     try {
       await api.sendFriendRequest(userId);
@@ -79,7 +79,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  /** Принять запрос */
+  /** РџСЂРёРЅСЏС‚СЊ Р·Р°РїСЂРѕСЃ */
   const acceptRequest = async (requestId: string) => {
     try {
       await api.acceptFriendRequest(requestId);
@@ -90,7 +90,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  /** Отклонить запрос */
+  /** РћС‚РєР»РѕРЅРёС‚СЊ Р·Р°РїСЂРѕСЃ */
   const declineRequest = async (requestId: string) => {
     try {
       await api.declineFriendRequest(requestId);
@@ -100,7 +100,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  /** Удалить друга */
+  /** РЈРґР°Р»РёС‚СЊ РґСЂСѓРіР° */
   const removeFriend = async (friendId: string) => {
     try {
       await api.removeFriend(friendId);
@@ -110,7 +110,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  /** Отменить исходящий запрос */
+  /** РћС‚РјРµРЅРёС‚СЊ РёСЃС…РѕРґСЏС‰РёР№ Р·Р°РїСЂРѕСЃ */
   const cancelOutgoing = async (requestId: string) => {
     try {
       await api.declineFriendRequest(requestId);
@@ -121,7 +121,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0f]">
+    <div className="h-full flex flex-col bg-bg">
       {/* Header */}
       <div className="glass-strong px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <motion.button
@@ -135,7 +135,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-nexo-500 to-purple-600 flex items-center justify-center">
             <Users size={16} className="text-white" />
           </div>
-          <h1 className="text-base font-bold text-white">Друзья</h1>
+          <h1 className="text-base font-bold text-white">Р”СЂСѓР·СЊСЏ</h1>
         </div>
       </div>
 
@@ -151,7 +151,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Друзья
+            Р”СЂСѓР·СЊСЏ
             {friends.length > 0 && (
               <span className={`min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center ${
                 activeTab === 'list' ? 'bg-white/20 text-white' : 'bg-zinc-700 text-zinc-400'
@@ -169,7 +169,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Запросы
+            Р—Р°РїСЂРѕСЃС‹
             {(incomingRequests.length + outgoingRequests.length) > 0 && (
               <span className={`min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center ${
                 activeTab === 'requests' ? 'bg-white/20 text-white' : 'bg-nexo-500 text-white'
@@ -187,7 +187,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Поиск
+            РџРѕРёСЃРє
           </motion.button>
         </div>
       </div>
@@ -195,7 +195,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <AnimatePresence mode="wait">
-          {/* Список друзей */}
+          {/* РЎРїРёСЃРѕРє РґСЂСѓР·РµР№ */}
           {activeTab === 'list' && (
             <motion.div
               key="list"
@@ -209,14 +209,14 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                   <div className="w-16 h-16 rounded-full glass-subtle flex items-center justify-center">
                     <Users size={28} className="opacity-40" />
                   </div>
-                  <p className="text-sm">Список друзей пуст</p>
+                  <p className="text-sm">РЎРїРёСЃРѕРє РґСЂСѓР·РµР№ РїСѓСЃС‚</p>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setActiveTab('search')}
                     className="glass-btn px-4 py-2 rounded-xl text-xs text-nexo-400"
                   >
                     <UserPlus size={14} className="mr-1.5" />
-                    Найти друзей
+                    РќР°Р№С‚Рё РґСЂСѓР·РµР№
                   </motion.button>
                 </div>
               ) : (
@@ -250,7 +250,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                         whileTap={{ scale: 0.9 }}
                         onClick={() => removeFriend(friend.id)}
                         className="glass-btn w-8 h-8 rounded-xl text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                        title="Удалить друга"
+                        title="РЈРґР°Р»РёС‚СЊ РґСЂСѓРіР°"
                       >
                         <X size={14} />
                       </motion.button>
@@ -261,7 +261,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
             </motion.div>
           )}
 
-          {/* Запросы в друзья */}
+          {/* Р—Р°РїСЂРѕСЃС‹ РІ РґСЂСѓР·СЊСЏ */}
           {activeTab === 'requests' && (
             <motion.div
               key="requests"
@@ -271,12 +271,12 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
               transition={{ duration: 0.2 }}
               className="space-y-4"
             >
-              {/* Входящие запросы */}
+              {/* Р’С…РѕРґСЏС‰РёРµ Р·Р°РїСЂРѕСЃС‹ */}
               {incomingRequests.length > 0 && (
                 <div>
                   <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <UserPlus size={12} />
-                    Входящие ({incomingRequests.length})
+                    Р’С…РѕРґСЏС‰РёРµ ({incomingRequests.length})
                   </h3>
                   <div className="space-y-1">
                     {incomingRequests.map(req => (
@@ -298,7 +298,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                             whileTap={{ scale: 0.9 }}
                             onClick={() => acceptRequest(req.id)}
                             className="glass-btn w-8 h-8 rounded-xl text-green-400 hover:text-green-300"
-                            title="Принять"
+                            title="РџСЂРёРЅСЏС‚СЊ"
                           >
                             <Check size={14} />
                           </motion.button>
@@ -306,7 +306,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                             whileTap={{ scale: 0.9 }}
                             onClick={() => declineRequest(req.id)}
                             className="glass-btn w-8 h-8 rounded-xl text-red-400 hover:text-red-300"
-                            title="Отклонить"
+                            title="РћС‚РєР»РѕРЅРёС‚СЊ"
                           >
                             <X size={14} />
                           </motion.button>
@@ -317,12 +317,12 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                 </div>
               )}
 
-              {/* Исходящие запросы */}
+              {/* РСЃС…РѕРґСЏС‰РёРµ Р·Р°РїСЂРѕСЃС‹ */}
               {outgoingRequests.length > 0 && (
                 <div>
                   <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Clock size={12} />
-                    Исходящие ({outgoingRequests.length})
+                    РСЃС…РѕРґСЏС‰РёРµ ({outgoingRequests.length})
                   </h3>
                   <div className="space-y-1">
                     {outgoingRequests.map(req => (
@@ -331,14 +331,14 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                           <Clock size={16} className="text-zinc-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">Запрос отправлен</p>
-                          <p className="text-xs text-zinc-500">Ожидание ответа...</p>
+                          <p className="text-sm font-medium text-white truncate">Р—Р°РїСЂРѕСЃ РѕС‚РїСЂР°РІР»РµРЅ</p>
+                          <p className="text-xs text-zinc-500">РћР¶РёРґР°РЅРёРµ РѕС‚РІРµС‚Р°...</p>
                         </div>
                         <motion.button
                           whileTap={{ scale: 0.9 }}
                           onClick={() => cancelOutgoing(req.id)}
                           className="glass-btn w-8 h-8 rounded-xl text-zinc-500 hover:text-red-400"
-                          title="Отменить"
+                          title="РћС‚РјРµРЅРёС‚СЊ"
                         >
                           <X size={14} />
                         </motion.button>
@@ -348,19 +348,19 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                 </div>
               )}
 
-              {/* Пусто */}
+              {/* РџСѓСЃС‚Рѕ */}
               {incomingRequests.length === 0 && outgoingRequests.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-500">
                   <div className="w-16 h-16 rounded-full glass-subtle flex items-center justify-center">
                     <Clock size={28} className="opacity-40" />
                   </div>
-                  <p className="text-sm">Нет запросов в друзья</p>
+                  <p className="text-sm">РќРµС‚ Р·Р°РїСЂРѕСЃРѕРІ РІ РґСЂСѓР·СЊСЏ</p>
                 </div>
               )}
             </motion.div>
           )}
 
-          {/* Поиск */}
+          {/* РџРѕРёСЃРє */}
           {activeTab === 'search' && (
             <motion.div
               key="search"
@@ -369,16 +369,16 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Поле поиска */}
+              {/* РџРѕР»Рµ РїРѕРёСЃРєР° */}
               <ClearInput
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Поиск по имени или username..."
+                placeholder="РџРѕРёСЃРє РїРѕ РёРјРµРЅРё РёР»Рё username..."
                 className="w-full mb-4 rounded-2xl text-sm text-white placeholder-zinc-500 glass-input py-3"
                 leftIcon={<Search size={16} className="text-zinc-500" />}
               />
 
-              {/* Результаты */}
+              {/* Р РµР·СѓР»СЊС‚Р°С‚С‹ */}
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 size={24} className="text-nexo-400 animate-spin" />
@@ -405,7 +405,7 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                         className="glass-btn px-3 py-1.5 rounded-xl text-xs text-nexo-400"
                       >
                         <UserPlus size={12} className="mr-1" />
-                        Добавить
+                        Р”РѕР±Р°РІРёС‚СЊ
                       </motion.button>
                     </div>
                   ))}
@@ -415,14 +415,14 @@ export default function FriendsPage({ onClose }: { onClose?: () => void }) {
                   <div className="w-16 h-16 rounded-full glass-subtle flex items-center justify-center">
                     <Search size={28} className="opacity-40" />
                   </div>
-                  <p className="text-sm">Никого не найдено</p>
+                  <p className="text-sm">РќРёРєРѕРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 gap-3 text-zinc-500">
                   <div className="w-16 h-16 rounded-full glass-subtle flex items-center justify-center">
                     <Search size={28} className="opacity-40" />
                   </div>
-                  <p className="text-sm">Введите имя для поиска</p>
+                  <p className="text-sm">Р’РІРµРґРёС‚Рµ РёРјСЏ РґР»СЏ РїРѕРёСЃРєР°</p>
                 </div>
               )}
             </motion.div>

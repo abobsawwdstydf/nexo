@@ -56,7 +56,7 @@ export default function UnifiedModal({
           exit={{ scale: 0.95, opacity: 0, y: 10 }}
           transition={{ type: 'spring', damping: 30, stiffness: 350 }}
           className={`
-            bg-[#141418] rounded-[1.5rem]
+            bg-surface rounded-[1.5rem]
             w-full ${maxWidthClasses[maxWidth]}
             h-auto sm:max-h-[88vh]
             overflow-hidden shadow-[0_0_80px_rgba(123,97,255,0.08)]

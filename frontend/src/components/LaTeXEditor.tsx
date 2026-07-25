@@ -90,7 +90,7 @@ export default function LaTeXEditor({ onClose, onSend }: LaTeXEditorProps) {
         value={formula}
         onChange={(e) => setFormula(e.target.value)}
         placeholder="Введите LaTeX формулу..."
-        className="flex-1 bg-[#1F1F23] text-white font-mono text-sm p-4 border-b border-white/10 resize-none focus:outline-none max-h-32"
+        className="flex-1 bg-surface-secondary text-white font-mono text-sm p-4 border-b border-white/10 resize-none focus:outline-none max-h-32"
       />
 
       {/* Buttons grid */}

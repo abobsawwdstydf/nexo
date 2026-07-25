@@ -706,7 +706,7 @@ export default function MessageInput({ chatId }: MessageInputProps) {
             exit={{ height: 0, opacity: 0, y: 10, scale: 0.95 }}
             className="mb-2 max-w-3xl mx-auto overflow-hidden px-1.5"
           >
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl relative shadow-xl" style={{ background: 'rgba(18, 18, 24, 0.65)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl relative shadow-xl liquid-glass">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-[#7B61FF] rounded-r-md" />
               <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
                 {editingMessage ? (
@@ -762,7 +762,7 @@ export default function MessageInput({ chatId }: MessageInputProps) {
         <>
           {/* Inline sticker/emoji panel — instant, no animation */}
           {showStickerPanel && (
-            <div className="w-full mb-2 h-[400px] flex flex-col overflow-hidden rounded-2xl" style={{ background: 'rgba(18,18,24,0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="w-full mb-2 h-[400px] flex flex-col overflow-hidden rounded-2xl liquid-glass">
               <MediaPicker
                 inline
                 onClose={() => setShowStickerPanel(false)}

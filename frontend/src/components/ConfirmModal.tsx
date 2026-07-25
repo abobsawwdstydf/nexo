@@ -99,7 +99,7 @@ export default function ConfirmModal({
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className="w-full max-w-[400px] rounded-2xl bg-[#1F1F23] border border-white/10 shadow-2xl overflow-hidden pointer-events-auto"
+            className="w-full max-w-[400px] rounded-2xl bg-surface-secondary border border-white/10 shadow-2xl overflow-hidden pointer-events-auto"
           >
             <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
               <div className="flex items-center gap-2">

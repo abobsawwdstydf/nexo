@@ -337,7 +337,7 @@ export default function MusicPlaylistsModal({ onClose }: MusicPlaylistsModalProp
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[600px] sm:max-w-[calc(100%-32px)] sm:max-h-[80vh] bg-[#1F1F23] rounded-none sm:rounded-2xl border-0 sm:border sm:border-white/10 shadow-2xl z-50 flex flex-col overflow-hidden"
+            className="fixed inset-0 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[600px] sm:max-w-[calc(100%-32px)] sm:max-h-[80vh] bg-surface-secondary rounded-none sm:rounded-2xl border-0 sm:border sm:border-white/10 shadow-2xl z-50 flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
@@ -463,7 +463,7 @@ export default function MusicPlaylistsModal({ onClose }: MusicPlaylistsModalProp
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] max-w-[calc(100%-32px)] bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl z-[60] p-5"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] max-w-[calc(100%-32px)] bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl z-[60] p-5"
               onClick={e => e.stopPropagation()}
             >
               <h3 className="text-lg font-bold text-white mb-4">
@@ -560,7 +560,7 @@ export default function MusicPlaylistsModal({ onClose }: MusicPlaylistsModalProp
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-w-[calc(100%-32px)] max-h-[80vh] bg-[#1F1F23] rounded-2xl border border-white/10 shadow-2xl z-[60] flex flex-col overflow-hidden"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] max-w-[calc(100%-32px)] max-h-[80vh] bg-surface-secondary rounded-2xl border border-white/10 shadow-2xl z-[60] flex flex-col overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}

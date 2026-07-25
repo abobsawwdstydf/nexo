@@ -185,7 +185,7 @@ export default function TemplatesModal({ onClose, onSelect }: TemplatesModalProp
       className="fixed inset-0 flex items-center justify-center z-50"
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-[#1F1F23] rounded-2xl border border-white/10 flex flex-col w-[500px] h-[600px]">
+      <div className="relative bg-surface-secondary rounded-2xl border border-white/10 flex flex-col w-[500px] h-[600px]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center gap-2">

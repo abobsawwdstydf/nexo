@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+﻿import { motion } from 'framer-motion';
 import { ArrowLeft, ExternalLink, Shield, CreditCard, CheckCircle, Coins, HelpCircle, AlertTriangle, Mail, Send, Zap, Lock, Gift, Sparkles } from 'lucide-react';
 
 interface YooKassaInfoPageProps {
@@ -18,8 +18,8 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
               <Coins size={32} className="text-white" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-violet-200 to-purple-300 bg-clip-text text-transparent">Пополнение бобров</h1>
-              <p className="text-sm text-zinc-400 leading-relaxed">Безопасные платежи через YooKassa</p>
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-violet-200 to-purple-300 bg-clip-text text-transparent">РџРѕРїРѕР»РЅРµРЅРёРµ Р±РѕР±СЂРѕРІ</h1>
+              <p className="text-sm text-zinc-400 leading-relaxed">Р‘РµР·РѕРїР°СЃРЅС‹Рµ РїР»Р°С‚РµР¶Рё С‡РµСЂРµР· YooKassa</p>
             </div>
           </div>
         </div>
@@ -29,7 +29,7 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
           <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 rounded-2xl p-4 flex items-start gap-3">
             <Lock size={20} className="text-emerald-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-emerald-300 mb-1">Защита данных</p>
+              <p className="text-sm font-semibold text-emerald-300 mb-1">Р—Р°С‰РёС‚Р° РґР°РЅРЅС‹С…</p>
               <p className="text-xs text-zinc-400 leading-relaxed">
                 HTTPS + PCI DSS
               </p>
@@ -38,18 +38,18 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
           <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-2xl p-4 flex items-start gap-3">
             <Zap size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-blue-300 mb-1">Мгновенно</p>
+              <p className="text-sm font-semibold text-blue-300 mb-1">РњРіРЅРѕРІРµРЅРЅРѕ</p>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Бобры за секунды
+                Р‘РѕР±СЂС‹ Р·Р° СЃРµРєСѓРЅРґС‹
               </p>
             </div>
           </div>
           <div className="bg-gradient-to-br from-violet-500/10 to-violet-600/5 border border-violet-500/20 rounded-2xl p-4 flex items-start gap-3">
             <Shield size={20} className="text-violet-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-violet-300 mb-1">Надёжно</p>
+              <p className="text-sm font-semibold text-violet-300 mb-1">РќР°РґС‘Р¶РЅРѕ</p>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                YooKassa лицензирована
+                YooKassa Р»РёС†РµРЅР·РёСЂРѕРІР°РЅР°
               </p>
             </div>
           </div>
@@ -61,17 +61,17 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
               <Coins size={20} className="text-amber-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Что такое бобры?</h2>
+            <h2 className="text-2xl font-bold text-white">Р§С‚Рѕ С‚Р°РєРѕРµ Р±РѕР±СЂС‹?</h2>
           </div>
           <p className="text-zinc-300 text-base leading-relaxed mb-6">
-            Бобры — это внутренняя валюта Нексо Мессенджера. Используйте их для премиум-функций и подарков.
+            Р‘РѕР±СЂС‹ вЂ” СЌС‚Рѕ РІРЅСѓС‚СЂРµРЅРЅСЏСЏ РІР°Р»СЋС‚Р° РќРµРєСЃРѕ РњРµСЃСЃРµРЅРґР¶РµСЂР°. РСЃРїРѕР»СЊР·СѓР№С‚Рµ РёС… РґР»СЏ РїСЂРµРјРёСѓРј-С„СѓРЅРєС†РёР№ Рё РїРѕРґР°СЂРєРѕРІ.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { icon: '👑', text: 'Нексо НУче', color: 'from-amber-500/20 to-orange-500/10' },
-              { icon: '📺', text: 'Платные каналы', color: 'from-blue-500/20 to-cyan-500/10' },
-              { icon: '🎁', text: 'Подарки друзьям', color: 'from-pink-500/20 to-rose-500/10' },
-              { icon: '✨', text: 'Эксклюзив', color: 'from-purple-500/20 to-violet-500/10' },
+              { icon: 'рџ‘‘', text: 'РќРµРєСЃРѕ РќРЈС‡Рµ', color: 'from-amber-500/20 to-orange-500/10' },
+              { icon: 'рџ“є', text: 'РџР»Р°С‚РЅС‹Рµ РєР°РЅР°Р»С‹', color: 'from-blue-500/20 to-cyan-500/10' },
+              { icon: 'рџЋЃ', text: 'РџРѕРґР°СЂРєРё РґСЂСѓР·СЊСЏРј', color: 'from-pink-500/20 to-rose-500/10' },
+              { icon: 'вњЁ', text: 'Р­РєСЃРєР»СЋР·РёРІ', color: 'from-purple-500/20 to-violet-500/10' },
             ].map((item, i) => (
               <div key={i} className={`bg-gradient-to-br ${item.color} border border-white/10 rounded-2xl p-4 flex items-center gap-4 hover:border-white/20 transition-colors`}>
                 <span className="text-3xl">{item.icon}</span>
@@ -82,7 +82,7 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
           <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/10 border border-amber-500/30">
             <p className="text-sm text-amber-200 font-semibold flex items-center gap-2">
               <Zap size={16} />
-              1 бобёр = 1 рубль • Минимум 10 бобров (10 ₽)
+              1 Р±РѕР±С‘СЂ = 1 СЂСѓР±Р»СЊ вЂў РњРёРЅРёРјСѓРј 10 Р±РѕР±СЂРѕРІ (10 в‚Ѕ)
             </p>
           </div>
         </section>
@@ -93,33 +93,33 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
               <CheckCircle size={20} className="text-emerald-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Как пополнить?</h2>
+            <h2 className="text-2xl font-bold text-white">РљР°Рє РїРѕРїРѕР»РЅРёС‚СЊ?</h2>
           </div>
           <div className="space-y-4">
             {[
               {
                 step: '1',
-                title: 'Откройте кошелёк',
-                desc: 'Нажмите на иконку кошелька в меню',
-                icon: '💰',
+                title: 'РћС‚РєСЂРѕР№С‚Рµ РєРѕС€РµР»С‘Рє',
+                desc: 'РќР°Р¶РјРёС‚Рµ РЅР° РёРєРѕРЅРєСѓ РєРѕС€РµР»СЊРєР° РІ РјРµРЅСЋ',
+                icon: 'рџ’°',
               },
               {
                 step: '2',
-                title: 'Выберите сумму',
-                desc: 'Минимум 10 бобров (10 ₽)',
-                icon: '💵',
+                title: 'Р’С‹Р±РµСЂРёС‚Рµ СЃСѓРјРјСѓ',
+                desc: 'РњРёРЅРёРјСѓРј 10 Р±РѕР±СЂРѕРІ (10 в‚Ѕ)',
+                icon: 'рџ’µ',
               },
               {
                 step: '3',
-                title: 'Оплатите',
-                desc: 'Защищённая страница YooKassa',
-                icon: '🔒',
+                title: 'РћРїР»Р°С‚РёС‚Рµ',
+                desc: 'Р—Р°С‰РёС‰С‘РЅРЅР°СЏ СЃС‚СЂР°РЅРёС†Р° YooKassa',
+                icon: 'рџ”’',
               },
               {
-                step: '✓',
-                title: 'Готово!',
-                desc: 'Бобры зачислены за секунды',
-                icon: '✨',
+                step: 'вњ“',
+                title: 'Р“РѕС‚РѕРІРѕ!',
+                desc: 'Р‘РѕР±СЂС‹ Р·Р°С‡РёСЃР»РµРЅС‹ Р·Р° СЃРµРєСѓРЅРґС‹',
+                icon: 'вњЁ',
               },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-white/5 to-white/[0.02] border border-white/10 hover:border-white/20 transition-colors">
@@ -141,14 +141,14 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
             <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
               <CreditCard size={20} className="text-blue-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Способы оплаты</h2>
+            <h2 className="text-2xl font-bold text-white">РЎРїРѕСЃРѕР±С‹ РѕРїР»Р°С‚С‹</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { icon: '💳', text: 'Банковские карты', sub: 'Visa, Mastercard, МИР' },
-              { icon: '💰', text: 'Кошелёк YooMoney', sub: 'Быстро и удобно' },
-              { icon: '📱', text: 'Мобильный баланс', sub: 'Со счёта оператора' },
-              { icon: '🏦', text: 'Интернет-банкинг', sub: 'Через ваш банк' },
+              { icon: 'рџ’і', text: 'Р‘Р°РЅРєРѕРІСЃРєРёРµ РєР°СЂС‚С‹', sub: 'Visa, Mastercard, РњРР ' },
+              { icon: 'рџ’°', text: 'РљРѕС€РµР»С‘Рє YooMoney', sub: 'Р‘С‹СЃС‚СЂРѕ Рё СѓРґРѕР±РЅРѕ' },
+              { icon: 'рџ“±', text: 'РњРѕР±РёР»СЊРЅС‹Р№ Р±Р°Р»Р°РЅСЃ', sub: 'РЎРѕ СЃС‡С‘С‚Р° РѕРїРµСЂР°С‚РѕСЂР°' },
+              { icon: 'рџЏ¦', text: 'РРЅС‚РµСЂРЅРµС‚-Р±Р°РЅРєРёРЅРі', sub: 'Р§РµСЂРµР· РІР°С€ Р±Р°РЅРє' },
             ].map((method, i) => (
               <div key={i} className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 hover:border-blue-500/40 transition-colors">
                 <div className="flex items-center gap-3 mb-2">
@@ -169,9 +169,9 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
             <div className="flex items-start gap-3">
               <AlertTriangle size={20} className="text-orange-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-sm font-semibold text-orange-300 mb-2">Возврат средств</h3>
+                <h3 className="text-sm font-semibold text-orange-300 mb-2">Р’РѕР·РІСЂР°С‚ СЃСЂРµРґСЃС‚РІ</h3>
                 <p className="text-sm text-zinc-300 leading-relaxed">
-                  Бобры — виртуальная валюта и не подлежат возврату. Если произошла ошибка при зачислении, свяжитесь с поддержкой.
+                  Р‘РѕР±СЂС‹ вЂ” РІРёСЂС‚СѓР°Р»СЊРЅР°СЏ РІР°Р»СЋС‚Р° Рё РЅРµ РїРѕРґР»РµР¶Р°С‚ РІРѕР·РІСЂР°С‚Сѓ. Р•СЃР»Рё РїСЂРѕРёР·РѕС€Р»Р° РѕС€РёР±РєР° РїСЂРё Р·Р°С‡РёСЃР»РµРЅРёРё, СЃРІСЏР¶РёС‚РµСЃСЊ СЃ РїРѕРґРґРµСЂР¶РєРѕР№.
                 </p>
               </div>
             </div>
@@ -184,11 +184,11 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
             <div className="flex items-start gap-3">
               <Shield size={20} className="text-emerald-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-sm font-semibold text-emerald-300 mb-2">Безопасность платежей</h3>
+                <h3 className="text-sm font-semibold text-emerald-300 mb-2">Р‘РµР·РѕРїР°СЃРЅРѕСЃС‚СЊ РїР»Р°С‚РµР¶РµР№</h3>
                 <ul className="text-sm text-zinc-300 space-y-1">
-                  <li>✓ Защищённое соединение HTTPS</li>
-                  <li>✓ YooKassa лицензирована и соответствует PCI DSS</li>
-                  <li>✓ Мы не имеем доступа к данным карт</li>
+                  <li>вњ“ Р—Р°С‰РёС‰С‘РЅРЅРѕРµ СЃРѕРµРґРёРЅРµРЅРёРµ HTTPS</li>
+                  <li>вњ“ YooKassa Р»РёС†РµРЅР·РёСЂРѕРІР°РЅР° Рё СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ PCI DSS</li>
+                  <li>вњ“ РњС‹ РЅРµ РёРјРµРµРј РґРѕСЃС‚СѓРїР° Рє РґР°РЅРЅС‹Рј РєР°СЂС‚</li>
                 </ul>
               </div>
             </div>
@@ -201,10 +201,10 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
             <div className="w-10 h-10 rounded-xl bg-nexo-500/20 flex items-center justify-center">
               <Mail size={20} className="text-nexo-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Поддержка</h2>
+            <h2 className="text-2xl font-bold text-white">РџРѕРґРґРµСЂР¶РєР°</h2>
           </div>
           <p className="text-zinc-300 text-base leading-relaxed mb-4">
-            Возникли вопросы? Свяжитесь с нами:
+            Р’РѕР·РЅРёРєР»Рё РІРѕРїСЂРѕСЃС‹? РЎРІСЏР¶РёС‚РµСЃСЊ СЃ РЅР°РјРё:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
@@ -224,19 +224,19 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
 
         {/* Seller details */}
         <section>
-          <h2 className="text-lg font-semibold text-white mb-3">Реквизиты продавца</h2>
+          <h2 className="text-lg font-semibold text-white mb-3">Р РµРєРІРёР·РёС‚С‹ РїСЂРѕРґР°РІС†Р°</h2>
           <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-zinc-500">Наименование:</span>
-              <span className="text-zinc-300">Замякин Денис Витальевич</span>
+              <span className="text-zinc-500">РќР°РёРјРµРЅРѕРІР°РЅРёРµ:</span>
+              <span className="text-zinc-300">Р—Р°РјСЏРєРёРЅ Р”РµРЅРёСЃ Р’РёС‚Р°Р»СЊРµРІРёС‡</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-500">ИНН:</span>
+              <span className="text-zinc-500">РРќРќ:</span>
               <span className="text-zinc-300 font-mono">226911329166</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-500">Статус:</span>
-              <span className="text-zinc-300">Физическое лицо / самозанятый</span>
+              <span className="text-zinc-500">РЎС‚Р°С‚СѓСЃ:</span>
+              <span className="text-zinc-300">Р¤РёР·РёС‡РµСЃРєРѕРµ Р»РёС†Рѕ / СЃР°РјРѕР·Р°РЅСЏС‚С‹Р№</span>
             </div>
           </div>
         </section>
@@ -244,9 +244,9 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
         {/* Important notice */}
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
           <p className="text-xs text-amber-300/80 leading-relaxed">
-            <strong>Важно:</strong> Бобры не являются реальными деньгами и не могут быть обменяны на
-            реальную валюту. Они используются исключительно внутри Нексо Мессенджера для доступа к
-            дополнительным функциям и контенту.
+            <strong>Р’Р°Р¶РЅРѕ:</strong> Р‘РѕР±СЂС‹ РЅРµ СЏРІР»СЏСЋС‚СЃСЏ СЂРµР°Р»СЊРЅС‹РјРё РґРµРЅСЊРіР°РјРё Рё РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ РѕР±РјРµРЅСЏРЅС‹ РЅР°
+            СЂРµР°Р»СЊРЅСѓСЋ РІР°Р»СЋС‚Сѓ. РћРЅРё РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РёСЃРєР»СЋС‡РёС‚РµР»СЊРЅРѕ РІРЅСѓС‚СЂРё РќРµРєСЃРѕ РњРµСЃСЃРµРЅРґР¶РµСЂР° РґР»СЏ РґРѕСЃС‚СѓРїР° Рє
+            РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рј С„СѓРЅРєС†РёСЏРј Рё РєРѕРЅС‚РµРЅС‚Сѓ.
           </p>
         </div>
 
@@ -258,7 +258,7 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition-colors"
           >
-            Узнать больше о YooKassa
+            РЈР·РЅР°С‚СЊ Р±РѕР»СЊС€Рµ Рѕ YooKassa
             <ExternalLink size={14} />
           </a>
         </div>
@@ -269,15 +269,15 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
   // Standalone page mode (accessed via /yookassainfo)
   if (standalone) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-[#0f0f14] flex-shrink-0">
+      <div className="min-h-screen bg-bg flex flex-col">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-surface flex-shrink-0">
           <button
             onClick={() => window.history.back()}
             className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
-          <h3 className="text-sm font-semibold text-white flex-1">Пополнение через YooKassa</h3>
+          <h3 className="text-sm font-semibold text-white flex-1">РџРѕРїРѕР»РЅРµРЅРёРµ С‡РµСЂРµР· YooKassa</h3>
         </div>
         {content}
       </div>
@@ -299,7 +299,7 @@ export default function YooKassaInfoPage({ onClose, standalone }: YooKassaInfoPa
         >
           <ArrowLeft size={20} />
         </button>
-        <h3 className="text-sm font-semibold text-white flex-1">Пополнение через YooKassa</h3>
+        <h3 className="text-sm font-semibold text-white flex-1">РџРѕРїРѕР»РЅРµРЅРёРµ С‡РµСЂРµР· YooKassa</h3>
       </div>
       {content}
     </motion.div>

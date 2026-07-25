@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { X, Film, Upload, Play, Pause, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react';
 
@@ -145,7 +145,7 @@ export default function VideoShareModal({
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-2xl bg-[#0a0a0f] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+        className="w-full max-w-2xl bg-bg rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -156,10 +156,10 @@ export default function VideoShareModal({
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">
-                {isMine ? 'Трансляция видео' : 'Совместный просмотр'}
+                {isMine ? 'РўСЂР°РЅСЃР»СЏС†РёСЏ РІРёРґРµРѕ' : 'РЎРѕРІРјРµСЃС‚РЅС‹Р№ РїСЂРѕСЃРјРѕС‚СЂ'}
               </h3>
               <p className="text-xs text-zinc-500">
-                {isSharing ? '🔴 Идёт трансляция' : isMine ? 'Выберите видео для трансляции' : 'Ожидание видео...'}
+                {isSharing ? 'рџ”ґ РРґС‘С‚ С‚СЂР°РЅСЃР»СЏС†РёСЏ' : isMine ? 'Р’С‹Р±РµСЂРёС‚Рµ РІРёРґРµРѕ РґР»СЏ С‚СЂР°РЅСЃР»СЏС†РёРё' : 'РћР¶РёРґР°РЅРёРµ РІРёРґРµРѕ...'}
               </p>
             </div>
           </div>
@@ -234,13 +234,13 @@ export default function VideoShareModal({
                 onClick={() => setTab('file')}
                 className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'file' ? 'bg-purple-500/20 text-purple-400' : 'text-zinc-400 hover:bg-white/5'}`}
               >
-                Файл
+                Р¤Р°Р№Р»
               </button>
               <button
                 onClick={() => setTab('url')}
                 className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'url' ? 'bg-purple-500/20 text-purple-400' : 'text-zinc-400 hover:bg-white/5'}`}
               >
-                Ссылка
+                РЎСЃС‹Р»РєР°
               </button>
             </div>
             {tab === 'file' ? (
@@ -249,7 +249,7 @@ export default function VideoShareModal({
                 className="w-full py-12 rounded-2xl border-2 border-dashed border-white/10 hover:border-purple-500/50 flex flex-col items-center gap-3 text-zinc-400 hover:text-purple-400 transition-colors"
               >
                 <Upload size={32} />
-                <span className="text-sm">Нажмите чтобы выбрать видео</span>
+                <span className="text-sm">РќР°Р¶РјРёС‚Рµ С‡С‚РѕР±С‹ РІС‹Р±СЂР°С‚СЊ РІРёРґРµРѕ</span>
                 <span className="text-xs text-zinc-600">MP4, WebM, MOV</span>
               </button>
             ) : (
@@ -266,7 +266,7 @@ export default function VideoShareModal({
                   onClick={handleUrlShare}
                   className="px-4 py-3 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
                 >
-                  Транслировать
+                  РўСЂР°РЅСЃР»РёСЂРѕРІР°С‚СЊ
                 </button>
               </div>
             )}
@@ -275,7 +275,7 @@ export default function VideoShareModal({
         ) : (
           <div className="p-12 flex flex-col items-center gap-4 text-zinc-500">
             <Film size={48} className="opacity-30" />
-            <p className="text-sm">Ожидание трансляции...</p>
+            <p className="text-sm">РћР¶РёРґР°РЅРёРµ С‚СЂР°РЅСЃР»СЏС†РёРё...</p>
           </div>
         )}
 
@@ -285,7 +285,7 @@ export default function VideoShareModal({
               onClick={onClose}
               className="w-full py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium transition-colors"
             >
-              Остановить трансляцию
+              РћСЃС‚Р°РЅРѕРІРёС‚СЊ С‚СЂР°РЅСЃР»СЏС†РёСЋ
             </button>
           </div>
         )}

@@ -67,7 +67,7 @@ export default function InteractiveMapModal({ onClose, onSend }: InteractiveMapM
       </div>
 
       {/* Map preview */}
-      <div className="flex-1 bg-[#1F1F23] p-4 border-b border-white/10 flex items-center justify-center">
+      <div className="flex-1 bg-surface-secondary p-4 border-b border-white/10 flex items-center justify-center">
         <div className="text-center">
           <MapPin size={48} className="text-nexo-500 mx-auto mb-2" />
           <p className="text-white/60 text-sm">

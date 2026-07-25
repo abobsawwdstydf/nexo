@@ -213,7 +213,7 @@ export default function ProfileMusicUploadModal({ isOpen, onClose, onUploaded }:
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm z-[10000]"
           >
-            <div className="bg-[#1F1F23] backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+            <div className="bg-surface-secondary backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
               {modalHeader}
               <div className="p-4 space-y-3">
                 {modalContent}

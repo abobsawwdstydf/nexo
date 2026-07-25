@@ -249,7 +249,7 @@ export default function CameraModal({ onClose, onCapture }: CameraModalProps) {
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-lg bg-[#1F1F23] rounded-2xl overflow-hidden shadow-lg border border-white/10"
+        className="w-full max-w-lg bg-surface-secondary rounded-2xl overflow-hidden shadow-lg border border-white/10"
       >
         {headerContent}
         {cameraContent}

@@ -242,7 +242,7 @@ export default function AcceptSharedFolderModal({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl bg-[#1F1F23] shadow-2xl max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-md rounded-2xl bg-surface-secondary shadow-2xl max-h-[85vh] overflow-y-auto"
       >
         {header}
         {content}

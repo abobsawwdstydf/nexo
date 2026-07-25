@@ -422,7 +422,7 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#0a0a0f]">
+      <div className="flex-1 flex items-center justify-center bg-bg">
         <div className="w-8 h-8 border-2 border-nexo-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -430,14 +430,14 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
 
   if (!profile) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#0a0a0f] text-zinc-500">
+      <div className="flex-1 flex items-center justify-center bg-bg text-zinc-500">
         {t('profileNotFound')}
       </div>
     );
   }
 
   const profileBody = (
-    <div className="flex flex-col h-full bg-[#0a0a0f]/95 backdrop-blur-xl">
+    <div className="flex flex-col h-full liquid-glass">
       {/* ===== HEADER — Messenger style ===== */}
       <div className="flex-shrink-0 relative">
         <div className="flex items-center gap-1 px-1 py-[7px]">
@@ -601,7 +601,7 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
             </div>
 
             {profile.isOnline && !isSelf && (
-              <div className="absolute bottom-1 right-1 w-[22px] h-[22px] rounded-full bg-[#0a0a0f] flex items-center justify-center">
+              <div className="absolute bottom-1 right-1 w-[22px] h-[22px] rounded-full bg-bg flex items-center justify-center">
                 <div className="w-[16px] h-[16px] rounded-full bg-[#4dcd5e]" />
               </div>
             )}
@@ -1047,7 +1047,7 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
         </div>
 
         {/* ===== 3D Model Viewer Placeholder ===== */}
-        <div className="mx-4 mb-3 rounded-2xl overflow-hidden" style={{ background: 'rgba(18,18,24,0.65)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
+        <div className="mx-4 mb-3 rounded-2xl overflow-hidden liquid-glass">
           <div className="relative h-[160px] flex items-center justify-center overflow-hidden">
             {/* Animated gradient background */}
             <div className="absolute inset-0 opacity-30" style={{ background: 'radial-gradient(circle at 30% 50%, rgba(123,97,255,0.3), transparent 60%), radial-gradient(circle at 70% 50%, rgba(255,0,128,0.2), transparent 60%)' }} />
@@ -1117,7 +1117,7 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
                     <div
                       key={m.id}
                       onClick={() => setLightboxIndex(idx)}
-                      className="relative aspect-square bg-[#0a0a0f] overflow-hidden group cursor-pointer"
+                      className="relative aspect-square bg-bg overflow-hidden group cursor-pointer"
                     >
                       {m.type === 'video' ? (
                         <>
@@ -1457,12 +1457,12 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
                   <label className="text-[13px] text-zinc-500 mb-1.5 block">Истекает через</label>
                   <select value={statusExpires} onChange={(e) => setStatusExpires(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl glass-input text-white focus:outline-none focus:border-nexo-500 transition-colors appearance-none text-[14px]">
-                    <option value="1" className="bg-[#0a0a0f]">1 час</option>
-                    <option value="4" className="bg-[#0a0a0f]">4 часа</option>
-                    <option value="8" className="bg-[#0a0a0f]">8 часов</option>
-                    <option value="24" className="bg-[#0a0a0f]">24 часа</option>
-                    <option value="168" className="bg-[#0a0a0f]">7 дней</option>
-                    <option value="" className="bg-[#0a0a0f]">Никогда</option>
+                    <option value="1" className="bg-bg">1 час</option>
+                    <option value="4" className="bg-bg">4 часа</option>
+                    <option value="8" className="bg-bg">8 часов</option>
+                    <option value="24" className="bg-bg">24 часа</option>
+                    <option value="168" className="bg-bg">7 дней</option>
+                    <option value="" className="bg-bg">Никогда</option>
                   </select>
                 </div>
                 <div className="flex gap-2 pt-2">
@@ -1538,8 +1538,8 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
       >
         <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
         {/* Mobile: solid bg. Desktop: glass panel */}
-        <div className="absolute inset-0 sm:hidden bg-[#0a0a0f]" />
-        <div className="absolute inset-0 hidden sm:block bg-[#141418]" />
+        <div className="absolute inset-0 sm:hidden bg-bg" />
+        <div className="absolute inset-0 hidden sm:block bg-surface" />
         <div className="absolute -inset-px hidden sm:block rounded-[2rem] bg-gradient-to-b from-white/[0.1] via-white/[0.04] to-transparent pointer-events-none" />
         <div className="absolute top-0 left-0 right-0 hidden sm:block h-[1px] bg-white/10 pointer-events-none" />
         <div className="absolute inset-0 hidden sm:block bg-white/[0.02] pointer-events-none" />
