@@ -1,0 +1,52 @@
+name: Build Nexo Desktop App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tw93/Pake@main
+        with:
+          url: 'https://nexo.hakerone.ru'
+          name: 'Nexo'
+          width: '1200'
+          height: '800'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-macOS
+          path: '*.dmg'
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tw93/Pake@main
+        with:
+          url: 'https://nexo.hakerone.ru'
+          name: 'Nexo'
+          width: '1200'
+          height: '800'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-Windows
+          path: '*.msi'
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tw93/Pake@main
+        with:
+          url: 'https://nexo.hakerone.ru'
+          name: 'Nexo'
+          width: '1200'
+          height: '800'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-Linux
+          path: '*.deb'
