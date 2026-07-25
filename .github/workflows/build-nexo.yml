@@ -10,7 +10,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: tw93/Pake@main
+      - uses: tw93/Pake@V3.15.1
         with:
           url: 'https://nexo.hakerone.ru'
           name: 'Nexo'
@@ -25,7 +25,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: tw93/Pake@main
+      - uses: tw93/Pake@V3.15.1
         with:
           url: 'https://nexo.hakerone.ru'
           name: 'Nexo'
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: tw93/Pake@main
+      - uses: tw93/Pake@V3.15.1
         with:
           url: 'https://nexo.hakerone.ru'
           name: 'Nexo'
