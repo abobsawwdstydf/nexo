@@ -1,4 +1,4 @@
-name: Build Nexo Mobile Apps (APK & IPA)
+name: Build Нексо Mobile Apps (APK & IPA)
 
 on:
   workflow_dispatch:
@@ -56,7 +56,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Nexo-Android-APK
+          name: Нексо-Android-APK
           path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
 
   build-ios:
@@ -102,11 +102,11 @@ jobs:
           mkdir -p Payload
           APP_PATH=$(find build -name "App.app" -type d | head -1)
           cp -r "$APP_PATH" Payload/
-          zip -r Nexo.ipa Payload
+          zip -r "Нексо.ipa" Payload
           rm -rf Payload
           
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Nexo-iOS-IPA
-          path: frontend/ios/App/Nexo.ipa
+          name: Нексо-iOS-IPA
+          path: frontend/ios/App/Нексо.ipa
