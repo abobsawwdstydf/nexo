@@ -22,7 +22,8 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Build macOS app with Pake
-        run:           npx pake-cli https://nexo.hakerone.ru --name Нексо --width 1200 --height 800 --hide-title-bar
+        run: |
+          npx pake-cli https://nexo.hakerone.ru --name Нексо --icon frontend/public/logo.png --width 1200 --height 800 --hide-title-bar --title "Нексо"
 
       - name: Upload macOS app
         uses: actions/upload-artifact@v4
@@ -46,7 +47,8 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Build Windows app with Pake
-        run:           npx pake-cli https://nexo.hakerone.ru --name Нексо --width 1200 --height 800 --hide-title-bar
+        run: |
+          npx pake-cli https://nexo.hakerone.ru --name Нексо --icon frontend/public/logo.png --width 1200 --height 800 --hide-window-decorations --title "Нексо" --installer-language ru-RU
 
       - name: Upload Windows app
         uses: actions/upload-artifact@v4
@@ -73,7 +75,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Build Linux app with Pake
-        run:           npx pake-cli https://nexo.hakerone.ru --name Нексо --width 1200 --height 800 --hide-title-bar
+        run: |
+          npx pake-cli https://nexo.hakerone.ru --name Нексо --icon frontend/public/logo.png --width 1200 --height 800 --hide-window-decorations --title "Нексо"
 
       - name: Upload Linux app
         uses: actions/upload-artifact@v4
