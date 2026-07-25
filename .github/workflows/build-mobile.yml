@@ -28,7 +28,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
           
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -76,7 +76,7 @@ jobs:
       - name: Build iOS App
         working-directory: frontend/ios
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+          xcodebuild -project App.xcodeproj -scheme App -sdk iphoneos -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
           
       - name: Create IPA
         run: |
