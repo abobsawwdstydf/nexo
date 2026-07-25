@@ -10,13 +10,22 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: tw93/Pake@V3.15.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          url: 'https://nexo.hakerone.ru'
-          name: 'Nexo'
-          width: '1200'
-          height: '800'
-      - uses: actions/upload-artifact@v4
+          node-version: '22'
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Build macOS app with Pake
+        run: npx pake-cli https://nexo.hakerone.ru --name Nexo --width 1200 --height 800 --hide-title-bar
+
+      - name: Upload macOS app
+        uses: actions/upload-artifact@v4
         with:
           name: Nexo-macOS
           path: '*.dmg'
@@ -25,13 +34,22 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: tw93/Pake@V3.15.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          url: 'https://nexo.hakerone.ru'
-          name: 'Nexo'
-          width: '1200'
-          height: '800'
-      - uses: actions/upload-artifact@v4
+          node-version: '22'
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Build Windows app with Pake
+        run: npx pake-cli https://nexo.hakerone.ru --name Nexo --width 1200 --height 800 --hide-title-bar
+
+      - name: Upload Windows app
+        uses: actions/upload-artifact@v4
         with:
           name: Nexo-Windows
           path: '*.msi'
@@ -40,13 +58,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: tw93/Pake@V3.15.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          url: 'https://nexo.hakerone.ru'
-          name: 'Nexo'
-          width: '1200'
-          height: '800'
-      - uses: actions/upload-artifact@v4
+          node-version: '22'
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Build Linux app with Pake
+        run: npx pake-cli https://nexo.hakerone.ru --name Nexo --width 1200 --height 800 --hide-title-bar
+
+      - name: Upload Linux app
+        uses: actions/upload-artifact@v4
         with:
           name: Nexo-Linux
           path: '*.deb'
