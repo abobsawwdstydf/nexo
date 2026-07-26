@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -940,15 +941,13 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
               {view === 'friends' && renderFriends()}
               {view === 'calls' && renderCalls()}
               {view === 'about' && renderAbout()}
-              {view === 'premium' && (
-                <div className="h-full">
-                  <PremiumPage onClose={() => changeView('main')} />
-                </div>
+              {view === 'premium' && createPortal(
+                <PremiumPage onClose={() => changeView('main')} />,
+                document.body
               )}
-              {view === 'cloud' && (
-                <div className="h-full">
-                  <CloudStoragePage onClose={() => changeView('main')} />
-                </div>
+              {view === 'cloud' && createPortal(
+                <CloudStoragePage onClose={() => changeView('main')} />,
+                document.body
               )}
               {view === 'statistics' && (
                 <div className="h-full overflow-hidden">
