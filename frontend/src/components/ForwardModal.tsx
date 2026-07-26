@@ -240,7 +240,7 @@ export default function ForwardModal({ messages, onClose }: ForwardModalProps) {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-surface-secondary rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
+          className="liquid-glass rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden border border-white/[0.1]"
           onClick={(e) => e.stopPropagation()}
         >
           {header}

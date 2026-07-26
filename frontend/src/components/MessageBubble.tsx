@@ -354,8 +354,8 @@ function MessageBubble({
                 : message.type === 'sticker' && !message.content
                   ? 'p-0 shadow-none border-none bg-transparent'
                   : isMine
-                    ? 'bubble-sent text-white shadow-sm px-[13px] py-[7px] hover:shadow-md'
-                    : 'bubble-received shadow-sm px-[13px] py-[7px] hover:shadow-md'
+                    ? 'bubble-sent text-white px-[13px] py-[7px] hover:shadow-lg hover:scale-[1.01] hover:-translate-y-0.5'
+                    : 'bubble-received shadow-sm px-[13px] py-[7px] hover:shadow-lg hover:scale-[1.01] hover:-translate-y-0.5'
             } ${message._isSending ? 'opacity-70' : ''} ${message._isFailed ? 'ring-1 ring-red-500/40' : ''}`}
           >
             {/* Forwarded message header */}

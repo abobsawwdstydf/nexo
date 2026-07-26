@@ -411,18 +411,18 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
 
   return (
     <>
-      <div className={`w-full ${currentView !== 'wall' ? 'sm:w-[380px]' : ''} h-full flex sm:rounded-[28px] overflow-hidden relative z-10 glass-strong border border-white/[0.06]`}>
+      <div className={`w-full ${currentView !== 'wall' ? 'sm:w-[380px]' : ''} h-full flex sm:rounded-[28px] overflow-hidden relative z-10 liquid-glass-strong border border-white/[0.08]`}>
 
         {/* ====== БОКОВАЯ НАВИГАЦИЯ (ПК) ====== */}
         {!isMobile && (
           <div className="w-[56px] flex flex-col items-center py-3 gap-2.5 flex-shrink-0 z-20">
             {/* Логотип */}
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center glass-strong border border-white/[0.06]">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center liquid-glass border border-white/[0.1] transition-all duration-300 hover:shadow-lg hover:scale-105">
               <img src="/logo.png" alt="Нексо" className="w-7 h-7 rounded-xl object-cover" />
             </div>
 
             {/* Кнопки навигации — отдельная панель */}
-            <div className="w-[44px] rounded-2xl flex flex-col items-center py-2 gap-1.5 glass-strong border border-white/[0.06]">
+            <div className="w-[44px] rounded-2xl flex flex-col items-center py-2 gap-1.5 liquid-glass-subtle border border-white/[0.08]">
               <NavButton
                 icon={Menu}
                 label="Меню"
@@ -481,7 +481,7 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
         <div className="flex-1 flex flex-col min-w-0 gap-2 p-2">
 
           {/* Верхняя панель: Header + Поиск + Сторисы */}
-          <div className="rounded-2xl overflow-hidden flex-shrink-0 glass-strong border border-white/[0.06]">
+          <div className="rounded-2xl overflow-hidden flex-shrink-0 liquid-glass border border-white/[0.08]">
             {/* Header */}
             <div className="relative h-[52px] px-4 flex items-center gap-3">
               <button
@@ -845,7 +845,7 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
                             animate={{ opacity: 1, y: 0 }}
                             className="flex flex-col items-center justify-center py-12 text-zinc-500 gap-3"
                           >
-                            <div className="w-16 h-16 rounded-full glass-subtle flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-full liquid-glass-subtle flex items-center justify-center border border-white/[0.06]">
                               <Search size={24} className="opacity-50" />
                             </div>
                             <p className="text-sm">Ничего не найдено</p>
@@ -864,7 +864,7 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
                         animate={{ opacity: 1, y: 0 }}
                         className="flex flex-col items-center justify-center py-12 text-zinc-500 gap-3 px-6"
                       >
-                        <div className="w-20 h-20 rounded-full glass-subtle flex items-center justify-center">
+                        <div className="w-20 h-20 rounded-full liquid-glass-subtle flex items-center justify-center border border-white/[0.06]">
                           <MessageSquare size={36} className="opacity-30" />
                         </div>
                         <p className="text-sm text-center">{showArchive ? 'Архив пуст' : t('noChats')}</p>
@@ -1041,7 +1041,7 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.15 }}
-            className="fixed z-[70] w-48 rounded-xl glass-strong shadow-2xl py-1 overflow-hidden"
+            className="fixed z-[70] w-48 rounded-xl liquid-glass shadow-2xl py-1 overflow-hidden border border-white/[0.1]"
             style={{
               left: Math.min(folderContextMenu.x, window.innerWidth - 200),
               top: Math.min(folderContextMenu.y, window.innerHeight - 100),

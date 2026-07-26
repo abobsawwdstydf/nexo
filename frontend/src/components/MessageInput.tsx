@@ -881,7 +881,7 @@ export default function MessageInput({ chatId }: MessageInputProps) {
           {/* Кнопка «Скрепка» */}
           <button
             onClick={() => setShowAttachMenuState(true)}
-            className="w-[52px] h-[52px] rounded-full flex items-center justify-center flex-shrink-0 transition-transform active:scale-[0.94] hover:bg-white/[0.06] glass border border-white/[0.08]"
+            className="w-[52px] h-[52px] rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 active:scale-[0.94] hover:scale-105 hover:shadow-lg liquid-glass-subtle border border-white/[0.1]"
             title="Прикрепить"
           >
             <Paperclip size={22} className="text-white/80" />
@@ -889,7 +889,7 @@ export default function MessageInput({ chatId }: MessageInputProps) {
 
           {/* Поле ввода со смайликом внутри */}
           <div
-            className="flex-1 min-w-0 flex items-center gap-3 rounded-full px-[18px] h-[52px] transition-all duration-200 focus-within:border-[#7B61FF]/30 glass border border-white/[0.08]"
+            className="flex-1 min-w-0 flex items-center gap-3 rounded-full px-[18px] h-[52px] transition-all duration-300 focus-within:border-[#7B61FF]/40 focus-within:shadow-[0_0_20px_rgba(123,97,255,0.15)] liquid-glass border border-white/[0.1]"
           >
                 <textarea
                   ref={inputRef}

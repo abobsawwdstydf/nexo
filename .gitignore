@@ -54,3 +54,10 @@ Thumbs.db
 
 # Installers
 *.exe
+
+# Wrangler cache
+.wrangler/
+
+# Compiled binaries
+nexo-linux
+backend/nexo-linux
