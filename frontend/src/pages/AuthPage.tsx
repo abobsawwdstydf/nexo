@@ -20,6 +20,7 @@ const D = {
 } as const;
 
 const FONT = `'PreschoolPlayhouse', 'Caveat', cursive`;
+const AUTH_FONT_SIZE = 'clamp(30px, 5.5vw, 48px)';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WEB AUDIO — Apple-style sounds
@@ -296,8 +297,8 @@ function OtpInput({
             background: D.inputBg,
             border: `2px solid ${borderColor}`,
             color: D.textPrimary,
-            fontSize: 24,
-            fontWeight: 700,
+            fontSize: 20,
+            fontWeight: 500,
             fontFamily: FONT,
             textAlign: 'center',
             outline: 'none',
@@ -355,15 +356,15 @@ export default function AuthPage() {
   const chooseReg = useTypingAnimation('зарегистрироваться', { enabled: screen === 'choose' && chooseOr.phase === 'done', muted, typingSpeed: 70, noErase: true, onType: () => playTypeClick(muted) });
   const chooseQuestion = useTypingAnimation('?', { enabled: screen === 'choose' && chooseReg.phase === 'done', muted, typingSpeed: 100, noErase: true, onType: () => playTypeClick(muted) });
 
-  const loginEmailLabel = useTypingAnimation('Введи свой email', { enabled: screen === 'login-email', muted, onType: () => playTypeClick(muted) });
-  const loginCodeLabel = useTypingAnimation('Введи код', { enabled: screen === 'login-code', muted, onType: () => playTypeClick(muted) });
-  const loginSuccessText = useTypingAnimation('Вход выполнен', { enabled: screen === 'login-success', muted, onType: () => playTypeClick(muted) });
+  const loginEmailLabel = useTypingAnimation('Введи свой email', { enabled: screen === 'login-email', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
+  const loginCodeLabel = useTypingAnimation('Введи код', { enabled: screen === 'login-code', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
+  const loginSuccessText = useTypingAnimation('Вход выполнен', { enabled: screen === 'login-success', muted, noErase: true, onType: () => playTypeClick(muted) });
 
-  const regNameLabel = useTypingAnimation('Как тебя зовут?', { enabled: screen === 'reg-name', muted, onType: () => playTypeClick(muted) });
-  const regUsernameLabel = useTypingAnimation('Придумай username', { enabled: screen === 'reg-username', muted, onType: () => playTypeClick(muted) });
-  const regEmailLabel = useTypingAnimation('Введи email', { enabled: screen === 'reg-email', muted, onType: () => playTypeClick(muted) });
-  const regCodeLabel = useTypingAnimation('Введи код', { enabled: screen === 'reg-code', muted, onType: () => playTypeClick(muted) });
-  const regSuccessText = useTypingAnimation('Регистрация завершена!', { enabled: screen === 'reg-success', muted, onType: () => playTypeClick(muted) });
+  const regNameLabel = useTypingAnimation('Как тебя зовут?', { enabled: screen === 'reg-name', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
+  const regUsernameLabel = useTypingAnimation('Придумай username', { enabled: screen === 'reg-username', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
+  const regEmailLabel = useTypingAnimation('Введи email', { enabled: screen === 'reg-email', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
+  const regCodeLabel = useTypingAnimation('Введи код', { enabled: screen === 'reg-code', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
+  const regSuccessText = useTypingAnimation('Регистрация завершена!', { enabled: screen === 'reg-success', muted, noErase: true, onType: () => playTypeClick(muted) });
 
   // ─── Phase transitions ──────────────────────────────────────────────────
   useEffect(() => {
@@ -546,7 +547,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center' }}
           >
             <span style={{
-              fontSize: 'clamp(56px, 10vw, 96px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -576,7 +577,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', padding: '0 24px' }}
           >
             <span style={{
-              fontSize: 'clamp(32px, 6vw, 56px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -606,7 +607,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(28px, 5vw, 48px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -666,7 +667,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -701,18 +702,18 @@ export default function AuthPage() {
                       border: 'none',
                       borderBottom: `2px solid ${D.border}`,
                       color: D.textPrimary,
-                      fontSize: 20,
-                      fontFamily: FONT,
-                      fontWeight: 300,
-                      outline: 'none',
-                      caretColor: D.primary,
-                      transition: 'border-color 0.2s',
-                    }}
-                    onFocus={e => { e.currentTarget.style.borderBottomColor = D.primary; }}
-                    onBlur={e => { e.currentTarget.style.borderBottomColor = D.border; }}
-                  />
-                  <motion.button
-                    onClick={() => { setEmail(emailDraft); handleSendLoginCode(); }}
+                    fontSize: 20,
+                    fontFamily: FONT,
+                    fontWeight: 500,
+                    outline: 'none',
+                    caretColor: D.primary,
+                    transition: 'border-color 0.2s',
+                  }}
+                  onFocus={e => { e.currentTarget.style.borderBottomColor = D.primary; }}
+                  onBlur={e => { e.currentTarget.style.borderBottomColor = D.border; }}
+                />
+                <motion.button
+                  onClick={() => { setEmail(emailDraft); handleSendLoginCode(); }}
                     whileHover={{ scale: 1.1, background: D.primary }}
                     whileTap={{ scale: 0.9 }}
                     disabled={submitting || !emailDraft.includes('@')}
@@ -804,7 +805,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -870,7 +871,7 @@ export default function AuthPage() {
               />
             </motion.div>
             <div style={{
-              fontSize: 'clamp(24px, 5vw, 36px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.success,
               fontFamily: FONT,
@@ -894,7 +895,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -941,7 +942,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -972,7 +973,7 @@ export default function AuthPage() {
                     color: D.textPrimary,
                     fontSize: 20,
                     fontFamily: FONT,
-                    fontWeight: 300,
+                    fontWeight: 500,
                     outline: 'none',
                     caretColor: D.primary,
                     textAlign: 'center',
@@ -1009,7 +1010,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -1042,7 +1043,7 @@ export default function AuthPage() {
                       color: D.textPrimary,
                       fontSize: 20,
                       fontFamily: FONT,
-                      fontWeight: 300,
+                      fontWeight: 500,
                       outline: 'none',
                       caretColor: D.primary,
                     }}
@@ -1092,7 +1093,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -1124,7 +1125,7 @@ export default function AuthPage() {
                       color: D.textPrimary,
                       fontSize: 20,
                       fontFamily: FONT,
-                      fontWeight: 300,
+                      fontWeight: 500,
                       outline: 'none',
                       caretColor: D.primary,
                       transition: 'border-color 0.2s',
@@ -1196,7 +1197,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
@@ -1260,7 +1261,7 @@ export default function AuthPage() {
               />
             </motion.div>
             <div style={{
-              fontSize: 'clamp(24px, 5vw, 36px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.success,
               fontFamily: FONT,
@@ -1284,7 +1285,7 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(18px, 3.5vw, 28px)',
+              fontSize: AUTH_FONT_SIZE,
               fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
