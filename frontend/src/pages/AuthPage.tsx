@@ -19,10 +19,10 @@ const D = {
   inputBg: 'rgba(255,255,255,0.04)',
 } as const;
 
-const FONT = `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif`;
+const FONT = `'Caveat', cursive`;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// WEB AUDIO — Typing Click Sound
+// WEB AUDIO — Apple-style sounds
 // ═══════════════════════════════════════════════════════════════════════════
 let audioCtx: AudioContext | null = null;
 function getAudioCtx() {
@@ -34,16 +34,25 @@ function playTypeClick(muted: boolean) {
   if (muted) return;
   try {
     const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 800 + Math.random() * 400;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.06, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.06);
+    const t = ctx.currentTime;
+    // Layer 1: crisp high click
+    const osc1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    osc1.connect(g1); g1.connect(ctx.destination);
+    osc1.frequency.value = 2800 + Math.random() * 600;
+    osc1.type = 'sine';
+    g1.gain.setValueAtTime(0.045, t);
+    g1.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+    osc1.start(t); osc1.stop(t + 0.025);
+    // Layer 2: body click
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.frequency.value = 1200 + Math.random() * 300;
+    osc2.type = 'triangle';
+    g2.gain.setValueAtTime(0.03, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.018);
+    osc2.start(t); osc2.stop(t + 0.018);
   } catch {}
 }
 
@@ -51,16 +60,15 @@ function playEraseClick(muted: boolean) {
   if (muted) return;
   try {
     const ctx = getAudioCtx();
+    const t = ctx.currentTime;
     const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 400 + Math.random() * 200;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.03, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.04);
+    const g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.frequency.value = 600 + Math.random() * 200;
+    osc.type = 'triangle';
+    g.gain.setValueAtTime(0.025, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+    osc.start(t); osc.stop(t + 0.035);
   } catch {}
 }
 
@@ -68,19 +76,30 @@ function playSuccessSound(muted: boolean) {
   if (muted) return;
   try {
     const ctx = getAudioCtx();
-    const notes = [523, 659, 784];
+    const t = ctx.currentTime;
+    // Apple-style ascending arpeggio: C5 E5 G5 C6
+    const notes = [523.25, 659.25, 783.99, 1046.5];
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
       osc.frequency.value = freq;
       osc.type = 'sine';
-      const start = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.08, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.2);
-      osc.start(start);
-      osc.stop(start + 0.2);
+      const start = t + i * 0.09;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.07, start + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, start + 0.28);
+      osc.start(start); osc.stop(start + 0.28);
+      // harmonic overtone for warmth
+      const osc2 = ctx.createOscillator();
+      const g2 = ctx.createGain();
+      osc2.connect(g2); g2.connect(ctx.destination);
+      osc2.frequency.value = freq * 2;
+      osc2.type = 'sine';
+      g2.gain.setValueAtTime(0, start);
+      g2.gain.linearRampToValueAtTime(0.02, start + 0.015);
+      g2.gain.exponentialRampToValueAtTime(0.001, start + 0.2);
+      osc2.start(start); osc2.stop(start + 0.2);
     });
   } catch {}
 }
@@ -89,16 +108,24 @@ function playErrorSound(muted: boolean) {
   if (muted) return;
   try {
     const ctx = getAudioCtx();
+    const t = ctx.currentTime;
+    // Low thud + dissonant buzz
     const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 200;
-    osc.type = 'sawtooth';
-    gain.gain.setValueAtTime(0.06, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
+    const g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.frequency.value = 180;
+    osc.type = 'sine';
+    g.gain.setValueAtTime(0.08, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t); osc.stop(t + 0.35);
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.frequency.value = 130;
+    osc2.type = 'sawtooth';
+    g2.gain.setValueAtTime(0.03, t + 0.02);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc2.start(t + 0.02); osc2.stop(t + 0.25);
   } catch {}
 }
 
@@ -302,7 +329,7 @@ type Screen =
 
 export default function AuthPage() {
   const { sendLoginCode, loginConfirm, register } = useAuthStore();
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [screen, setScreen] = useState<Screen>('greeting');
   const [email, setEmail] = useState('');
   const [emailDraft, setEmailDraft] = useState('');
@@ -519,18 +546,19 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center' }}
           >
             <span style={{
-              fontSize: 'clamp(40px, 8vw, 72px)',
-              fontWeight: 200,
+              fontSize: 'clamp(56px, 10vw, 96px)',
+              fontWeight: 500,
               color: D.textPrimary,
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.01em',
               fontFamily: FONT,
+              lineHeight: 1.1,
             }}>
               {greet.display}
               {greet.phase === 'typing' && (
                 <motion.span
                   animate={{ opacity: [1, 0] }}
                   transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse' }}
-                  style={{ color: D.primary, fontWeight: 100 }}
+                  style={{ color: D.primary, fontWeight: 400 }}
                 >|</motion.span>
               )}
             </span>
@@ -548,19 +576,19 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', padding: '0 24px' }}
           >
             <span style={{
-              fontSize: 'clamp(24px, 5vw, 44px)',
-              fontWeight: 200,
+              fontSize: 'clamp(32px, 6vw, 56px)',
+              fontWeight: 500,
               color: D.textPrimary,
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.01em',
               fontFamily: FONT,
-              lineHeight: 1.3,
+              lineHeight: 1.2,
             }}>
               {welcome.display}
               {welcome.phase === 'typing' && (
                 <motion.span
                   animate={{ opacity: [1, 0] }}
                   transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse' }}
-                  style={{ color: D.primary, fontWeight: 100 }}
+                  style={{ color: D.primary, fontWeight: 400 }}
                 >|</motion.span>
               )}
             </span>
@@ -578,8 +606,8 @@ export default function AuthPage() {
             style={{ position: 'absolute', textAlign: 'center', padding: '0 24px' }}
           >
             <div style={{
-              fontSize: 'clamp(20px, 4vw, 36px)',
-              fontWeight: 200,
+              fontSize: 'clamp(28px, 5vw, 48px)',
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -597,7 +625,7 @@ export default function AuthPage() {
                   whileHover={{ color: D.primary, textShadow: `0 0 20px ${D.primaryGlow}` }}
                   style={{
                     background: 'none', border: 'none', color: D.textPrimary,
-                    fontSize: 'inherit', fontWeight: 200, fontFamily: FONT,
+                    fontSize: 'inherit', fontWeight: 500, fontFamily: FONT,
                     cursor: 'pointer', textDecoration: 'underline',
                     textUnderlineOffset: 6, textDecorationColor: 'rgba(255,255,255,0.2)',
                   }}
@@ -612,7 +640,7 @@ export default function AuthPage() {
                   whileHover={{ color: D.primary, textShadow: `0 0 20px ${D.primaryGlow}` }}
                   style={{
                     background: 'none', border: 'none', color: D.textPrimary,
-                    fontSize: 'inherit', fontWeight: 200, fontFamily: FONT,
+                    fontSize: 'inherit', fontWeight: 500, fontFamily: FONT,
                     cursor: 'pointer', textDecoration: 'underline',
                     textUnderlineOffset: 6, textDecorationColor: 'rgba(255,255,255,0.2)',
                   }}
@@ -639,7 +667,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -777,7 +805,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -843,7 +871,7 @@ export default function AuthPage() {
             </motion.div>
             <div style={{
               fontSize: 'clamp(24px, 5vw, 36px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.success,
               fontFamily: FONT,
             }}>
@@ -867,7 +895,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -914,7 +942,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -982,7 +1010,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -1065,7 +1093,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -1169,7 +1197,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
@@ -1233,7 +1261,7 @@ export default function AuthPage() {
             </motion.div>
             <div style={{
               fontSize: 'clamp(24px, 5vw, 36px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.success,
               fontFamily: FONT,
             }}>
@@ -1257,7 +1285,7 @@ export default function AuthPage() {
           >
             <div style={{
               fontSize: 'clamp(18px, 3.5vw, 28px)',
-              fontWeight: 200,
+              fontWeight: 500,
               color: D.textPrimary,
               letterSpacing: '-0.01em',
               fontFamily: FONT,
