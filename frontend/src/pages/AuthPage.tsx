@@ -398,7 +398,7 @@ export default function AuthPage() {
           {/* Login step indicator */}
           <StepHeader
             stepLabel={loginStep === 'credentials' ? 'Вход' : 'Подтверждение'}
-            title={loginStep === 'credentials' ? 'Добро пожаловать!' : 'Введите код'}
+            title={loginStep === 'credentials' ? 'Привет, добро пожаловать в Нексо!' : 'Введите код'}
             subtitle={loginStep === 'credentials' ? 'Войдите в свой аккаунт' : `Код отправлен на ${loginEmail}`}
           />
           <Steps cur={loginStep === 'credentials' ? 1 : 2} total={2} />
