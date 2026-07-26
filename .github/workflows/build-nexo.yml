@@ -23,7 +23,7 @@ jobs:
 
       - name: Build macOS app with Pake
         run: |
-          npx pake-cli https://nexo.hakerone.ru --name Nexo --icon frontend/public/logo.png --width 1200 --height 800 --hide-title-bar --title "Нексо"
+          npx pake-cli https://nexo.hakerone.ru --name Нексо --icon frontend/public/logo.png --width 1200 --height 800 --hide-title-bar --title "Нексо"
 
       - name: Upload macOS app
         uses: actions/upload-artifact@v4
@@ -48,7 +48,7 @@ jobs:
 
       - name: Build Windows app with Pake
         run: |
-          npx pake-cli https://nexo.hakerone.ru --name Nexo --icon frontend/public/logo.png --width 1200 --height 800 --hide-window-decorations --title "Нексо" --installer-language ru-RU
+          npx pake-cli https://nexo.hakerone.ru --name Нексо --icon frontend/public/logo.png --width 1200 --height 800 --hide-window-decorations --title "Нексо" --installer-language ru-RU
 
       - name: Upload Windows app
         uses: actions/upload-artifact@v4
@@ -76,7 +76,7 @@ jobs:
 
       - name: Build Linux app with Pake
         run: |
-          npx pake-cli https://nexo.hakerone.ru --name Nexo --icon frontend/public/logo.png --width 1200 --height 800 --hide-window-decorations --title "Нексо"
+          npx pake-cli https://nexo.hakerone.ru --name Нексо --icon frontend/public/logo.png --width 1200 --height 800 --hide-window-decorations --title "Нексо"
 
       - name: Upload Linux app
         uses: actions/upload-artifact@v4

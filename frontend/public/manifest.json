@@ -4,8 +4,8 @@
   "description": "Secure end-to-end encrypted messenger with Signal Protocol, AI features, and bots",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#6366f1",
+  "background_color": "#0a0a0f",
+  "theme_color": "#7B61FF",
   "orientation": "portrait-primary",
   "scope": "/",
   "icons": [
@@ -26,23 +26,23 @@
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "New Message",
-      "short_name": "New",
-      "description": "Start a new conversation",
+      "name": "Новое сообщение",
+      "short_name": "Новое",
+      "description": "Начать новый диалог",
       "url": "/?action=new",
       "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
     },
     {
-      "name": "Favorites",
-      "short_name": "Favorites",
-      "description": "Open favorites chat",
+      "name": "Избранное",
+      "short_name": "Избранное",
+      "description": "Открыть избранный чат",
       "url": "/?chat=favorites",
       "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
     },
     {
-      "name": "Statistics",
-      "short_name": "Stats",
-      "description": "View your statistics",
+      "name": "Статистика",
+      "short_name": "Статистика",
+      "description": "Просмотреть статистику",
       "url": "/?view=statistics",
       "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
     }
