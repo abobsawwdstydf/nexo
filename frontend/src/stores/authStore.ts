@@ -37,6 +37,25 @@ export const useAuthStore = create<AuthState>((set, get) => {
     console.error('Failed to load user from localStorage:', e);
   }
 
+  /** Common post-login flow: persist tokens, connect socket, subscribe. */
+  function completeLogin(result: { csrfToken?: string; user: User; accessToken?: string; refreshToken?: string }) {
+    if (result.csrfToken) api.setCsrfToken(result.csrfToken);
+    localStorage.setItem('nexo_user', JSON.stringify(result.user));
+    if (result.accessToken) {
+      localStorage.setItem('nexo_access_token', result.accessToken);
+    }
+    if (result.refreshToken) {
+      localStorage.setItem('nexo_refresh_token', result.refreshToken);
+    }
+    if (result.accessToken) {
+      connectSocket(result.accessToken);
+    }
+    set({ user: result.user, isLoading: false });
+    setTimeout(() => {
+      subscribeToNotifications().catch(() => {});
+    }, 2000);
+  }
+
   return {
     user: savedUser,
     isLoading: true,
@@ -66,22 +85,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         localStorage.removeItem('nexo_access_token');
         localStorage.removeItem('nexo_refresh_token');
         const result = await api.loginConfirm(email, code);
-        if (result.csrfToken) api.setCsrfToken(result.csrfToken);
-        localStorage.setItem('nexo_user', JSON.stringify(result.user));
-        if (result.accessToken) {
-          localStorage.setItem('nexo_access_token', result.accessToken);
-        }
-        if (result.refreshToken) {
-          localStorage.setItem('nexo_refresh_token', result.refreshToken);
-        }
-        if (result.accessToken) {
-          connectSocket(result.accessToken);
-        }
-        set({ user: result.user, isLoading: false });
-
-        setTimeout(() => {
-          subscribeToNotifications().catch(() => {});
-        }, 2000);
+        completeLogin(result);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         set({ error: msg, isLoading: false });
@@ -95,22 +99,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         localStorage.removeItem('nexo_access_token');
         localStorage.removeItem('nexo_refresh_token');
         const result = await api.register(data);
-        // Backend now returns { accessToken, refreshToken, user } — auto-login
-        if (result.csrfToken) api.setCsrfToken(result.csrfToken);
-        localStorage.setItem('nexo_user', JSON.stringify(result.user));
-        if (result.accessToken) {
-          localStorage.setItem('nexo_access_token', result.accessToken);
-        }
-        if (result.refreshToken) {
-          localStorage.setItem('nexo_refresh_token', result.refreshToken);
-        }
-        if (result.accessToken) {
-          connectSocket(result.accessToken);
-        }
-        set({ user: result.user, isLoading: false });
-        setTimeout(() => {
-          subscribeToNotifications().catch(() => {});
-        }, 2000);
+        completeLogin(result);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         set({ error: msg, isLoading: false });

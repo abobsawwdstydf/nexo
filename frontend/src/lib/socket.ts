@@ -346,11 +346,8 @@ export function getSocket(): SocketInterface | null {
   return socket;
 }
 
-let intentionalDisconnect = false;
-
 export function disconnectSocket() {
   if (ws) {
-    intentionalDisconnect = true;
     clearReconnectState();
     ws.close();
     ws = null;

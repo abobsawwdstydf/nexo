@@ -114,7 +114,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Сначала пробуем сеть; в случае ошибки используем кэш (уже подгруженный в state)
       const chats = await api.getChats();
       // Auto-create favorites chat if not present
-      if (!chats.some((c: any) => c.type === 'favorites')) {
+      if (!chats.some((c) => c.type === 'favorites')) {
         try {
           const favChat = await api.getOrCreateFavorites();
           chats.unshift(favChat);
@@ -284,7 +284,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             m.id === messageId ? { ...m, isDeleted: true, content: null } : m
           );
 
-      const latestVisible = (isTemp ? updatedMessages : updatedMessages)
+      const latestVisible = updatedMessages
         .filter(m => !m.isDeleted)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 

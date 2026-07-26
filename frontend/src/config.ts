@@ -89,13 +89,6 @@ export const getServerUrl = (): string => {
   return getApiUrl();
 };
 
-export const SOCKET_CONFIG = {
-  transports: ['websocket', 'polling'],
-  reconnection: true,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 1000,
-};
-
 export const APP_CONFIG = {
   name: 'Нексо Мессенджер',
   version: '1.0.0',

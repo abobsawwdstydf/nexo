@@ -28,7 +28,6 @@ const WallPage = lazy(() => import('./pages/WallPage'));
 const HashtagPage = lazy(() => import('./pages/HashtagPage'));
 const DeviceAuthPage = lazy(() => import('./pages/DeviceAuthPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
-const YooKassaInfoPage = null; // Removed
 const AcceptSharedFolderModal = lazy(() => import('./components/AcceptSharedFolderModal'));
 
 type AppView = 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag';
@@ -43,16 +42,24 @@ const LEGAL_ROUTES: Record<string, LegalPageType> = {
 };
 
 export default function App() {
-  const { user, checkAuth, isLoading, updateUser } = useAuthStore();
+  const { user, checkAuth, isLoading } = useAuthStore();
   const { success } = useToastStore();
   const { activeChat } = useChatStore();
-  const { currentView, profileUserId, hashtagTag, highlightPostId, showAI, navigateTo, openProfile, openHashtag, openWallPost, openAI, closeAI, openFriends, closeFriends, clearHighlight } = useNavigationStore();
+  const { currentView, profileUserId, hashtagTag, highlightPostId, navigateTo, openProfile, openHashtag, openWallPost, openAI, openFriends, clearHighlight } = useNavigationStore();
   const [sharedFolderToken, setSharedFolderToken] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileFriendsOpen, setMobileFriendsOpen] = useState(false);
 
+  // Detect standalone pages (must be computed before hooks but after state)
+  const pathname = window.location.pathname;
+  const isPaymentSuccess = pathname === '/payment/success';
+  const isDeviceAuth = pathname.startsWith('/device');
+  const legalMatch = pathname.match(/^\/legal\/([a-z-]+)$/);
+  const legalType = legalMatch ? LEGAL_ROUTES[legalMatch[1]] : undefined;
 
-  // Определяем мобильное устройство
+  // ─── All hooks MUST be declared before any early returns (Rules of Hooks) ───
+
+  // Mobile device detection
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
     check();
@@ -60,7 +67,7 @@ export default function App() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Глобальный звук клика по кнопкам
+  // Global click sound for buttons
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -72,52 +79,27 @@ export default function App() {
     return () => document.removeEventListener('click', handler);
   }, []);
 
-  // Страница успешной оплаты
-  if (window.location.pathname === '/payment/success') {
-    return <Suspense fallback={<НексоLoader />}><PaymentSuccessPage /></Suspense>;
-  }
-
-  // Страница ЮKassa info — removed
-  // if (window.location.pathname === '/yookassainfo') {
-  //   return <Suspense fallback={<НексоLoader />}><YooKassaInfoPage standalone /></Suspense>;
-  // }
-
-  // Device auth page
-  if (window.location.pathname.startsWith('/device')) {
-    return <Suspense fallback={<НексоLoader />}><DeviceAuthPage /></Suspense>;
-  }
-
-  const legalPath = window.location.pathname.match(/^\/legal\/([a-z-]+)$/);
-  const legalType = legalPath ? LEGAL_ROUTES[legalPath[1]] : undefined;
-  if (legalType) {
-    return <LegalPage type={legalType} onClose={() => window.history.length > 1 ? window.history.back() : window.location.assign('/')} />;
-  }
-
-  // Shared folder link - только один раз при монтировании
-  useEffect(() => {
-    const folderMatch = window.location.pathname.match(/^\/folder\/([a-f0-9]+)$/);
-    if (folderMatch && user) {
-      const folderToken = folderMatch[1];
-      setSharedFolderToken(folderToken);
-    }
-  }, [user]);
-
+  // Auth check on mount
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  // Settings and backgrounds are loaded via /api/init in checkAuth()
-  // No separate calls needed — data arrives in the init response
+  // Shared folder link — parse once on mount
+  useEffect(() => {
+    const folderMatch = window.location.pathname.match(/^\/folder\/([a-f0-9]+)$/);
+    if (folderMatch && user) {
+      setSharedFolderToken(folderMatch[1]);
+    }
+  }, [user]);
 
+  // Hash-based routing (#/@username, #/channel/username)
   useEffect(() => {
     const handleHashRoute = () => {
       const hash = window.location.hash;
       if (hash.startsWith('#/@')) {
-        const username = hash.slice(3);
-        window.location.href = `/?user=${username}`;
+        window.location.href = `/?user=${hash.slice(3)}`;
       } else if (hash.startsWith('#/channel/')) {
-        const channelUsername = hash.slice(10);
-        window.location.href = `/?channel=${channelUsername}`;
+        window.location.href = `/?channel=${hash.slice(10)}`;
       }
     };
     handleHashRoute();
@@ -125,7 +107,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashRoute);
   }, []);
 
-  // Роутинг по /@username, /wall/post/:postId и ?user=username
+  // URL-based routing (/@username, /wall/post/:postId, ?user=username)
   useEffect(() => {
     const path = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
@@ -133,14 +115,12 @@ export default function App() {
     const hashtagMatch = path.match(/^\/wall\/hashtag\/(.+)$/);
     const postMatch = path.match(/^\/wall\/post\/(.+)$/);
     const queryUser = params.get('user');
-    
+
     if (postMatch && user) {
-      const postId = postMatch[1];
-      openWallPost(postId);
+      openWallPost(postMatch[1]);
       window.history.replaceState({}, '', '/');
     } else if (hashtagMatch && user) {
-      const tag = hashtagMatch[1];
-      openHashtag(tag);
+      openHashtag(hashtagMatch[1]);
       window.history.replaceState({}, '', '/');
     } else if (usernameMatch && user) {
       const username = usernameMatch[1];
@@ -162,7 +142,7 @@ export default function App() {
     }
   }, [user]);
 
-  // Listen for premium notifications via socket
+  // Premium notification listener
   useEffect(() => {
     if (!user) return;
     const socket = getSocket();
@@ -173,11 +153,24 @@ export default function App() {
     };
 
     socket.on('premium:gift_received', handlePremiumGift);
-
     return () => {
       socket.off('premium:gift_received', handlePremiumGift);
     };
   }, [user?.id]);
+
+  // ─── Standalone pages (render outside the app shell) ───────────────────────
+
+  if (isPaymentSuccess) {
+    return <Suspense fallback={<НексоLoader />}><PaymentSuccessPage /></Suspense>;
+  }
+
+  if (isDeviceAuth) {
+    return <Suspense fallback={<НексоLoader />}><DeviceAuthPage /></Suspense>;
+  }
+
+  if (legalType) {
+    return <LegalPage type={legalType} onClose={() => window.history.length > 1 ? window.history.back() : window.location.assign('/')} />;
+  }
 
   if (isLoading && user) {
     return (

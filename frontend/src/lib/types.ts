@@ -16,12 +16,6 @@ export interface UserBasic {
 export interface UserPresence extends UserBasic {
   isOnline: boolean;
   lastSeen: string;
-  isVerified?: boolean;
-  verifiedBadgeUrl?: string | null;
-  verifiedBadgeType?: string | null;
-  tagText?: string | null;
-  tagColor?: string | null;
-  tagStyle?: string | null;
 }
 
 export interface Channel {
@@ -46,14 +40,7 @@ export interface User extends UserPresence {
   notifyFriends?: boolean;
   pinnedChannel?: Channel | null;
   // Verification
-  isVerified?: boolean;
-  verifiedBadgeUrl?: string | null;
-  verifiedBadgeType?: string | null;
   verifiedAt?: string | null;
-  // Tag
-  tagText?: string | null;
-  tagColor?: string | null;
-  tagStyle?: string | null;
   // Premium
   isPremium?: boolean;
   premiumBadgeUrl?: string | null;
@@ -288,12 +275,6 @@ export interface FriendshipStatus {
 
 export interface FriendWithId extends UserPresence {
   friendshipId: string;
-  isVerified?: boolean;
-  verifiedBadgeUrl?: string | null;
-  verifiedBadgeType?: string | null;
-  tagText?: string | null;
-  tagColor?: string | null;
-  tagStyle?: string | null;
 }
 
 export interface CallLog {

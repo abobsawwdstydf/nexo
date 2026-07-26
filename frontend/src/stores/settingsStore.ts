@@ -78,7 +78,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   updateSettings: async (updates: Partial<UserSettings>) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.put('/users/settings', updates);
+      await api.put('/users/settings', updates);
       set((state) => ({
         settings: { ...(state.settings || { settingsSyncEnabled: false, hideStoryViews: false }), ...updates },
       }));
