@@ -19,7 +19,7 @@ const D = {
   inputBg: 'rgba(255,255,255,0.04)',
 } as const;
 
-const FONT = `'Caveat', cursive`;
+const FONT = `'PreschoolPlayhouse', 'Caveat', cursive`;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WEB AUDIO — Apple-style sounds
@@ -350,10 +350,10 @@ export default function AuthPage() {
   // ─── Typing animations ─────────────────────────────────────────────────
   const greet = useTypingAnimation('Привет', { enabled: screen === 'greeting', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
   const welcome = useTypingAnimation('Добро пожаловать в Нексо', { enabled: screen === 'welcome', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
-  const chooseLogin = useTypingAnimation('Войти', { enabled: screen === 'choose', muted, typingSpeed: 90, onType: () => playTypeClick(muted) });
+  const chooseLogin = useTypingAnimation('Войти', { enabled: screen === 'choose', muted, typingSpeed: 90, noErase: true, onType: () => playTypeClick(muted) });
   const chooseOr = useTypingAnimation(' или ', { enabled: screen === 'choose' && chooseLogin.phase === 'done', muted, typingSpeed: 60, noErase: true, onType: () => playTypeClick(muted) });
-  const chooseReg = useTypingAnimation('зарегистрироваться', { enabled: screen === 'choose' && chooseOr.phase === 'done', muted, typingSpeed: 70, onType: () => playTypeClick(muted) });
-  const chooseQuestion = useTypingAnimation('?', { enabled: screen === 'choose' && chooseReg.phase === 'done', muted, typingSpeed: 100, onType: () => playTypeClick(muted) });
+  const chooseReg = useTypingAnimation('зарегистрироваться', { enabled: screen === 'choose' && chooseOr.phase === 'done', muted, typingSpeed: 70, noErase: true, onType: () => playTypeClick(muted) });
+  const chooseQuestion = useTypingAnimation('?', { enabled: screen === 'choose' && chooseReg.phase === 'done', muted, typingSpeed: 100, noErase: true, onType: () => playTypeClick(muted) });
 
   const loginEmailLabel = useTypingAnimation('Введи свой email', { enabled: screen === 'login-email', muted, onType: () => playTypeClick(muted) });
   const loginCodeLabel = useTypingAnimation('Введи код', { enabled: screen === 'login-code', muted, onType: () => playTypeClick(muted) });
@@ -613,7 +613,7 @@ export default function AuthPage() {
               fontFamily: FONT,
               lineHeight: 1.4,
             }}>
-              <span>{chooseLogin.display}</span>
+              {chooseLogin.phase !== 'done' && <span>{chooseLogin.display}</span>}
               {chooseLogin.phase === 'typing' && (
                 <motion.span animate={{ opacity: [1, 0] }} transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse' }} style={{ color: D.primary }}>|</motion.span>
               )}
@@ -646,7 +646,7 @@ export default function AuthPage() {
                   }}
                 >зарегистрироваться</motion.button>
               )}
-              <span>{chooseReg.display}</span>
+              {chooseReg.phase !== 'done' && <span>{chooseReg.display}</span>}
               <span>{chooseQuestion.display}</span>
               {chooseQuestion.phase === 'typing' && (
                 <motion.span animate={{ opacity: [1, 0] }} transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse' }} style={{ color: D.primary }}>|</motion.span>
