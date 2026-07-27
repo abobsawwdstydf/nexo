@@ -137,9 +137,9 @@ type TypingPhase = 'idle' | 'typing' | 'pausing' | 'erasing' | 'done';
 
 function useTypingAnimation(
   text: string,
-  opts: { typingSpeed?: number; eraseSpeed?: number; pauseAfter?: number; enabled?: boolean; muted?: boolean; noErase?: boolean; onType?: () => void; onErase?: () => void } = {}
+  opts: { typingSpeed?: number; eraseSpeed?: number; pauseAfter?: number; startDelay?: number; enabled?: boolean; muted?: boolean; noErase?: boolean; onType?: () => void; onErase?: () => void } = {}
 ) {
-  const { typingSpeed = 75, eraseSpeed = 35, pauseAfter = 1500, enabled = true, muted = false, noErase = false, onType, onErase } = opts;
+  const { typingSpeed = 70, eraseSpeed = 35, pauseAfter = 1500, startDelay = 300, enabled = true, muted = false, noErase = false, onType, onErase } = opts;
   const [display, setDisplay] = useState('');
   const [phase, setPhase] = useState<TypingPhase>('idle');
   const idxRef = useRef(0);
@@ -163,7 +163,7 @@ function useTypingAnimation(
         idxRef.current++;
         setDisplay(text.slice(0, idxRef.current));
         onType?.();
-        const t = window.setTimeout(type, typingSpeed + Math.random() * 20);
+        const t = window.setTimeout(type, typingSpeed);
         timersRef.current.push(t);
       } else {
         if (noErase) {
@@ -191,11 +191,11 @@ function useTypingAnimation(
       }
     };
 
-    const start = window.setTimeout(type, 300);
+    const start = window.setTimeout(type, startDelay);
     timersRef.current.push(start);
 
     return clear;
-  }, [text, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [text, enabled, startDelay]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { display, phase };
 }
@@ -374,10 +374,10 @@ export default function AuthPage() {
   // ─── Typing animations ─────────────────────────────────────────────────
   const greet = useTypingAnimation('Привет', { enabled: screen === 'greeting', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
   const welcome = useTypingAnimation('Добро пожаловать в Нексо', { enabled: screen === 'welcome', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
-  const chooseLogin = useTypingAnimation('Войти', { enabled: screen === 'choose', muted, typingSpeed: 90, noErase: true, onType: () => playTypeClick(muted) });
-  const chooseOr = useTypingAnimation(' или ', { enabled: screen === 'choose' && chooseLogin.phase === 'done', muted, typingSpeed: 60, noErase: true, onType: () => playTypeClick(muted) });
-  const chooseReg = useTypingAnimation('зарегистрироваться', { enabled: screen === 'choose' && chooseOr.phase === 'done', muted, typingSpeed: 70, noErase: true, onType: () => playTypeClick(muted) });
-  const chooseQuestion = useTypingAnimation('?', { enabled: screen === 'choose' && chooseReg.phase === 'done', muted, typingSpeed: 100, noErase: true, onType: () => playTypeClick(muted) });
+  const chooseLogin = useTypingAnimation('Войти', { enabled: screen === 'choose', muted, typingSpeed: 70, startDelay: 0, noErase: true, onType: () => playTypeClick(muted) });
+  const chooseOr = useTypingAnimation(' или ', { enabled: screen === 'choose' && chooseLogin.phase === 'done', muted, typingSpeed: 70, startDelay: 0, noErase: true, onType: () => playTypeClick(muted) });
+  const chooseReg = useTypingAnimation('зарегистрироваться', { enabled: screen === 'choose' && chooseOr.phase === 'done', muted, typingSpeed: 70, startDelay: 0, noErase: true, onType: () => playTypeClick(muted) });
+  const chooseQuestion = useTypingAnimation('?', { enabled: screen === 'choose' && chooseReg.phase === 'done', muted, typingSpeed: 70, startDelay: 0, noErase: true, onType: () => playTypeClick(muted) });
 
   const loginEmailLabel = useTypingAnimation('Введи свой email', { enabled: screen === 'login-email', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
   const loginCodeLabel = useTypingAnimation('Введи код', { enabled: screen === 'login-code', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
@@ -608,6 +608,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               lineHeight: 1.2,
+              wordBreak: 'keep-all',
             }}>
               {welcome.display}
               {welcome.phase === 'typing' && (
@@ -638,6 +639,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               lineHeight: 1.4,
+              wordBreak: 'keep-all',
             }}>
               {chooseLogin.phase !== 'done' && <span>{chooseLogin.display}</span>}
               {chooseLogin.phase === 'typing' && (
@@ -658,7 +660,7 @@ export default function AuthPage() {
                 >Войти</motion.button>
               )}
               <span>{chooseOr.display}</span>
-              {chooseOr.phase === 'done' && (
+              {chooseReg.phase === 'done' && (
                 <motion.button
                   onClick={() => { setScreen('reg-name'); }}
                   initial={{ opacity: 0 }}
@@ -698,6 +700,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               marginBottom: 40,
+              wordBreak: 'keep-all',
             }}>
               {loginEmailLabel.display}
               {loginEmailLabel.phase === 'typing' && (
@@ -840,6 +843,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               marginBottom: 8,
+              wordBreak: 'keep-all',
             }}>
               {loginCodeLabel.display}
               {loginCodeLabel.phase === 'typing' && (
@@ -977,6 +981,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               marginBottom: 40,
+              wordBreak: 'keep-all',
             }}>
               {regNameLabel.display}
               {regNameLabel.phase === 'typing' && (
@@ -1079,6 +1084,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               marginBottom: 40,
+              wordBreak: 'keep-all',
             }}>
               {regUsernameLabel.display}
               {regUsernameLabel.phase === 'typing' && (
@@ -1225,6 +1231,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               marginBottom: 40,
+              wordBreak: 'keep-all',
             }}>
               {regEmailLabel.display}
               {regEmailLabel.phase === 'typing' && (
@@ -1343,6 +1350,7 @@ export default function AuthPage() {
               letterSpacing: '-0.01em',
               fontFamily: FONT,
               marginBottom: 8,
+              wordBreak: 'keep-all',
             }}>
               {regCodeLabel.display}
               {regCodeLabel.phase === 'typing' && (
