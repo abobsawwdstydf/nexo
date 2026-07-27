@@ -709,57 +709,32 @@ export default function AuthPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <div style={{ position: 'relative', marginBottom: 24 }}>
+                <div style={{ position: 'relative', marginBottom: 12 }}>
                   <input
                     ref={emailInputRef}
                     type="email"
                     value={emailDraft}
                     onChange={e => { setEmailDraft(e.target.value); playTypeClick(muted); }}
                     onKeyDown={e => { if (e.key === 'Enter') { setEmail(emailDraft); handleSendLoginCode(); } }}
-                    placeholder="email@example.com"
+                    placeholder="Свой email, можно продолжить"
                     autoComplete="email"
                     style={{
                       width: '100%',
-                      padding: '16px 56px 16px 0',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: `2px solid ${D.border}`,
+                      padding: '16px 16px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: `1.5px solid ${D.border}`,
+                      borderRadius: 12,
                       color: D.textPrimary,
-                    fontSize: 20,
-                    fontFamily: FONT,
-                    fontWeight: 500,
-                    outline: 'none',
-                    caretColor: D.primary,
-                    transition: 'border-color 0.2s',
-                  }}
-                  onFocus={e => { e.currentTarget.style.borderBottomColor = D.primary; }}
-                  onBlur={e => { e.currentTarget.style.borderBottomColor = D.border; }}
-                />
-                <motion.button
-                  onClick={() => { setEmail(emailDraft); handleSendLoginCode(); }}
-                    whileHover={{ scale: 1.1, background: D.primary }}
-                    whileTap={{ scale: 0.9 }}
-                    disabled={submitting || !emailDraft.includes('@')}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      background: emailDraft.includes('@') ? D.primary : 'rgba(255,255,255,0.06)',
-                      border: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: emailDraft.includes('@') ? 'pointer' : 'default',
-                      opacity: emailDraft.includes('@') ? 1 : 0.3,
-                      transition: 'all 0.2s',
+                      fontSize: 20,
+                      fontFamily: FONT,
+                      fontWeight: 500,
+                      outline: 'none',
+                      caretColor: D.primary,
+                      transition: 'border-color 0.2s',
                     }}
-                  >
-                    <ArrowRight size={18} color="#fff" />
-                  </motion.button>
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = D.border; }}
+                  />
 
                   {/* Email autocomplete dropdown */}
                   <AnimatePresence>
@@ -785,7 +760,7 @@ export default function AuthPage() {
                         {emailSuggestions.map(s => (
                           <motion.button
                             key={s}
-                            onClick={() => { setEmailDraft(s); setEmail(s); emailSuggestions.length = 0; }}
+                            onClick={() => { setEmailDraft(s); setEmail(s); }}
                             whileHover={{ background: 'rgba(255,255,255,0.06)' }}
                             style={{
                               width: '100%',
@@ -804,6 +779,35 @@ export default function AuthPage() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* Continue button - gray with border */}
+                <motion.button
+                  onClick={() => { setEmail(emailDraft); handleSendLoginCode(); }}
+                  whileHover={emailDraft.includes('@') ? { scale: 1.03 } : {}}
+                  whileTap={emailDraft.includes('@') ? { scale: 0.97 } : {}}
+                  disabled={submitting || !emailDraft.includes('@')}
+                  style={{
+                    width: '100%',
+                    padding: '14px 24px',
+                    borderRadius: 12,
+                    background: emailDraft.includes('@') ? 'rgba(123,97,255,0.2)' : 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${emailDraft.includes('@') ? 'rgba(123,97,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    color: emailDraft.includes('@') ? '#fff' : 'rgba(255,255,255,0.3)',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    fontFamily: FONT,
+                    cursor: emailDraft.includes('@') ? 'pointer' : 'default',
+                    opacity: emailDraft.includes('@') ? 1 : 0.5,
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  Продолжить
+                  <ArrowRight size={18} />
+                </motion.button>
 
                 {error && (
                   <motion.p
@@ -1229,21 +1233,21 @@ export default function AuthPage() {
             </div>
             {regEmailLabel.phase === 'done' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <div style={{ position: 'relative', marginBottom: 24 }}>
+                <div style={{ position: 'relative', marginBottom: 12 }}>
                   <input
                     ref={regEmailInputRef}
                     type="email"
                     value={regEmailDraft}
                     onChange={e => { setRegEmailDraft(e.target.value); playTypeClick(muted); }}
                     onKeyDown={e => { if (e.key === 'Enter') { setRegEmail(regEmailDraft); handleRegisterEmail(); } }}
-                    placeholder="email@example.com"
+                    placeholder="Свой email, можно продолжить"
                     autoComplete="email"
                     style={{
                       width: '100%',
-                      padding: '16px 56px 16px 0',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: `2px solid ${D.border}`,
+                      padding: '16px 16px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: `1.5px solid ${D.border}`,
+                      borderRadius: 12,
                       color: D.textPrimary,
                       fontSize: 20,
                       fontFamily: FONT,
@@ -1252,25 +1256,9 @@ export default function AuthPage() {
                       caretColor: D.primary,
                       transition: 'border-color 0.2s',
                     }}
-                    onFocus={e => { e.currentTarget.style.borderBottomColor = D.primary; }}
-                    onBlur={e => { e.currentTarget.style.borderBottomColor = D.border; }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = D.border; }}
                   />
-                  <motion.button
-                    onClick={() => { setRegEmail(regEmailDraft); handleRegisterEmail(); }}
-                    whileHover={{ scale: 1.1, background: D.primary }}
-                    whileTap={{ scale: 0.9 }}
-                    disabled={submitting || !regEmailDraft.includes('@')}
-                    style={{
-                      position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: regEmailDraft.includes('@') ? D.primary : 'rgba(255,255,255,0.06)',
-                      border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: regEmailDraft.includes('@') ? 'pointer' : 'default',
-                      opacity: regEmailDraft.includes('@') ? 1 : 0.3, transition: 'all 0.2s',
-                    }}
-                  >
-                    <ArrowRight size={18} color="#fff" />
-                  </motion.button>
 
                   <AnimatePresence>
                     {regEmailSuggestions.length > 0 && (
@@ -1287,7 +1275,7 @@ export default function AuthPage() {
                         {regEmailSuggestions.map(s => (
                           <motion.button
                             key={s}
-                            onClick={() => { setRegEmailDraft(s); setRegEmail(s); regEmailSuggestions.length = 0; }}
+                            onClick={() => { setRegEmailDraft(s); setRegEmail(s); }}
                             whileHover={{ background: 'rgba(255,255,255,0.06)' }}
                             style={{
                               width: '100%', padding: '12px 16px', background: 'transparent',
@@ -1300,8 +1288,38 @@ export default function AuthPage() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* Continue button - gray with border */}
+                <motion.button
+                  onClick={() => { setRegEmail(regEmailDraft); handleRegisterEmail(); }}
+                  whileHover={regEmailDraft.includes('@') ? { scale: 1.03 } : {}}
+                  whileTap={regEmailDraft.includes('@') ? { scale: 0.97 } : {}}
+                  disabled={submitting || !regEmailDraft.includes('@')}
+                  style={{
+                    width: '100%',
+                    padding: '14px 24px',
+                    borderRadius: 12,
+                    background: regEmailDraft.includes('@') ? 'rgba(123,97,255,0.2)' : 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${regEmailDraft.includes('@') ? 'rgba(123,97,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    color: regEmailDraft.includes('@') ? '#fff' : 'rgba(255,255,255,0.3)',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    fontFamily: FONT,
+                    cursor: regEmailDraft.includes('@') ? 'pointer' : 'default',
+                    opacity: regEmailDraft.includes('@') ? 1 : 0.5,
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  Продолжить
+                  <ArrowRight size={18} />
+                </motion.button>
+
                 {error && (
-                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ color: D.error, fontSize: 13, fontFamily: FONT }}>{error}</motion.p>
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ color: D.error, fontSize: 13, fontFamily: FONT, marginTop: 8 }}>{error}</motion.p>
                 )}
               </motion.div>
             )}
