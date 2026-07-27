@@ -442,11 +442,12 @@ export default function AuthPage() {
   }, [username]);
 
   // ─── Login handlers ─────────────────────────────────────────────────────
-  const handleSendLoginCode = async () => {
-    if (!email || !email.includes('@')) return;
+  const handleSendLoginCode = async (emailToUse: string) => {
+    if (!emailToUse || !emailToUse.includes('@')) return;
+    setEmail(emailToUse);
     setSubmitting(true); setError('');
     try {
-      const result = await sendLoginCode(email);
+      const result = await sendLoginCode(emailToUse);
       if (result.requiresCode) {
         setScreen('login-code');
       }
@@ -471,11 +472,12 @@ export default function AuthPage() {
   }, [email, loginConfirm, muted]);
 
   // ─── Register handlers ──────────────────────────────────────────────────
-  const handleRegisterEmail = async () => {
-    if (!regEmail || !regEmail.includes('@')) return;
+  const handleRegisterEmail = async (emailToUse: string) => {
+    if (!emailToUse || !emailToUse.includes('@')) return;
+    setRegEmail(emailToUse);
     setSubmitting(true); setError('');
     try {
-      await api.sendEmailCode(regEmail);
+      await api.sendEmailCode(emailToUse);
       setScreen('reg-code');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Ошибка');
@@ -715,7 +717,7 @@ export default function AuthPage() {
                     type="email"
                     value={emailDraft}
                     onChange={e => { setEmailDraft(e.target.value); playTypeClick(muted); }}
-                    onKeyDown={e => { if (e.key === 'Enter') { setEmail(emailDraft); handleSendLoginCode(); } }}
+                    onKeyDown={e => { if (e.key === 'Enter') { handleSendLoginCode(emailDraft); } }}
                     placeholder="Свой email, можно продолжить"
                     autoComplete="email"
                     style={{
@@ -782,7 +784,7 @@ export default function AuthPage() {
 
                 {/* Continue button - gray with border */}
                 <motion.button
-                  onClick={() => { setEmail(emailDraft); handleSendLoginCode(); }}
+                  onClick={() => { handleSendLoginCode(emailDraft); }}
                   whileHover={emailDraft.includes('@') ? { scale: 1.03 } : {}}
                   whileTap={emailDraft.includes('@') ? { scale: 0.97 } : {}}
                   disabled={submitting || !emailDraft.includes('@')}
@@ -1237,7 +1239,7 @@ export default function AuthPage() {
                     type="email"
                     value={regEmailDraft}
                     onChange={e => { setRegEmailDraft(e.target.value); playTypeClick(muted); }}
-                    onKeyDown={e => { if (e.key === 'Enter') { setRegEmail(regEmailDraft); handleRegisterEmail(); } }}
+                    onKeyDown={e => { if (e.key === 'Enter') { handleRegisterEmail(regEmailDraft); } }}
                     placeholder="Свой email, можно продолжить"
                     autoComplete="email"
                     style={{
@@ -1289,7 +1291,7 @@ export default function AuthPage() {
 
                 {/* Continue button - gray with border */}
                 <motion.button
-                  onClick={() => { setRegEmail(regEmailDraft); handleRegisterEmail(); }}
+                  onClick={() => { handleRegisterEmail(regEmailDraft); }}
                   whileHover={regEmailDraft.includes('@') ? { scale: 1.03 } : {}}
                   whileTap={regEmailDraft.includes('@') ? { scale: 0.97 } : {}}
                   disabled={submitting || !regEmailDraft.includes('@')}
