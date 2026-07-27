@@ -7,25 +7,31 @@
   --color-nexo-100: #e5deff;
   --color-nexo-200: #cdbdff;
   --color-nexo-300: #b49dff;
-  --color-nexo-400: #9b7dff;
-  --color-nexo-500: #7B61FF;
-  --color-nexo-600: #6347d6;
-  --color-nexo-700: #4c33b0;
-  --color-nexo-800: #37258a;
-  --color-nexo-900: #241a63;
-  --color-nexo-950: #120d3d;
+  --color-nexo-400: #A78BFA;
+  --color-nexo-500: #8B5CF6;
+  --color-nexo-600: #7C3AED;
+  --color-nexo-700: #6D28D9;
+  --color-nexo-800: #5B21B6;
+  --color-nexo-900: #4C1D95;
+  --color-nexo-950: #2E1065;
 
-  --color-bg: #0a0a0f;
-  --color-surface: #0E0E10;
-  --color-surface-secondary: #1F1F23;
-  --color-surface-tertiary: #2B2B2F;
-  --color-surface-hover: #35353A;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-light: rgba(255, 255, 255, 0.12);
+  /* === Cosmic Dark Theme Palette === */
+  --color-bg: #0F0A1A;
+  --color-surface: #1A1525;
+  --color-surface-secondary: #140F1F;
+  --color-surface-tertiary: #1A1525;
+  --color-surface-hover: #2D2A3E;
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-border: #2D2A3E;
+  --color-border-light: #2D2A3E;
 
-  --color-accent: #7B61FF;
-  --color-accent-hover: #9b7dff;
-  --color-accent-light: rgba(123, 97, 255, 0.15);
+  /* === Accent Colors === */
+  --color-accent: #8B5CF6;
+  --color-accent-hover: #A78BFA;
+  --color-accent-light: rgba(139, 92, 246, 0.15);
+  --color-accent-secondary: #60A5FA;
+  --color-accent-gradient: linear-gradient(135deg, #8B5CF6, #60A5FA);
 
   /* === Unified Glass Effect Tokens (Liquid Glass Enhanced) === */
   --glass-blur: 24px;
@@ -39,37 +45,41 @@
   --glass-saturation: 180%;
   --glass-saturation-strong: 220%;
   --glass-saturation-mega: 260%;
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-hover: rgba(255, 255, 255, 0.18);
-  --glass-border-active: rgba(255, 255, 255, 0.24);
-  --glass-border-glow: rgba(123, 97, 255, 0.3);
-  --glass-bg: rgba(14, 14, 16, 0.72);
-  --glass-bg-strong: rgba(14, 14, 16, 0.85);
-  --glass-bg-subtle: rgba(14, 14, 16, 0.55);
-  --glass-bg-ultra: rgba(14, 14, 16, 0.92);
-  --glass-bg-inset: rgba(14, 14, 16, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(255, 255, 255, 0.12);
+  --glass-border-active: rgba(255, 255, 255, 0.18);
+  --glass-border-glow: rgba(139, 92, 246, 0.3);
+  --glass-bg: rgba(15, 10, 26, 0.72);
+  --glass-bg-strong: rgba(15, 10, 26, 0.85);
+  --glass-bg-subtle: rgba(15, 10, 26, 0.55);
+  --glass-bg-ultra: rgba(15, 10, 26, 0.92);
+  --glass-bg-inset: rgba(15, 10, 26, 0.45);
   --glass-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
-  --glass-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --glass-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   --glass-shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.65);
-  --glass-glow: 0 0 40px rgba(123, 97, 255, 0.15);
-  --glass-glow-strong: 0 0 60px rgba(123, 97, 255, 0.25);
+  --glass-glow: 0 0 40px rgba(139, 92, 246, 0.15);
+  --glass-glow-strong: 0 0 60px rgba(139, 92, 246, 0.25);
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 50%, rgba(255, 255, 255, 0.04) 100%);
 
   /* === Status Colors === */
-  --color-online: #4dcd5e;
+  --color-online: #34D399;
   --color-offline: #6d7f8e;
 
   /* === Message Bubble Tokens (Liquid Glass Enhanced) === */
-  --bubble-sent: rgba(43, 82, 120, 0.85);
-  --bubble-sent-hover: rgba(50, 96, 140, 0.9);
-  --bubble-sent-glass: rgba(43, 82, 120, 0.6);
-  --bubble-received: rgba(24, 37, 51, 0.8);
-  --bubble-received-hover: rgba(30, 45, 61, 0.85);
-  --bubble-received-glass: rgba(24, 37, 51, 0.55);
+  --bubble-sent: rgba(139, 92, 246, 0.25);
+  --bubble-sent-hover: rgba(139, 92, 246, 0.35);
+  --bubble-sent-glass: rgba(139, 92, 246, 0.15);
+  --bubble-received: rgba(26, 21, 37, 0.8);
+  --bubble-received-hover: rgba(35, 30, 50, 0.85);
+  --bubble-received-glass: rgba(26, 21, 37, 0.6);
   --bubble-sent-time: rgba(255, 255, 255, 0.6);
   --bubble-received-time: rgba(255, 255, 255, 0.5);
   --bubble-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   --bubble-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.35);
+
+  /* === Hover Accent Colors === */
+  --color-hover-violet: #A78BFA;
+  --color-hover-blue: #93C5FD;
 }
 
 /* Custom color scheme support */
@@ -98,7 +108,7 @@ html, body, #root {
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--color-surface);
+  background-color: var(--color-bg);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -115,9 +125,9 @@ h1, h2 {
   backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation));
   -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation));
   background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(123, 97, 255, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(155, 125, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 60% 80%, rgba(180, 157, 255, 0.03) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 50%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(96, 165, 250, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%);
 }
 
 /* Скроллбары - тонкие и незаметные */
@@ -534,8 +544,8 @@ textarea:focus-visible {
 }
 .glass-input:focus {
   background: var(--glass-bg);
-  border-color: rgba(123, 97, 255, 0.5);
-  box-shadow: 0 0 0 3px rgba(123, 97, 255, 0.12), var(--glass-shadow-inset);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12), var(--glass-shadow-inset);
 }
 
 /* ---- Specialized glass: cards ---- */
@@ -551,13 +561,13 @@ textarea:focus-visible {
 .glass-tab-active {
   background: linear-gradient(
     135deg,
-    rgba(123, 97, 255, 0.25) 0%,
-    rgba(123, 97, 255, 0.1) 100%
+    rgba(139, 92, 246, 0.25) 0%,
+    rgba(96, 165, 250, 0.1) 100%
   );
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-  border: 1px solid rgba(123, 97, 255, 0.35);
-  box-shadow: 0 4px 12px rgba(123, 97, 255, 0.2), var(--glass-shadow-inset);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2), var(--glass-shadow-inset);
 }
 
 /* ---- Aliases for backward compatibility ---- */
@@ -592,7 +602,7 @@ textarea:focus-visible {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(123, 97, 255, 0.3), rgba(123, 97, 255, 0.2), rgba(123, 97, 255, 0.3));
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.2), rgba(139, 92, 246, 0.3));
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: -1;
@@ -645,7 +655,7 @@ textarea:focus-visible {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(123, 97, 255, 0.3), rgba(123, 97, 255, 0.2), rgba(123, 97, 255, 0.3));
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.2), rgba(139, 92, 246, 0.3));
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: -1;
@@ -1192,8 +1202,8 @@ textarea:focus-visible {
 /* ======================== */
 
 ::selection {
-  background: rgba(123, 97, 255, 0.3);
-  text-shadow: 0 0 8px rgba(123, 97, 255, 0.4);
+  background: rgba(139, 92, 246, 0.3);
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
 .bubble-sent {
@@ -1285,7 +1295,7 @@ input:focus, textarea:focus {
 }
 
 :focus-visible {
-  outline: 2px solid rgba(123, 97, 255, 0.6);
+  outline: 2px solid rgba(139, 92, 246, 0.6);
   outline-offset: 2px;
 }
 
@@ -1299,9 +1309,9 @@ a:focus:not(:focus-visible) {
 /* ======================== */
 
 em-emoji-picker {
-  --em-rgb-background: 14, 14, 16;
-  --em-rgb-input: 26, 26, 30;
-  --em-rgb-color: 240, 240, 240;
+  --em-rgb-background: 15, 10, 26;
+  --em-rgb-input: 26, 21, 37;
+  --em-rgb-color: 241, 245, 249;
   --border-radius: 0 0 16px 16px;
   border: none !important;
   width: 100% !important;
@@ -1332,11 +1342,10 @@ em-emoji-picker .Search {
   --color-surface-secondary: #f9fafb;
   --color-surface-tertiary: #f3f4f6;
   --color-surface-hover: #e5e7eb;
-  --color-border: rgba(0, 0, 0, 0.08);
-  --color-border-light: rgba(0, 0, 0, 0.12);
   --color-text-primary: #111827;
   --color-text-secondary: #4b5563;
-  --color-text-tertiary: #9ca3af;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-light: rgba(0, 0, 0, 0.12);
 
   /* Light glass tokens */
   --glass-bg: rgba(255, 255, 255, 0.8);
@@ -1352,8 +1361,8 @@ em-emoji-picker .Search {
   --glass-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.1);
 
   /* Light bubble tokens */
-  --bubble-sent: #3b82f6;
-  --bubble-sent-hover: #60a5fa;
+  --bubble-sent: #8B5CF6;
+  --bubble-sent-hover: #A78BFA;
   --bubble-received: #f3f4f6;
   --bubble-received-hover: #e5e7eb;
   --bubble-sent-time: rgba(255, 255, 255, 0.7);
@@ -1435,7 +1444,7 @@ em-emoji-picker .Search {
 }
 [data-theme="light"] .glass-input:focus {
   background: var(--glass-bg);
-  border-color: rgba(123, 97, 255, 0.5);
+  border-color: rgba(139, 92, 246, 0.5);
 }
 
 [data-theme="light"] .glass-card {

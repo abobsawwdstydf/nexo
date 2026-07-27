@@ -5,7 +5,7 @@ import { useToastStore } from '../stores/toastStore';
 import { Card, CardHeader, Button, Text, Badge, cn } from './ui';
 
 const COLOR_SCHEMES = [
-  { id: 'default', name: 'Индиго', color: '#7B61FF' },
+  { id: 'default', name: 'Фиолет', color: '#8B5CF6' },
   { id: 'blue', name: 'Синий', color: '#3b82f6' },
   { id: 'purple', name: 'Фиолетовый', color: '#a855f7' },
   { id: 'green', name: 'Зелёный', color: '#22c55e' },
@@ -14,7 +14,7 @@ const COLOR_SCHEMES = [
   { id: 'pink', name: 'Розовый', color: '#ec4899' },
   { id: 'teal', name: 'Бирюзовый', color: '#14b8a6' },
   { id: 'yellow', name: 'Жёлтый', color: '#eab308' },
-  { id: 'custom', name: 'Свой цвет', color: '#7B61FF' },
+  { id: 'custom', name: 'Свой цвет', color: '#8B5CF6' },
 ] as const;
 
 const BACKGROUNDS = [
