@@ -4,7 +4,7 @@ import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { TelegramTabBar } from './telegram-ui';
 
-export type MobileView = 'chat' | 'contacts' | 'ai' | 'settings' | 'wall' | 'profile';
+export type MobileView = 'chat' | 'contacts' | 'ai' | 'settings' | 'profile';
 
 interface MobileBottomNavProps {
   currentView: MobileView;

@@ -14,7 +14,6 @@ import {
   Archive,
   ArchiveRestore,
   Share2,
-  Newspaper,
   Phone,
   FileText,
   Star,
@@ -60,7 +59,6 @@ interface Folder {
 interface SidebarProps {
   onOpenAI: () => void;
   onOpenFriends: () => void;
-  onOpenWall?: () => void;
 }
 
 function NavButton({
@@ -120,7 +118,7 @@ function NavButton({
   );
 }
 
-export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: SidebarProps) {
+export default function Sidebar({ onOpenAI, onOpenFriends }: SidebarProps) {
   const { user } = useAuthStore();
   const { chats, activeChat, searchQuery, setSearchQuery, addChat, setActiveChat, archivedChatIds, showArchive, setShowArchive } = useChatStore();
   const { t } = useLang();
@@ -405,10 +403,6 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
     if (tab === 'chats') {
       setSearchQuery('');
       if (activeChat) setActiveChat(null);
-      // Если на стене — переключаемся на чаты
-      if (currentView === 'wall') {
-        useNavigationStore.getState().navigateTo('chat');
-      }
     }
     if (tab === 'settings') setShowSideMenu(true);
     if (tab === 'friends') onOpenFriends();
@@ -416,7 +410,7 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
 
   return (
     <>
-      <div className={`w-full ${currentView !== 'wall' ? 'sm:w-[380px]' : ''} h-full flex sm:rounded-[28px] overflow-hidden relative z-10 liquid-glass-strong border border-white/[0.08]`}>
+      <div className="w-full sm:w-[380px] h-full flex sm:rounded-[28px] overflow-hidden relative z-10 liquid-glass-strong border border-white/[0.08]">
 
         {/* ====== БОКОВАЯ НАВИГАЦИЯ (ПК) ====== */}
         {!isMobile && (
@@ -471,14 +465,6 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
                 active={currentView === 'favorites'}
                 onClick={() => useNavigationStore.getState().navigateTo('favorites')}
               />
-              {onOpenWall && (
-                <NavButton
-                  icon={Newspaper}
-                  label="Стена"
-                  active={currentView === 'wall'}
-                  onClick={onOpenWall}
-                />
-              )}
             </div>
 
             <div className="flex-1" />
@@ -511,7 +497,6 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
         )}
 
         {/* ====== ОСНОВНОЙ КОНТЕНТ ====== */}
-        {currentView !== 'wall' && (
         <div className="flex-1 flex flex-col min-w-0 gap-2 p-2">
 
           {/* Верхняя панель: Header + Поиск + Сторисы */}
@@ -996,7 +981,6 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
           </div>
 
         </div>
-        )}
       </div>
 
       {/* ====== МОДАЛКИ ====== */}

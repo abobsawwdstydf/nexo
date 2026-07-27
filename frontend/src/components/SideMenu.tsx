@@ -43,7 +43,7 @@ import {
   Store,
   Video,
   Gift,
-  Award,
+
   ListMusic,
   ShieldAlert,
   Cloud,
@@ -62,11 +62,10 @@ import StatisticsPage from '../pages/StatisticsPage';
 import CloudStoragePage from '../pages/CloudStoragePage';
 import ThemeSettings from './ThemeSettings';
 
-import BadgesModal from './BadgesModal';
 import UserProfile from './UserProfile';
 import type { User as UserType, UserPresence, FriendRequest, FriendWithId } from '../lib/types';
 
-type SideView = 'main' | 'profile' | 'settings' | 'about' | 'friends' | 'calls' | 'premium' | 'statistics' | 'badges' | 'cloud';
+type SideView = 'main' | 'profile' | 'settings' | 'about' | 'friends' | 'calls' | 'premium' | 'statistics' | 'cloud';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -317,8 +316,6 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
     { icon: Crown, label: 'Нексо НУче', onClick: () => changeView('premium'), highlight: true },
     { icon: Cloud, label: 'Облачное хранилище', onClick: () => changeView('cloud') },
     { icon: BarChart3, label: 'Статистика', onClick: () => changeView('statistics') },
-    { divider: true },
-    { icon: Award, label: 'Мои значки', onClick: () => changeView('badges') },
     { divider: true },
     { icon: Settings, label: t('settings'), onClick: () => changeView('settings') },
     { divider: true },
@@ -960,11 +957,6 @@ export default function SideMenu({ isOpen, onClose }: SideMenuProps) {
                   <div className="h-[calc(100%-3.5rem)] overflow-y-auto">
                     <StatisticsPage />
                   </div>
-                </div>
-              )}
-              {view === 'badges' && (
-                <div className="h-full flex flex-col">
-                  <BadgesModal onClose={() => changeView('main')} isSelf={true} embedded={true} />
                 </div>
               )}
             </AnimatePresence>

@@ -539,15 +539,15 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
 
       {/* ===== SCROLLABLE CONTENT ===== */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden pb-24 sm:pb-8">
-        {/* ===== RGB ANIMATED BANNER (Discord-style) ===== */}
+        {/* ===== NEXO GRADIENT BANNER ===== */}
         <div className="relative h-[180px] w-full overflow-hidden flex-shrink-0">
-          {/* RGB gradient animation */}
+          {/* Nexo purple gradient */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(135deg, #ff0040, #ff8c00, #ffe600, #00ff88, #00b4d8, #7B61FF, #ff0080, #ff0040)',
-              backgroundSize: '400% 400%',
-              animation: 'rgbBannerShift 8s ease infinite',
+              background: 'linear-gradient(135deg, #1a0a2e 0%, #3b1a7a 25%, #7B61FF 50%, #5b21b6 75%, #1a0a2e 100%)',
+              backgroundSize: '200% 200%',
+              animation: 'nexoBannerShift 12s ease infinite',
             }}
           />
           {/* Glass overlay for depth */}
@@ -556,11 +556,9 @@ export default function UserProfile({ userId, chatId, onClose, isSelf, embedded 
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")' }} />
           {/* Inline keyframes */}
           <style>{`
-            @keyframes rgbBannerShift {
+            @keyframes nexoBannerShift {
               0% { background-position: 0% 50%; }
-              25% { background-position: 100% 0%; }
-              50% { background-position: 100% 100%; }
-              75% { background-position: 0% 100%; }
+              50% { background-position: 100% 50%; }
               100% { background-position: 0% 50%; }
             }
           `}</style>

@@ -29,13 +29,11 @@ import UserProfile from './components/UserProfile';
 import LegalPage, { type LegalPageType } from './components/LegalPage';
 
 // Lazy-loaded pages (code-split)
-const WallPage = lazy(() => import('./pages/WallPage'));
-const HashtagPage = lazy(() => import('./pages/HashtagPage'));
 const DeviceAuthPage = lazy(() => import('./pages/DeviceAuthPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const AcceptSharedFolderModal = lazy(() => import('./components/AcceptSharedFolderModal'));
 
-type AppView = 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag' | 'contacts' | 'calls' | 'files' | 'favorites' | 'settings';
+type AppView = 'chat' | 'friends' | 'profile' | 'contacts' | 'calls' | 'files' | 'favorites' | 'settings';
 
 const LEGAL_ROUTES: Record<string, LegalPageType> = {
   terms: 'terms',
@@ -50,7 +48,7 @@ export default function App() {
   const { user, checkAuth, isLoading } = useAuthStore();
   const { success } = useToastStore();
   const { activeChat } = useChatStore();
-  const { currentView, profileUserId, hashtagTag, highlightPostId, navigateTo, openProfile, openHashtag, openWallPost, openAI, openFriends, clearHighlight } = useNavigationStore();
+  const { currentView, profileUserId, navigateTo, openProfile, openAI, openFriends } = useNavigationStore();
   const [sharedFolderToken, setSharedFolderToken] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileFriendsOpen, setMobileFriendsOpen] = useState(false);
@@ -112,22 +110,14 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashRoute);
   }, []);
 
-  // URL-based routing (/@username, /wall/post/:postId, ?user=username)
+  // URL-based routing (/@username, ?user=username)
   useEffect(() => {
     const path = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
     const usernameMatch = path.match(/^\/@(.+)$/);
-    const hashtagMatch = path.match(/^\/wall\/hashtag\/(.+)$/);
-    const postMatch = path.match(/^\/wall\/post\/(.+)$/);
     const queryUser = params.get('user');
 
-    if (postMatch && user) {
-      openWallPost(postMatch[1]);
-      window.history.replaceState({}, '', '/');
-    } else if (hashtagMatch && user) {
-      openHashtag(hashtagMatch[1]);
-      window.history.replaceState({}, '', '/');
-    } else if (usernameMatch && user) {
+    if (usernameMatch && user) {
       const username = usernameMatch[1];
       api.searchUsers(username).then(users => {
         const foundUser = users.find(u => u.username === username);
@@ -199,33 +189,18 @@ export default function App() {
             {/* Main content */}
             <div className="flex-1 min-h-0 overflow-hidden flex">
               {/* Sidebar - show on all views for consistent layout */}
-              {(currentView === 'chat' || currentView === 'wall' || currentView === 'friends') && (
-                <div className={`${(isMobile && activeChat) || (isMobile && currentView === 'wall') ? 'hidden' : 'flex'} w-full ${currentView === 'wall' ? 'sm:w-[56px]' : 'sm:w-[380px]'} flex-shrink-0 border-r border-border sm:rounded-2xl overflow-hidden transition-all duration-300`}>
+              {(currentView === 'chat' || currentView === 'friends') && (
+                <div className={`${isMobile && activeChat ? 'hidden' : 'flex'} w-full sm:w-[380px] flex-shrink-0 border-r border-border sm:rounded-2xl overflow-hidden transition-all duration-300`}>
                   <Sidebar 
                     onOpenAI={() => openAI()}
                     onOpenFriends={() => openFriends()}
-                    onOpenWall={() => navigateTo('wall')}
                   />
                 </div>
               )}
               
               <div className={`${isMobile && currentView === 'chat' && !activeChat ? 'hidden' : 'flex'} flex-1 min-h-0 overflow-hidden`}>
                 <AnimatePresence mode="wait">
-                  {currentView === 'hashtag' && hashtagTag ? (
-                    <motion.div
-                      key="hashtag"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.2, ease: 'easeOut' }}
-                      className="flex-1 min-h-0"
-                    >
-                      <HashtagPage
-                        tag={hashtagTag}
-                        onClose={() => navigateTo('wall')}
-                      />
-                    </motion.div>
-                  ) : currentView === 'contacts' ? (
+                  {currentView === 'contacts' ? (
                     <motion.div
                       key="contacts"
                       initial={{ opacity: 0, x: 20 }}
@@ -305,17 +280,6 @@ export default function App() {
                           onClose={() => navigateTo('chat')}
                         />
                       </motion.div>
-                    </motion.div>
-                  ) : currentView === 'wall' ? (
-                    <motion.div
-                      key="wall"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.2, ease: 'easeOut' }}
-                      className="flex-1 min-h-0"
-                    >
-                      <WallPage highlightPostId={highlightPostId} onHighlightCleared={() => clearHighlight()} />
                     </motion.div>
                   ) : currentView === 'friends' ? (
                     <motion.div

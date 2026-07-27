@@ -63,9 +63,9 @@ export function wsRequest<T = any>(type: string, payload?: Record<string, any>, 
 export function wsEmit(type: string, data?: Record<string, any>) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-  const envelope: Record<string, any> = { type, ...(data || {}) };
+  // Wrap data in payload to avoid "type" field collision with the event name.
   try {
-    ws.send(JSON.stringify(envelope));
+    ws.send(JSON.stringify({ type, payload: data || {} }));
   } catch {}
 }
 
@@ -203,9 +203,9 @@ export function connectSocket(token?: string): SocketInterface | null {
     },
     emit: (event: string, ...args: any[]) => {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        // Backend expects {type, chatId} format for some events
-        // For now, send the event name and args as-is
-        ws.send(JSON.stringify({ type: event, ...args[0] }));
+        // Wrap args in payload to avoid "type" field collision with the event name.
+        // Backend expects: { type: "<event>", payload: { ... } }
+        ws.send(JSON.stringify({ type: event, payload: args[0] || {} }));
       }
     },
     get connected() {

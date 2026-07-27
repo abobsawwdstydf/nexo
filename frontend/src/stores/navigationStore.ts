@@ -1,12 +1,10 @@
 import { create } from 'zustand';
 
 interface NavigationState {
-  currentView: 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag' | 'ai' | 'contacts' | 'calls' | 'files' | 'favorites' | 'settings';
+  currentView: 'chat' | 'friends' | 'profile' | 'ai' | 'contacts' | 'calls' | 'files' | 'favorites' | 'settings';
   previousView: NavigationState['currentView'] | null;
   profileUserId: string | null;
   sidebarProfileUserId: string | null;
-  hashtagTag: string | null;
-  highlightPostId: string | null;
   showAI: boolean;
   showNewChat: boolean;
   showFriends: boolean;
@@ -20,8 +18,6 @@ interface NavigationState {
   openProfile: (userId: string) => void;
   openSidebarProfile: (userId: string) => void;
   closeSidebarProfile: () => void;
-  openHashtag: (tag: string) => void;
-  openWallPost: (postId: string) => void;
   openAI: () => void;
   closeAI: () => void;
   openNewChat: () => void;
@@ -40,7 +36,6 @@ interface NavigationState {
   openThread: (threadId: string) => void;
   closeThread: () => void;
   goBack: () => void;
-  clearHighlight: () => void;
 }
 
 export const useNavigationStore = create<NavigationState>((set) => ({
@@ -48,8 +43,6 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   previousView: null,
   profileUserId: null,
   sidebarProfileUserId: null,
-  hashtagTag: null,
-  highlightPostId: null,
   showAI: false,
   showNewChat: false,
   showFriends: false,
@@ -77,20 +70,6 @@ export const useNavigationStore = create<NavigationState>((set) => ({
 
   closeSidebarProfile: () =>
     set({ sidebarProfileUserId: null }),
-
-  openHashtag: (tag) =>
-    set((state) => ({
-      hashtagTag: tag,
-      currentView: 'hashtag',
-      previousView: state.currentView,
-    })),
-
-  openWallPost: (postId) =>
-    set((state) => ({
-      highlightPostId: postId,
-      currentView: 'wall',
-      previousView: state.currentView,
-    })),
 
   openAI: () =>
     set((state) => ({
@@ -185,6 +164,4 @@ export const useNavigationStore = create<NavigationState>((set) => ({
         previousView: null,
       };
     }),
-
-  clearHighlight: () => set({ highlightPostId: null }),
 }));
