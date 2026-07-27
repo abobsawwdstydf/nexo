@@ -165,6 +165,7 @@ func main() {
 
 	auth.Post("/chats", handlers.CreateChat)
 	auth.Get("/chats", handlers.GetChats)
+	auth.Post("/chats/favorites", handlers.GetOrCreateFavorites) // BEFORE /chats/:id
 	auth.Get("/chats/:id", handlers.GetChat)
 	auth.Post("/chats/:id/members", handlers.AddChatMember)
 	auth.Post("/chats/:id/leave", handlers.LeaveChat)

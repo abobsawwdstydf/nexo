@@ -347,6 +347,29 @@ export default function AuthPage() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const usernameInputRef = useRef<HTMLInputElement>(null);
   const regEmailInputRef = useRef<HTMLInputElement>(null);
+  const [nameFocused, setNameFocused] = useState(false);
+  const [usernameFocused, setUsernameFocused] = useState(false);
+
+  // ─── Username generator ──────────────────────────────────────────────
+  const generateUsername = useCallback((displayName: string) => {
+    const adjectives = ['cool', 'happy', 'lucky', 'swift', 'bold', 'calm', 'epic', 'fast', 'keen', 'wise'];
+    const nouns = ['fox', 'wolf', 'bear', 'hawk', 'star', 'moon', 'fire', 'wave', 'code', 'dev'];
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const num = Math.floor(Math.random() * 900 + 100);
+    // Transliterate Russian to Latin for username base
+    const translit = displayName
+      .toLowerCase()
+      .replace(/[а-яё]/g, c => {
+        const map: Record<string, string> = { 'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya' };
+        return map[c] || c;
+      })
+      .replace(/[^a-z]/g, '');
+    if (translit.length >= 3) {
+      return `${translit.slice(0, 8)}_${adj}${num}`;
+    }
+    return `${adj}_${noun}${num}`;
+  }, []);
 
   // ─── Typing animations ─────────────────────────────────────────────────
   const greet = useTypingAnimation('Привет', { enabled: screen === 'greeting', muted, onType: () => playTypeClick(muted), onErase: () => playEraseClick(muted) });
@@ -409,7 +432,7 @@ export default function AuthPage() {
 
   // ─── Username check ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (username.length < 3 || !/^[a-zA-Z0-9_.-]+$/.test(username)) { setUsernameStatus('idle'); return; }
+    if (username.length < 3 || !/^[a-zA-Zа-яА-ЯёЁ0-9_.-]+$/.test(username)) { setUsernameStatus('idle'); return; }
     setUsernameStatus('checking');
     const t = setTimeout(async () => {
       try { const r = await api.checkUsername(username); setUsernameStatus(r.available ? 'available' : 'taken'); }
@@ -956,42 +979,77 @@ export default function AuthPage() {
             </div>
             {regNameLabel.phase === 'done' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <input
-                  ref={nameInputRef}
-                  type="text"
-                  value={name}
-                  onChange={e => { setName(e.target.value); playTypeClick(muted); }}
-                  onKeyDown={e => { if (e.key === 'Enter' && name.trim()) setScreen('reg-username'); }}
-                  placeholder="Твоё имя"
-                  maxLength={50}
-                  style={{
-                    width: '100%',
-                    padding: '16px 0',
-                    background: 'transparent',
-                    border: 'none',
-                    borderBottom: `2px solid ${D.border}`,
-                    color: D.textPrimary,
-                    fontSize: 20,
-                    fontFamily: FONT,
-                    fontWeight: 500,
-                    outline: 'none',
-                    caretColor: D.primary,
-                    textAlign: 'center',
-                  }}
-                  onFocus={e => { e.currentTarget.style.borderBottomColor = D.primary; }}
-                  onBlur={e => { e.currentTarget.style.borderBottomColor = D.border; }}
-                />
+                {/* Floating label input */}
+                <div style={{ position: 'relative', marginBottom: 32 }}>
+                  <motion.span
+                    animate={{
+                      y: nameFocused || name ? -24 : 0,
+                      scale: nameFocused || name ? 0.8 : 1,
+                      color: nameFocused ? D.primary : D.textMuted,
+                    }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      top: 16,
+                      fontSize: 16,
+                      fontFamily: FONT,
+                      fontWeight: 500,
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                      transformOrigin: 'center',
+                    }}
+                  >
+                    Твоё имя
+                  </motion.span>
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={name}
+                    onChange={e => { setName(e.target.value); playTypeClick(muted); }}
+                    onFocus={() => setNameFocused(true)}
+                    onBlur={() => setNameFocused(false)}
+                    onKeyDown={e => { if (e.key === 'Enter' && name.trim()) setScreen('reg-username'); }}
+                    maxLength={50}
+                    autoComplete="name"
+                    style={{
+                      width: '100%',
+                      padding: '24px 0 8px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottom: `2px solid ${nameFocused ? D.primary : D.border}`,
+                      color: D.textPrimary,
+                      fontSize: 20,
+                      fontFamily: FONT,
+                      fontWeight: 500,
+                      outline: 'none',
+                      caretColor: D.primary,
+                      textAlign: 'center',
+                      transition: 'border-color 0.2s',
+                    }}
+                  />
+                </div>
                 <motion.button
                   onClick={() => { if (name.trim()) setScreen('reg-username'); }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={name.trim() ? { scale: 1.05, boxShadow: '0 0 24px rgba(123,97,255,0.4)' } : {}}
+                  whileTap={name.trim() ? { scale: 0.95 } : {}}
                   disabled={!name.trim()}
                   style={{
-                    marginTop: 32, padding: '14px 48px',
-                    borderRadius: 50, background: name.trim() ? D.primary : 'rgba(255,255,255,0.06)',
-                    border: 'none', color: '#fff', fontSize: 15, fontWeight: 600,
-                    fontFamily: FONT, cursor: name.trim() ? 'pointer' : 'default',
-                    opacity: name.trim() ? 1 : 0.4, transition: 'all 0.2s',
+                    padding: '12px 36px',
+                    borderRadius: 50,
+                    background: name.trim() ? 'rgba(123,97,255,0.3)' : 'rgba(255,255,255,0.04)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    border: `1px solid ${name.trim() ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                    color: '#fff',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    fontFamily: FONT,
+                    cursor: name.trim() ? 'pointer' : 'default',
+                    opacity: name.trim() ? 1 : 0.4,
+                    transition: 'all 0.2s',
+                    boxShadow: name.trim() ? '0 0 20px rgba(123,97,255,0.3)' : 'none',
                   }}
                 >Продолжить</motion.button>
               </motion.div>
@@ -1024,34 +1082,61 @@ export default function AuthPage() {
             </div>
             {regUsernameLabel.phase === 'done' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                  <span style={{ color: D.primary, fontSize: 20, fontWeight: 700, fontFamily: FONT, marginRight: 2 }}>@</span>
-                  <input
-                    ref={usernameInputRef}
-                    type="text"
-                    value={username}
-                    onChange={e => { setUsername(e.target.value.replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 17)); playTypeClick(muted); }}
-                    onKeyDown={e => { if (e.key === 'Enter' && username.length >= 3) setScreen('reg-email'); }}
-                    placeholder="username"
-                    maxLength={17}
-                    style={{
-                      width: 240,
-                      padding: '16px 0',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: `2px solid ${D.border}`,
-                      color: D.textPrimary,
-                      fontSize: 20,
-                      fontFamily: FONT,
-                      fontWeight: 500,
-                      outline: 'none',
-                      caretColor: D.primary,
-                    }}
-                    onFocus={e => { e.currentTarget.style.borderBottomColor = D.primary; }}
-                    onBlur={e => { e.currentTarget.style.borderBottomColor = D.border; }}
-                  />
+                {/* Floating label input with @ prefix */}
+                <div style={{ position: 'relative', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: D.primary, fontSize: 20, fontWeight: 700, fontFamily: FONT, marginRight: 2, position: 'relative', top: -2 }}>@</span>
+                  <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
+                    <motion.span
+                      animate={{
+                        y: usernameFocused || username ? -20 : 0,
+                        scale: usernameFocused || username ? 0.75 : 1,
+                        color: usernameFocused ? D.primary : D.textMuted,
+                      }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 14,
+                        fontSize: 16,
+                        fontFamily: FONT,
+                        fontWeight: 500,
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                        transformOrigin: 'left',
+                      }}
+                    >
+                      username
+                    </motion.span>
+                    <input
+                      ref={usernameInputRef}
+                      type="text"
+                      value={username}
+                      onChange={e => { setUsername(e.target.value.replace(/[^a-zA-Zа-яА-ЯёЁ0-9_.-]/g, '').slice(0, 20)); playTypeClick(muted); }}
+                      onFocus={() => setUsernameFocused(true)}
+                      onBlur={() => setUsernameFocused(false)}
+                      onKeyDown={e => { if (e.key === 'Enter' && username.length >= 3 && usernameStatus !== 'taken') setScreen('reg-email'); }}
+                      maxLength={20}
+                      autoComplete="username"
+                      style={{
+                        width: '100%',
+                        padding: '24px 0 6px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: `2px solid ${usernameFocused ? D.primary : D.border}`,
+                        color: D.textPrimary,
+                        fontSize: 20,
+                        fontFamily: FONT,
+                        fontWeight: 500,
+                        outline: 'none',
+                        caretColor: D.primary,
+                        transition: 'border-color 0.2s',
+                      }}
+                    />
+                  </div>
                 </div>
-                <div style={{ height: 20, marginTop: 8 }}>
+
+                {/* Username status */}
+                <div style={{ height: 20, marginTop: 4 }}>
                   <AnimatePresence>
                     {usernameStatus === 'available' && (
                       <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 12, color: D.success, fontFamily: FONT }}>Свободен</motion.span>
@@ -1061,22 +1146,59 @@ export default function AuthPage() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* Generate username button */}
                 <motion.button
-                  onClick={() => { if (username.length >= 3 && usernameStatus !== 'taken') setScreen('reg-email'); }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  disabled={username.length < 3 || usernameStatus === 'taken'}
+                  onClick={() => {
+                    const generated = generateUsername(name || 'user');
+                    setUsername(generated);
+                    playTypeClick(muted);
+                    usernameInputRef.current?.focus();
+                  }}
+                  whileHover={{ scale: 1.03, color: D.primary }}
+                  whileTap={{ scale: 0.97 }}
                   style={{
-                    marginTop: 24, padding: '14px 48px',
-                    borderRadius: 50,
-                    background: username.length >= 3 && usernameStatus !== 'taken' ? D.primary : 'rgba(255,255,255,0.06)',
-                    border: 'none', color: '#fff', fontSize: 15, fontWeight: 600,
+                    marginTop: 12,
+                    padding: '8px 20px',
+                    borderRadius: 20,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: `1px solid rgba(255,255,255,0.08)`,
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    color: D.textMuted,
+                    fontSize: 12,
+                    fontWeight: 500,
                     fontFamily: FONT,
-                    cursor: username.length >= 3 && usernameStatus !== 'taken' ? 'pointer' : 'default',
-                    opacity: username.length >= 3 && usernameStatus !== 'taken' ? 1 : 0.4,
+                    cursor: 'pointer',
                     transition: 'all 0.2s',
                   }}
-                >Продолжить</motion.button>
+                >Сгенерировать</motion.button>
+
+                {/* Continue button */}
+                <div style={{ marginTop: 24 }}>
+                  <motion.button
+                    onClick={() => { if (username.length >= 3 && usernameStatus !== 'taken') setScreen('reg-email'); }}
+                    whileHover={username.length >= 3 && usernameStatus !== 'taken' ? { scale: 1.05, boxShadow: '0 0 24px rgba(123,97,255,0.4)' } : {}}
+                    whileTap={username.length >= 3 && usernameStatus !== 'taken' ? { scale: 0.95 } : {}}
+                    disabled={username.length < 3 || usernameStatus === 'taken'}
+                    style={{
+                      padding: '12px 36px',
+                      borderRadius: 50,
+                      background: username.length >= 3 && usernameStatus !== 'taken' ? 'rgba(123,97,255,0.3)' : 'rgba(255,255,255,0.04)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: `1px solid ${username.length >= 3 && usernameStatus !== 'taken' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                      color: '#fff',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      fontFamily: FONT,
+                      cursor: username.length >= 3 && usernameStatus !== 'taken' ? 'pointer' : 'default',
+                      opacity: username.length >= 3 && usernameStatus !== 'taken' ? 1 : 0.4,
+                      transition: 'all 0.2s',
+                      boxShadow: username.length >= 3 && usernameStatus !== 'taken' ? '0 0 20px rgba(123,97,255,0.3)' : 'none',
+                    }}
+                  >Продолжить</motion.button>
+                </div>
               </motion.div>
             )}
           </motion.div>

@@ -368,6 +368,66 @@ func ArchiveChat(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true})
 }
 
+// GetOrCreateFavorites returns the user's personal "Избранное" chat,
+// creating it if it doesn't exist yet.
+func GetOrCreateFavorites(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+
+	// Find existing favorites chat for this user
+	var favChatIDs []string
+	db.GetDB().Raw(`
+		SELECT cm.chat_id FROM chat_members cm
+		JOIN chats ch ON ch.id = cm.chat_id
+		WHERE cm.user_id = ? AND ch.type = 'favorites'
+		LIMIT 1
+	`, userID).Scan(&favChatIDs)
+
+	if len(favChatIDs) > 0 {
+		var chat models.Chat
+		if err := db.GetDB().
+			Preload("Members", func(db *gorm.DB) *gorm.DB {
+				return db.Preload("User")
+			}).
+			First(&chat, "id = ?", favChatIDs[0]).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to load favorites chat"})
+		}
+		return c.JSON(chat)
+	}
+
+	// Create new favorites chat in a transaction
+	var chat models.Chat
+	if err := db.GetDB().Transaction(func(tx *gorm.DB) error {
+		chat = models.Chat{
+			ID:       generateID(),
+			Type:     "favorites",
+			Name:     "Избранное",
+			IsSecret: false,
+		}
+		if err := tx.Create(&chat).Error; err != nil {
+			return err
+		}
+
+		member := models.ChatMember{
+			ID:     generateID(),
+			ChatID: chat.ID,
+			UserID: userID,
+			Role:   "admin",
+		}
+		return tx.Create(&member).Error
+	}); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create favorites chat"})
+	}
+
+	// Reload with preloaded members
+	db.GetDB().
+		Preload("Members", func(db *gorm.DB) *gorm.DB {
+			return db.Preload("User")
+		}).
+		First(&chat, "id = ?", chat.ID)
+
+	return c.Status(201).JSON(chat)
+}
+
 func MuteChat(c *fiber.Ctx) error {
 	chatID := c.Params("id")
 	userID := c.Locals("userId").(string)
