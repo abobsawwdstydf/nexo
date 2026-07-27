@@ -65,14 +65,27 @@ func main() {
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))
-	// CORS — allow listed origins + localhost dev
+	// CORS — allow listed origins + localhost dev + CORS_ORIGINS env
 	allowedDomains := map[string]bool{
-		"nexo.hakerone.ru":       true,
-		"nexo.darkheavens.ru":    true,
-		"msg.hakerone.ru":        true,
-		"msg.darkheavens.ru":     true,
-		"neexoobeec.hakerone.ru": true,
-		"nneexion.darkheavens.ru": true, // backend API (будущий)
+		"nexo.hakerone.ru":        true,
+		"nexo.darkheavens.ru":     true,
+		"msg.hakerone.ru":         true,
+		"msg.darkheavens.ru":      true,
+		"neexoobeec.hakerone.ru":  true,
+		"nneexion.darkheavens.ru": true,
+		"n.hakerone.ru":           true,
+		"n.darkheavens.ru":        true,
+	}
+	// Also load from CORS_ORIGINS env (comma-separated)
+	if corsEnv := os.Getenv("CORS_ORIGINS"); corsEnv != "" {
+		for _, o := range strings.Split(corsEnv, ",") {
+			o = strings.TrimSpace(o)
+			o = strings.TrimPrefix(o, "https://")
+			o = strings.TrimPrefix(o, "http://")
+			if o != "" {
+				allowedDomains[o] = true
+			}
+		}
 	}
 	app.Use(cors.New(cors.Config{
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
