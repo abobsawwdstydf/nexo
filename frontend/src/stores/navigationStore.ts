@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 interface NavigationState {
-  currentView: 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag' | 'ai';
+  currentView: 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag' | 'ai' | 'contacts' | 'calls' | 'files' | 'favorites' | 'settings';
   previousView: NavigationState['currentView'] | null;
   profileUserId: string | null;
   sidebarProfileUserId: string | null;
@@ -28,6 +28,11 @@ interface NavigationState {
   closeNewChat: () => void;
   openFriends: () => void;
   closeFriends: () => void;
+  openContacts: () => void;
+  openCalls: () => void;
+  openFiles: () => void;
+  openFavorites: () => void;
+  openSettings: () => void;
   openChannelProfile: (channelId: string) => void;
   closeChannelProfile: () => void;
   openChannelStudio: (channelId: string) => void;
@@ -111,6 +116,36 @@ export const useNavigationStore = create<NavigationState>((set) => ({
       showFriends: false,
       currentView: state.previousView ?? 'chat',
       previousView: null,
+    })),
+
+  openContacts: () =>
+    set((state) => ({
+      currentView: 'contacts',
+      previousView: state.currentView,
+    })),
+
+  openCalls: () =>
+    set((state) => ({
+      currentView: 'calls',
+      previousView: state.currentView,
+    })),
+
+  openFiles: () =>
+    set((state) => ({
+      currentView: 'files',
+      previousView: state.currentView,
+    })),
+
+  openFavorites: () =>
+    set((state) => ({
+      currentView: 'favorites',
+      previousView: state.currentView,
+    })),
+
+  openSettings: () =>
+    set((state) => ({
+      currentView: 'settings',
+      previousView: state.currentView,
     })),
 
   openChannelProfile: (channelId) =>

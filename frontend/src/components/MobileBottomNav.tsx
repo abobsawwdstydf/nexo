@@ -1,10 +1,10 @@
 import { memo, useCallback } from 'react';
-import { MessageSquare, User, Newspaper, Plus, Sparkles } from 'lucide-react';
+import { MessageSquare, Users, Sparkles, Settings } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { TelegramTabBar } from './telegram-ui';
 
-export type MobileView = 'chat' | 'wall' | 'profile' | 'hashtag';
+export type MobileView = 'chat' | 'contacts' | 'ai' | 'settings' | 'wall' | 'profile';
 
 interface MobileBottomNavProps {
   currentView: MobileView;
@@ -28,9 +28,9 @@ function MobileBottomNav({
 
   const items = [
     { id: 'chat', label: 'Чаты', icon: MessageSquare, badge: unreadCount },
-    { id: 'wall', label: 'Стена', icon: Newspaper },
+    { id: 'contacts', label: 'Контакты', icon: Users },
     { id: 'ai', label: 'Нексо AI', icon: Sparkles, accent: true },
-    { id: 'profile', label: 'Профиль', icon: User },
+    { id: 'settings', label: 'Настройки', icon: Settings },
   ];
 
   const handleSelect = useCallback(
@@ -40,7 +40,7 @@ function MobileBottomNav({
         onOpenAI?.();
         return;
       }
-      if (id === 'profile') {
+      if (id === 'settings') {
         onOpenProfile?.();
         return;
       }
