@@ -9,6 +9,7 @@ import { playNotificationSound, playUvedSound, isChatMuted } from '../lib/sounds
 import { useLang } from '../lib/i18n';
 import type { Message, UserBasic, CallInfo } from '../lib/types';
 import { Send, Check, Phone, MessageSquare, Users, Archive, Plus } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
 import ChatView from '../components/ChatView';
 import CallModal from '../components/CallModal';
 import GroupCallModal from '../components/GroupCallModal';
@@ -564,12 +565,21 @@ export default function ChatPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="h-full w-full flex flex-col bg-surface gap-0 overflow-hidden"
+      className="h-full w-full flex flex-row bg-surface gap-0 overflow-hidden"
     >
-      {/* ChatView — занимает всё пространство */}
-      <div className="flex-1 w-full h-full min-h-0 overflow-hidden relative">
-        <ChatView onStartCall={handleStartCall} onStartGroupCall={handleStartGroupCall} />
-      </div>
+      {/* Sidebar — левая панель со списком чатов */}
+      {(!isMobile || !activeChat) && (
+        <div className={`${isMobile ? 'w-full' : 'w-[380px]'} h-full flex-shrink-0 overflow-hidden`}>
+          <Sidebar onOpenAI={openAI} onOpenFriends={openFriends} />
+        </div>
+      )}
+
+      {/* ChatView — правая панель с сообщениями */}
+      {(!isMobile || activeChat) && (
+        <div className="flex-1 w-full h-full min-h-0 overflow-hidden relative">
+          <ChatView onStartCall={handleStartCall} onStartGroupCall={handleStartGroupCall} />
+        </div>
+      )}
 
       {/* ====== NEXO AI PANEL ====== */}
       <AnimatePresence>
