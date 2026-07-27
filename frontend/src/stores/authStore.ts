@@ -2,8 +2,6 @@ import { create } from 'zustand';
 import { api } from '../lib/api';
 import { connectSocket, disconnectSocket } from '../lib/socket';
 import { subscribeToNotifications, unsubscribeFromNotifications } from '../lib/notifications';
-import { useChatStore } from './chatStore';
-import { useSettingsStore } from './settingsStore';
 import type { User } from '../lib/types';
 
 interface AuthState {
@@ -129,15 +127,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
           connectSocket(token);
         }
         set({ user, isLoading: false });
-
-        // Post-success operations — isolated from auth so data errors
-        // don't trigger logout (api.request() already handled refresh)
-        try {
-          useChatStore.getState().setChatsFromInit(initData.chats);
-          useSettingsStore.getState().setSettingsFromInit(initData.settings);
-        } catch (e) {
-          console.error('Failed to load init data:', e);
-        }
 
         setTimeout(() => {
           subscribeToNotifications().catch(() => {});
