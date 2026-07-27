@@ -8,17 +8,17 @@ export function AuthBackground() {
       <motion.div
         animate={{ scale: [1, 1.2, 1], opacity: [0.06, 0.12, 0.06] }}
         transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute top-1/4 left-1/3 w-[400px] h-[400px] rounded-full bg-[#7B61FF] blur-[120px]"
+        className="absolute top-1/4 left-1/3 w-[400px] h-[400px] rounded-full bg-white blur-[120px]"
       />
       <motion.div
         animate={{ scale: [1, 1.15, 1], opacity: [0.04, 0.08, 0.04] }}
         transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-        className="absolute bottom-1/4 right-1/3 w-[350px] h-[350px] rounded-full bg-[#8b5cf6] blur-[100px]"
+        className="absolute bottom-1/4 right-1/3 w-[350px] h-[350px] rounded-full bg-zinc-400 blur-[100px]"
       />
       <motion.div
         animate={{ scale: [1, 1.1, 1], opacity: [0.03, 0.06, 0.03] }}
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-[#a855f7] blur-[80px]"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-zinc-500 blur-[80px]"
       />
     </div>
   );
@@ -29,8 +29,8 @@ export function AuthGrid() {
     <div
       className="absolute inset-0 pointer-events-none opacity-[0.015]"
       style={{
-        backgroundImage:
-          'linear-gradient(rgba(99,102,241,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.4) 1px, transparent 1px)',
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)',
         backgroundSize: '50px 50px',
       }}
     />
@@ -109,7 +109,7 @@ export function AuthLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
         className={`relative ${sizeClass} object-cover`}
         style={
           size === 'lg'
-            ? { boxShadow: '0 0 60px rgba(99,102,241,0.3), 0 25px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)' }
+            ? { boxShadow: '0 0 60px rgba(255,255,255,0.1), 0 25px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)' }
             : undefined
         }
         initial={{ rotate: -180, scale: 0 }}
@@ -140,12 +140,12 @@ export function AuthTitle({ title, subtitle }: { title: string; subtitle?: strin
 }
 
 export const authTitleStyle = {
-  background: 'linear-gradient(135deg, #fff, #a5b4fc)',
+  background: 'linear-gradient(135deg, #fff, #ccc)',
   WebkitBackgroundClip: 'text' as const,
   WebkitTextFillColor: 'transparent' as const,
   backgroundClip: 'text' as const,
 };
 
 export const authPrimaryButtonStyle = {
-  boxShadow: '0 0 20px rgba(99,102,241,0.3), 0 6px 20px rgba(0,0,0,0.2)',
+  boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
 };

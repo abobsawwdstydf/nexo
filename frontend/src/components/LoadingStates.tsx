@@ -63,8 +63,8 @@ export function НексоLoader({ size = 'md', theme = 'dark' }: { size?: 'sm' 
   const dotColor = isDark ? 'rgba(255,255,255,0.2)' : '#d0d0d0';
   const trackBg = isDark ? 'rgba(255,255,255,0.08)' : '#eaeaea';
   const barGradient = isDark
-    ? '#7B61FF'
-    : '#7B61FF';
+    ? '#ffffff'
+    : '#333333';
   const pctSub = isDark ? 'rgba(255,255,255,0.35)' : '#bbb';
   const pctMain = isDark ? '#ffffff' : '#1F1F23';
 
@@ -149,7 +149,7 @@ export function DotsLoader({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          className={`${dotSize} rounded-full bg-nexo-500`}
+          className={`${dotSize} rounded-full bg-white`}
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.5, 1, 0.5],
@@ -170,7 +170,7 @@ export function PulseLoader() {
   return (
     <div className="relative w-12 h-12">
       <motion.div
-        className="absolute inset-0 rounded-full bg-nexo-500/30"
+        className="absolute inset-0 rounded-full bg-white/10"
         animate={{
           scale: [1, 1.5, 1],
           opacity: [0.6, 0, 0.6],
@@ -181,7 +181,7 @@ export function PulseLoader() {
         }}
       />
       <motion.div
-        className="absolute inset-2 rounded-full bg-nexo-500/50"
+        className="absolute inset-2 rounded-full bg-white/20"
         animate={{
           scale: [1, 1.3, 1],
           opacity: [0.8, 0, 0.8],
@@ -192,7 +192,7 @@ export function PulseLoader() {
           delay: 0.5,
         }}
       />
-      <div className="absolute inset-4 rounded-full bg-nexo-500" />
+      <div className="absolute inset-4 rounded-full bg-white" />
     </div>
   );
 }
@@ -202,7 +202,7 @@ export function ProgressBar({ progress = 0, className = '' }: { progress?: numbe
   return (
     <div className={`w-full h-1 bg-white/10 rounded-full overflow-hidden ${className}`}>
       <motion.div
-        className="h-full bg-nexo-500 rounded-full"
+        className="h-full bg-white rounded-full"
         initial={{ width: 0 }}
         animate={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         transition={{ duration: 0.3 }}
@@ -216,7 +216,7 @@ export function IndeterminateProgress({ className = '' }: { className?: string }
   return (
     <div className={`w-full h-1 bg-white/10 rounded-full overflow-hidden ${className}`}>
       <motion.div
-        className="h-full w-1/3 bg-nexo-500 rounded-full"
+        className="h-full w-1/3 bg-white rounded-full"
         animate={{
           x: ['-100%', '400%'],
         }}
@@ -263,7 +263,7 @@ export function LoadingOverlay({ message = 'Загрузка...' }: { message?: 
         style={{
           background: 'rgba(255,255,255,0.03)',
           border: '1px solid rgba(255,255,255,0.06)',
-          boxShadow: '0 0 80px rgba(99,102,241,0.08)',
+          boxShadow: '0 0 80px rgba(255,255,255,0.03)',
         }}
       >
         <НексоLoader size="lg" />
@@ -296,7 +296,7 @@ export function AIThinking() {
           ease: 'linear',
         }}
       >
-        <Sparkles size={16} className="text-nexo-400" />
+        <Sparkles size={16} className="text-white/60" />
       </motion.div>
       <span className="text-sm text-zinc-400">AI думает</span>
       <DotsLoader size="sm" />

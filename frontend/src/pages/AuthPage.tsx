@@ -9,8 +9,8 @@ import { ArrowRight, Volume2, VolumeX } from 'lucide-react';
 // ═══════════════════════════════════════════════════════════════════════════
 const D = {
   bg: '#000000',
-  primary: '#7B61FF',
-  primaryGlow: 'rgba(123,97,255,0.4)',
+  primary: '#ffffff',
+  primaryGlow: 'rgba(255,255,255,0.2)',
   success: '#3ba55d',
   error: '#ed4245',
   textPrimary: '#ffffff',
@@ -790,8 +790,8 @@ export default function AuthPage() {
                     width: '100%',
                     padding: '14px 24px',
                     borderRadius: 12,
-                    background: emailDraft.includes('@') ? 'rgba(123,97,255,0.2)' : 'rgba(255,255,255,0.04)',
-                    border: `1.5px solid ${emailDraft.includes('@') ? 'rgba(123,97,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    background: emailDraft.includes('@') ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${emailDraft.includes('@') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'}`,
                     color: emailDraft.includes('@') ? '#fff' : 'rgba(255,255,255,0.3)',
                     fontSize: 16,
                     fontWeight: 600,
@@ -1036,16 +1036,16 @@ export default function AuthPage() {
                 </div>
                 <motion.button
                   onClick={() => { if (name.trim()) setScreen('reg-username'); }}
-                  whileHover={name.trim() ? { scale: 1.05, boxShadow: '0 0 24px rgba(123,97,255,0.4)' } : {}}
+                  whileHover={name.trim() ? { scale: 1.05 } : {}}
                   whileTap={name.trim() ? { scale: 0.95 } : {}}
                   disabled={!name.trim()}
                   style={{
                     padding: '12px 36px',
                     borderRadius: 50,
-                    background: name.trim() ? 'rgba(123,97,255,0.3)' : 'rgba(255,255,255,0.04)',
+                    background: name.trim() ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
                     backdropFilter: 'blur(12px)',
                     WebkitBackdropFilter: 'blur(12px)',
-                    border: `1px solid ${name.trim() ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                    border: `1px solid ${name.trim() ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`,
                     color: '#fff',
                     fontSize: 14,
                     fontWeight: 600,
@@ -1053,7 +1053,6 @@ export default function AuthPage() {
                     cursor: name.trim() ? 'pointer' : 'default',
                     opacity: name.trim() ? 1 : 0.4,
                     transition: 'all 0.2s',
-                    boxShadow: name.trim() ? '0 0 20px rgba(123,97,255,0.3)' : 'none',
                   }}
                 >Продолжить</motion.button>
               </motion.div>
@@ -1182,24 +1181,23 @@ export default function AuthPage() {
                 <div style={{ marginTop: 24 }}>
                   <motion.button
                     onClick={() => { if (username.length >= 3 && usernameStatus !== 'taken') setScreen('reg-email'); }}
-                    whileHover={username.length >= 3 && usernameStatus !== 'taken' ? { scale: 1.05, boxShadow: '0 0 24px rgba(123,97,255,0.4)' } : {}}
+                    whileHover={username.length >= 3 && usernameStatus !== 'taken' ? { scale: 1.05 } : {}}
                     whileTap={username.length >= 3 && usernameStatus !== 'taken' ? { scale: 0.95 } : {}}
                     disabled={username.length < 3 || usernameStatus === 'taken'}
                     style={{
                       padding: '12px 36px',
                       borderRadius: 50,
-                      background: username.length >= 3 && usernameStatus !== 'taken' ? 'rgba(123,97,255,0.3)' : 'rgba(255,255,255,0.04)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: `1px solid ${username.length >= 3 && usernameStatus !== 'taken' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                    background: username.length >= 3 && usernameStatus !== 'taken' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    border: `1px solid ${username.length >= 3 && usernameStatus !== 'taken' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`,
                       color: '#fff',
                       fontSize: 14,
                       fontWeight: 600,
                       fontFamily: FONT,
                       cursor: username.length >= 3 && usernameStatus !== 'taken' ? 'pointer' : 'default',
-                      opacity: username.length >= 3 && usernameStatus !== 'taken' ? 1 : 0.4,
-                      transition: 'all 0.2s',
-                      boxShadow: username.length >= 3 && usernameStatus !== 'taken' ? '0 0 20px rgba(123,97,255,0.3)' : 'none',
+                    opacity: username.length >= 3 && usernameStatus !== 'taken' ? 1 : 0.4,
+                    transition: 'all 0.2s',
                     }}
                   >Продолжить</motion.button>
                 </div>
@@ -1299,8 +1297,8 @@ export default function AuthPage() {
                     width: '100%',
                     padding: '14px 24px',
                     borderRadius: 12,
-                    background: regEmailDraft.includes('@') ? 'rgba(123,97,255,0.2)' : 'rgba(255,255,255,0.04)',
-                    border: `1.5px solid ${regEmailDraft.includes('@') ? 'rgba(123,97,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    background: regEmailDraft.includes('@') ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${regEmailDraft.includes('@') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'}`,
                     color: regEmailDraft.includes('@') ? '#fff' : 'rgba(255,255,255,0.3)',
                     fontSize: 16,
                     fontWeight: 600,
