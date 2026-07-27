@@ -15,6 +15,10 @@ import {
   ArchiveRestore,
   Share2,
   Newspaper,
+  Phone,
+  FileText,
+  Star,
+  Settings,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
@@ -23,6 +27,7 @@ import { useLang } from '../lib/i18n';
 import { api } from '../lib/api';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import { cn, Badge, Spinner, SearchInput, GlassPanel, EmptyState } from './ui';
+import PremiumBadge from './PremiumBadge';
 import { AnimatedInput, AnimatedBadge } from './animations/AnimatedUIComponents';
 import Avatar from './Avatar';
 import UserTag from './UserTag';
@@ -437,16 +442,34 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
                 badge={unreadCount}
               />
               <NavButton
-                icon={Plus}
-                label="Новый чат"
-                active={false}
-                onClick={() => setShowNewChat(true)}
+                icon={Users}
+                label="Контакты"
+                active={currentView === 'contacts'}
+                onClick={() => useNavigationStore.getState().navigateTo('contacts')}
+              />
+              <NavButton
+                icon={Phone}
+                label="Звонки"
+                active={currentView === 'calls'}
+                onClick={() => useNavigationStore.getState().navigateTo('calls')}
               />
               <NavButton
                 icon={Sparkles}
                 label="Нексо AI"
                 active={false}
                 onClick={onOpenAI}
+              />
+              <NavButton
+                icon={FileText}
+                label="Файлы"
+                active={currentView === 'files'}
+                onClick={() => useNavigationStore.getState().navigateTo('files')}
+              />
+              <NavButton
+                icon={Star}
+                label="Избранное"
+                active={currentView === 'favorites'}
+                onClick={() => useNavigationStore.getState().navigateTo('favorites')}
               />
               {onOpenWall && (
                 <NavButton
@@ -459,6 +482,17 @@ export default function Sidebar({ onOpenAI, onOpenFriends, onOpenWall }: Sidebar
             </div>
 
             <div className="flex-1" />
+
+            {/* НуЧе Premium Banner */}
+            <PremiumBadge variant="sidebar" />
+
+            {/* Настройки */}
+            <NavButton
+              icon={Settings}
+              label="Настройки"
+              active={currentView === 'settings'}
+              onClick={() => useNavigationStore.getState().navigateTo('settings')}
+            />
 
             {/* Профиль — внизу колонки */}
             <button
