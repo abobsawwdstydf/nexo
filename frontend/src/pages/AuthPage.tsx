@@ -328,7 +328,7 @@ type Screen =
   | 'reg-success'
   | 'reg-error';
 
-export default function AuthPage() {
+export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'privacy' | 'terms' | 'cookies') => void }) {
   const { sendLoginCode, loginConfirm, register } = useAuthStore();
   const [muted, setMuted] = useState(false);
   const [screen, setScreen] = useState<Screen>('greeting');
@@ -1469,6 +1469,33 @@ export default function AuthPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Legal footer ────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 0.6 }}
+        className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-4 px-4"
+        style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
+      >
+        <button
+          onClick={() => onLegalClick?.('privacy')}
+          className="text-[11px] text-white/20 hover:text-white/50 transition-colors"
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        >Политика конфиденциальности</button>
+        <span className="text-[11px] text-white/10">·</span>
+        <button
+          onClick={() => onLegalClick?.('terms')}
+          className="text-[11px] text-white/20 hover:text-white/50 transition-colors"
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        >Пользовательское соглашение</button>
+        <span className="text-[11px] text-white/10">·</span>
+        <button
+          onClick={() => onLegalClick?.('cookies')}
+          className="text-[11px] text-white/20 hover:text-white/50 transition-colors"
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        >Cookie</button>
+      </motion.div>
     </div>
   );
 }
