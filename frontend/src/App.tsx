@@ -9,6 +9,11 @@ import { getSocket } from './lib/socket';
 import { playClickSound } from './hooks/useClickSound';
 import AuthPage from './pages/AuthPage';
 import ChatPage from './pages/ChatPage';
+import ContactsPage from './pages/ContactsPage';
+import CallsPage from './pages/CallsPage';
+import FavoritesPage from './pages/FavoritesPage';
+import SettingsPage from './pages/SettingsPage';
+import CloudStoragePage from './pages/CloudStoragePage';
 import ToastContainer from './components/ToastContainer';
 import MusicPlayer from './components/MusicPlayer';
 import VoicePlayerBar from './components/VoicePlayerBar';
@@ -30,7 +35,7 @@ const DeviceAuthPage = lazy(() => import('./pages/DeviceAuthPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const AcceptSharedFolderModal = lazy(() => import('./components/AcceptSharedFolderModal'));
 
-type AppView = 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag';
+type AppView = 'chat' | 'wall' | 'friends' | 'profile' | 'hashtag' | 'contacts' | 'calls' | 'files' | 'favorites' | 'settings';
 
 const LEGAL_ROUTES: Record<string, LegalPageType> = {
   terms: 'terms',
@@ -220,6 +225,61 @@ export default function App() {
                         onClose={() => navigateTo('wall')}
                       />
                     </motion.div>
+                  ) : currentView === 'contacts' ? (
+                    <motion.div
+                      key="contacts"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="flex-1 min-h-0"
+                    >
+                      <ContactsPage onClose={() => navigateTo('chat')} />
+                    </motion.div>
+                  ) : currentView === 'calls' ? (
+                    <motion.div
+                      key="calls"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="flex-1 min-h-0"
+                    >
+                      <CallsPage onClose={() => navigateTo('chat')} />
+                    </motion.div>
+                  ) : currentView === 'files' ? (
+                    <motion.div
+                      key="files"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="flex-1 min-h-0"
+                    >
+                      <CloudStoragePage onClose={() => navigateTo('chat')} />
+                    </motion.div>
+                  ) : currentView === 'favorites' ? (
+                    <motion.div
+                      key="favorites"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="flex-1 min-h-0"
+                    >
+                      <FavoritesPage onClose={() => navigateTo('chat')} />
+                    </motion.div>
+                  ) : currentView === 'settings' ? (
+                    <motion.div
+                      key="settings"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="flex-1 min-h-0"
+                    >
+                      <SettingsPage onClose={() => navigateTo('chat')} />
+                    </motion.div>
                   ) : currentView === 'profile' && profileUserId ? (
                     <motion.div
                       key="profile"
@@ -294,9 +354,8 @@ export default function App() {
       {/* Mobile Bottom Navigation - только на мобильном, скрывается когда открыт чат */}
       {user && isMobile && !(activeChat && currentView === 'chat') && (
         <MobileBottomNav
-          currentView={(mobileFriendsOpen ? 'wall' : currentView) as MobileView}
+          currentView={currentView as MobileView}
           onNavigate={(view) => {
-            setMobileFriendsOpen(false);
             navigateTo(view as AppView);
           }}
           onOpenAI={() => {
@@ -306,7 +365,6 @@ export default function App() {
             useNavigationStore.getState().openNewChat();
           }}
           onOpenProfile={() => {
-            setMobileFriendsOpen(false);
             openProfile(user.id);
           }}
         />
