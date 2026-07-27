@@ -7,11 +7,9 @@ import LegalPages from './pages/LegalPages';
 import CookieConsent from './components/CookieConsent';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-type Page = 'auth' | 'messenger' | 'legal';
-
 export default function App() {
   const { user, checkAuth } = useAuthStore();
-  const [page, setPage] = useState<Page>('auth');
+  const [showLegal, setShowLegal] = useState(false);
   const [legalTab, setLegalTab] = useState<'privacy' | 'terms' | 'cookies'>('privacy');
 
   // Auth check on mount
@@ -19,25 +17,17 @@ export default function App() {
     checkAuth();
   }, [checkAuth]);
 
-  // Sync page state with auth state
-  useEffect(() => {
-    if (user) {
-      setPage('messenger');
-    } else if (page === 'messenger') {
-      setPage('auth');
-    }
-  }, [user]);
-
   const openLegal = (tab: 'privacy' | 'terms' | 'cookies') => {
     setLegalTab(tab);
-    setPage('legal');
+    setShowLegal(true);
   };
 
   return (
     <ErrorBoundary>
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col relative">
+      {/* ═══ Main page: messenger or auth ═══ */}
       <AnimatePresence mode="wait">
-        {page === 'messenger' && user ? (
+        {user ? (
           <motion.div
             key="messenger"
             initial={{ opacity: 0 }}
@@ -47,20 +37,6 @@ export default function App() {
             className="h-full w-full"
           >
             <MessengerPage />
-          </motion.div>
-        ) : page === 'legal' ? (
-          <motion.div
-            key="legal"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="h-full w-full"
-          >
-            <LegalPages
-              initialTab={legalTab}
-              onBack={() => setPage(user ? 'messenger' : 'auth')}
-            />
           </motion.div>
         ) : (
           <motion.div
@@ -75,6 +51,26 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ═══ Legal overlay (fullscreen) ═══ */}
+      <AnimatePresence>
+        {showLegal && (
+          <motion.div
+            key="legal"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.25 }}
+            className="absolute inset-0 z-50 h-full w-full"
+          >
+            <LegalPages
+              initialTab={legalTab}
+              onBack={() => setShowLegal(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <CookieConsent />
     </div>
     </ErrorBoundary>

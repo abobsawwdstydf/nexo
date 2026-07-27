@@ -4,7 +4,7 @@ import { Cookie, X } from 'lucide-react';
 
 const COOKIE_CONSENT_KEY = 'nexo_cookie_consent';
 
-type ConsentLevel = 'accepted' | null;
+type ConsentLevel = 'accepted' | 'declined' | null;
 
 export default function CookieConsent() {
   const [consent, setConsent] = useState<ConsentLevel>(null);
