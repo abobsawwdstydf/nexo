@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'PreschoolPlayhouse', 'Caveat', cursive;
 
   --color-nexo-50: #f5f5f5;
   --color-nexo-100: #e5e5e5;
@@ -15,25 +15,25 @@
   --color-nexo-900: #171717;
   --color-nexo-950: #0a0a0a;
 
-  /* === Cosmic Dark Theme Palette === */
-  --color-bg: #0F0A1A;
-  --color-surface: #1A1525;
-  --color-surface-secondary: #140F1F;
-  --color-surface-tertiary: #1A1525;
-  --color-surface-hover: #2D2A3E;
-  --color-text-primary: #F1F5F9;
-  --color-text-secondary: #94A3B8;
-  --color-border: #2D2A3E;
-  --color-border-light: #2D2A3E;
+  /* === BWK Palette (black, white, gray only) === */
+  --color-bg: #000000;
+  --color-surface: #1a1a1a;
+  --color-surface-secondary: #111111;
+  --color-surface-tertiary: #1a1a1a;
+  --color-surface-hover: #2a2a2a;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #999999;
+  --color-border: #2a2a2a;
+  --color-border-light: #333333;
 
-  /* === Accent Colors === */
+  /* === Accent Colors (gray only) === */
   --color-accent: #a3a3a3;
   --color-accent-hover: #d4d4d4;
   --color-accent-light: rgba(163, 163, 163, 0.15);
   --color-accent-secondary: #737373;
   --color-accent-gradient: linear-gradient(135deg, #a3a3a3, #737373);
 
-  /* === Unified Glass Effect Tokens (Liquid Glass Enhanced) === */
+  /* === Unified Glass Effect Tokens (BWK) === */
   --glass-blur: 24px;
   --glass-blur-strong: 36px;
   --glass-blur-subtle: 16px;
@@ -49,11 +49,11 @@
   --glass-border-hover: rgba(255, 255, 255, 0.12);
   --glass-border-active: rgba(255, 255, 255, 0.18);
   --glass-border-glow: rgba(255, 255, 255, 0.15);
-  --glass-bg: rgba(15, 10, 26, 0.72);
-  --glass-bg-strong: rgba(15, 10, 26, 0.85);
-  --glass-bg-subtle: rgba(15, 10, 26, 0.55);
-  --glass-bg-ultra: rgba(15, 10, 26, 0.92);
-  --glass-bg-inset: rgba(15, 10, 26, 0.45);
+  --glass-bg: rgba(0, 0, 0, 0.72);
+  --glass-bg-strong: rgba(0, 0, 0, 0.85);
+  --glass-bg-subtle: rgba(0, 0, 0, 0.55);
+  --glass-bg-ultra: rgba(0, 0, 0, 0.92);
+  --glass-bg-inset: rgba(0, 0, 0, 0.45);
   --glass-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
   --glass-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   --glass-shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.65);
@@ -61,23 +61,23 @@
   --glass-glow-strong: 0 0 60px rgba(255, 255, 255, 0.08);
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 50%, rgba(255, 255, 255, 0.04) 100%);
 
-  /* === Status Colors === */
-  --color-online: #34D399;
-  --color-offline: #6d7f8e;
+  /* === Status Colors (gray only) === */
+  --color-online: #a3a3a3;
+  --color-offline: #555555;
 
-  /* === Message Bubble Tokens (Liquid Glass Enhanced) === */
+  /* === Message Bubble Tokens (BWK) === */
   --bubble-sent: rgba(255, 255, 255, 0.1);
   --bubble-sent-hover: rgba(255, 255, 255, 0.15);
   --bubble-sent-glass: rgba(255, 255, 255, 0.06);
-  --bubble-received: rgba(26, 21, 37, 0.8);
-  --bubble-received-hover: rgba(35, 30, 50, 0.85);
-  --bubble-received-glass: rgba(26, 21, 37, 0.6);
+  --bubble-received: rgba(26, 26, 26, 0.8);
+  --bubble-received-hover: rgba(40, 40, 40, 0.85);
+  --bubble-received-glass: rgba(26, 26, 26, 0.6);
   --bubble-sent-time: rgba(255, 255, 255, 0.6);
   --bubble-received-time: rgba(255, 255, 255, 0.5);
   --bubble-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   --bubble-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.35);
 
-  /* === Hover Accent Colors === */
+  /* === Hover Accent Colors (gray only) === */
   --color-hover-violet: #d4d4d4;
   --color-hover-blue: #a3a3a3;
 }
@@ -1089,111 +1089,17 @@ textarea:focus-visible {
 /*   Темы чатов            */
 /* ======================== */
 
-.chat-theme-midnight {
-  background-color: #0f0f13;
-  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E");
-}
-
-.chat-theme-ocean {
-  background-color: #0b172a;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%233b82f6' fill-opacity='0.05' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
-}
-
-.chat-theme-forest {
-  background-color: #0f1c15;
-  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2310b981' fill-opacity='0.04' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
-}
-
-.chat-theme-sunset {
-  background: linear-gradient(#1f111a, #150a0f);
-  position: relative;
-}
-.chat-theme-sunset::after {
-  content: '';
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle at 50% 150%, rgba(236, 72, 153, 0.1), transparent 60%);
-}
-
-.chat-theme-classic {
-  background-color: #121215;
-}
-
-.chat-theme-neon {
-  background-color: #0b0f19;
-  position: relative;
-}
-.chat-theme-neon::before {
-  content: '';
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  pointer-events: none;
-  background: radial-gradient(circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(163, 163, 163, 0.15), transparent 80%);
-  transition: background 0.15s ease-out;
-}
-
-.chat-theme-aurora {
-  background: linear-gradient(135deg, #022c22, #064e3b);
-  position: relative;
-}
-.chat-theme-aurora::before {
-  content: '';
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  pointer-events: none;
-  background: radial-gradient(circle 600px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(16, 185, 129, 0.2), transparent 70%);
-  transition: background 0.15s ease-out;
-}
-
-.chat-theme-cyber {
-  background-color: #000;
-  background-image:
-    linear-gradient(rgba(245, 158, 11, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
-  background-size: 20px 20px;
-  position: relative;
-}
-.chat-theme-cyber::before {
-  content: '';
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  pointer-events: none;
-  background: radial-gradient(circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(245, 158, 11, 0.15), transparent);
-  transition: background 0.15s ease-out;
-}
-
-.chat-theme-glass {
-  background-color: #0d1117;
-  position: relative;
-  overflow: hidden;
-}
-.chat-theme-glass::before {
-  content: '';
-  position: absolute;
-  width: 50vw;
-  height: 50vh;
-  left: var(--mouse-x, 50%);
-  top: var(--mouse-y, 50%);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  background: radial-gradient(circle, rgba(115, 115, 115, 0.2), transparent 60%);
-  filter: blur(80px);
-  transition: left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.chat-theme-void {
-  background-color: #000;
-  position: relative;
-}
-.chat-theme-void::before {
-  content: '';
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  pointer-events: none;
-  background: radial-gradient(circle 120px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.05), transparent);
-  transition: background 0.1s;
-}
+/* Темы чатов — все используют только черный/белый/серый */
+.chat-theme-midnight { background-color: #0f0f13; }
+.chat-theme-ocean { background-color: #0f0f13; }
+.chat-theme-forest { background-color: #0f0f13; }
+.chat-theme-sunset { background-color: #0f0f13; }
+.chat-theme-classic { background-color: #121215; }
+.chat-theme-neon { background-color: #0b0f19; }
+.chat-theme-aurora { background-color: #0f0f13; }
+.chat-theme-cyber { background-color: #000; }
+.chat-theme-glass { background-color: #0d1117; }
+.chat-theme-void { background-color: #000; }
 
 /* Фон основного экрана уже определён выше */
 
@@ -1461,125 +1367,28 @@ em-emoji-picker .Search {
   border: 1px solid color-mix(in srgb, var(--bubble-received) 60%, transparent);
 }
 
-/* Цветовые схемы */
-[data-color-scheme="blue"] {
-  --color-accent: #3b82f6;
-  --color-accent-hover: #737373;
-  --color-nexo-400: #3b82f6;
-  --color-nexo-500: #2563eb;
-  --color-nexo-600: #1d4ed8;
-}
-
-[data-color-scheme="purple"] {
-  --color-accent: #737373;
-  --color-accent-hover: #c084fc;
-  --color-nexo-400: #737373;
-  --color-nexo-500: #a3a3a3;
-  --color-nexo-600: #7e22ce;
-}
-
-[data-color-scheme="green"] {
-  --color-accent: #22c55e;
-  --color-accent-hover: #4ade80;
-  --color-nexo-400: #22c55e;
-  --color-nexo-500: #16a34a;
-  --color-nexo-600: #15803d;
-}
-
-[data-color-scheme="red"] {
-  --color-accent: #ef4444;
-  --color-accent-hover: #f87171;
-  --color-nexo-400: #ef4444;
-  --color-nexo-500: #dc2626;
-  --color-nexo-600: #b91c1c;
-}
-
-[data-color-scheme="orange"] {
-  --color-accent: #f97316;
-  --color-accent-hover: #fb923c;
-  --color-nexo-400: #f97316;
-  --color-nexo-500: #ea580c;
-  --color-nexo-600: #c2410c;
-}
-
-[data-color-scheme="indigo"] {
-  --color-accent: #a3a3a3;
-  --color-accent-hover: #9b7dff;
-  --color-nexo-400: #9b7dff;
-  --color-nexo-500: #a3a3a3;
-  --color-nexo-600: #6347d6;
-}
-
-[data-color-scheme="cyan"] {
-  --color-accent: #06b6d4;
-  --color-accent-hover: #22d3ee;
-  --color-nexo-400: #06b6d4;
-  --color-nexo-500: #0891b2;
-  --color-nexo-600: #0e7490;
-}
-
-[data-color-scheme="rose"] {
-  --color-accent: #f43f5e;
-  --color-accent-hover: #fb7185;
-  --color-nexo-400: #f43f5e;
-  --color-nexo-500: #e11d48;
-  --color-nexo-600: #be123c;
-}
-
-[data-color-scheme="emerald"] {
-  --color-accent: #10b981;
-  --color-accent-hover: #34d399;
-  --color-nexo-400: #10b981;
-  --color-nexo-500: #059669;
-  --color-nexo-600: #047857;
-}
-
-[data-color-scheme="amber"] {
-  --color-accent: #f59e0b;
-  --color-accent-hover: #fbbf24;
-  --color-nexo-400: #f59e0b;
-  --color-nexo-500: #d97706;
-  --color-nexo-600: #b45309;
-}
-
-[data-color-scheme="slate"] {
-  --color-accent: #64748b;
-  --color-accent-hover: #94a3b8;
-  --color-nexo-400: #64748b;
-  --color-nexo-500: #475569;
-  --color-nexo-600: #334155;
-}
-
-[data-color-scheme="pink"] {
-  --color-accent: #525252;
-  --color-accent-hover: #f472b6;
-  --color-nexo-400: #525252;
-  --color-nexo-500: #db2777;
-  --color-nexo-600: #be185d;
-}
-
-[data-color-scheme="teal"] {
-  --color-accent: #14b8a6;
-  --color-accent-hover: #2dd4bf;
-  --color-nexo-400: #14b8a6;
-  --color-nexo-500: #0d9488;
-  --color-nexo-600: #0f766e;
-}
-
-[data-color-scheme="yellow"] {
-  --color-accent: #eab308;
-  --color-accent-hover: #facc15;
-  --color-nexo-400: #eab308;
-  --color-nexo-500: #ca8a04;
-  --color-nexo-600: #a16207;
-}
-
+/* Цветовые схемы — все схемы используют только черный/белый/серый */
+[data-color-scheme="blue"],
+[data-color-scheme="purple"],
+[data-color-scheme="green"],
+[data-color-scheme="red"],
+[data-color-scheme="orange"],
+[data-color-scheme="indigo"],
+[data-color-scheme="cyan"],
+[data-color-scheme="rose"],
+[data-color-scheme="emerald"],
+[data-color-scheme="amber"],
+[data-color-scheme="slate"],
+[data-color-scheme="pink"],
+[data-color-scheme="teal"],
+[data-color-scheme="yellow"],
 [data-color-scheme="custom"] {
-  --color-accent: var(--nexo-custom-color, #a3a3a3);
-  --color-accent-hover: color-mix(in srgb, var(--nexo-custom-color, #a3a3a3) 80%, white);
-  --color-nexo-400: var(--nexo-custom-color, #a3a3a3);
-  --color-nexo-500: color-mix(in srgb, var(--nexo-custom-color, #a3a3a3) 80%, black);
-  --color-nexo-600: color-mix(in srgb, var(--nexo-custom-color, #a3a3a3) 60%, black);
+  /* Все схемы используют только оттенки серого */
+  --color-accent: #a3a3a3;
+  --color-accent-hover: #d4d4d4;
+  --color-nexo-400: #a3a3a3;
+  --color-nexo-500: #737373;
+  --color-nexo-600: #525252;
 }
 
 /* AMOLED тема — полностью чёрный фон */
@@ -2445,7 +2254,7 @@ em-emoji-picker .Search {
 
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(123, 97, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
 }
 
 .focus-glow {
@@ -2454,7 +2263,7 @@ em-emoji-picker .Search {
 
 .focus-glow:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(123, 97, 255, 0.3), 0 0 20px rgba(123, 97, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
 /* Active эффекты */
@@ -3297,9 +3106,9 @@ em-emoji-picker .Search {
 /* Glow text effect */
 .text-glow {
   text-shadow:
-    0 0 10px rgba(123, 97, 255, 0.4),
-    0 0 20px rgba(123, 97, 255, 0.2),
-    0 0 40px rgba(123, 97, 255, 0.1);
+    0 0 10px rgba(255, 255, 255, 0.4),
+    0 0 20px rgba(255, 255, 255, 0.2),
+    0 0 40px rgba(255, 255, 255, 0.1);
 }
 
 /* Neon glow on text */
@@ -3308,7 +3117,7 @@ em-emoji-picker .Search {
     0 0 5px currentColor,
     0 0 10px currentColor,
     0 0 20px currentColor,
-    0 0 40px rgba(123, 97, 255, 0.5);
+    0 0 40px rgba(255, 255, 255, 0.5);
 }
 
 /* Auth page background noise texture */
@@ -3324,7 +3133,7 @@ em-emoji-picker .Search {
 /* QR code container glow */
 .qr-glow {
   box-shadow:
-    0 0 30px rgba(123, 97, 255, 0.12),
+    0 0 30px rgba(255, 255, 255, 0.08),
     0 20px 50px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
@@ -3350,9 +3159,9 @@ em-emoji-picker .Search {
   padding: 1px;
   background: linear-gradient(
     135deg,
-    rgba(123, 97, 255, 0.3),
+    rgba(255, 255, 255, 0.3),
     rgba(163, 163, 163, 0.2),
-    rgba(168, 85, 247, 0.1),
+    rgba(255, 255, 255, 0.1),
     transparent
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);

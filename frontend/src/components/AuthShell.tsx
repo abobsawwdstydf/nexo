@@ -126,7 +126,7 @@ export function AuthTitle({ title, subtitle }: { title: string; subtitle?: strin
       <h1
         className="text-xl font-bold mt-3 tracking-tight text-center"
         style={{
-          background: 'linear-gradient(135deg, #fff, #a5b4fc)',
+          background: 'linear-gradient(135deg, #fff, #999)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',

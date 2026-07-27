@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="flex flex-col items-center justify-center p-8 bg-surface border border-border rounded-xl m-4 gap-4">
-          <AlertTriangle className="w-12 h-12 text-amber-500" />
+          <AlertTriangle className="w-12 h-12 text-white/50" />
           <h2 className="text-lg font-semibold text-primary">Что-то пошло не так</h2>
           <p className="text-sm text-secondary text-center max-w-md">
             Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.
@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <summary className="text-xs text-secondary cursor-pointer hover:text-primary">
                 Технические детали
               </summary>
-              <pre className="mt-2 p-3 bg-zinc-900/10 rounded-lg text-xs overflow-auto max-h-40 text-red-500">
+              <pre className="mt-2 p-3 bg-zinc-900/10 rounded-lg text-xs overflow-auto max-h-40 text-white/70">
                 {this.state.error.message}
                 {'\n'}
                 {this.state.error.stack}

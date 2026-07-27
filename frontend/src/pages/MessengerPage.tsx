@@ -1,12 +1,72 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft,
+  Bookmark,
+  Mic,
+  Paperclip,
+} from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import type { Chat } from '../lib/types';
 import { ChatList } from '../components/ChatList';
 import { MessageArea } from '../components/MessageArea';
+import UserProfileModal from '../components/UserProfileModal';
+import SettingsModal from '../components/SettingsModal';
 
 const FONT = "'Inter', system-ui, -apple-system, sans-serif";
+
+function SavedMessagesView({ onBack }: { onBack: () => void }) {
+  return (
+    <>
+      <div className="flex-shrink-0 flex items-center px-3 py-2.5 border-b border-white/[0.06]">
+        <motion.button
+          onClick={onBack}
+          className="md:hidden p-2 -ml-1 rounded-xl hover:bg-white/[0.06] transition-colors"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <ArrowLeft size={18} className="text-white/50" />
+        </motion.button>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="text-center max-w-xs">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 flex items-center justify-center">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-white/60">
+              Избранное
+            </h2>
+            <p className="text-sm text-white/30 mt-2 leading-relaxed">
+              Пересылайте сюда сообщения, фото, видео и голосовые сообщения, чтобы ничего не потерять
+            </p>
+            <div className="mt-6 flex flex-col gap-2 text-left">
+              <Tip icon={Bookmark} text="Нажми и удерживай сообщение → выбери «Переслать в Избранное»" />
+              <Tip icon={Mic} text="Голосовые заметки тоже сохраняются" />
+              <Tip icon={Paperclip} text="Фото и файлы — всё будет здесь" />
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Tip({ icon: Icon, text }: { icon: typeof Bookmark; text: string }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon size={14} className="text-white/20 mt-0.5 flex-shrink-0" />
+      <span className="text-xs text-white/30 leading-relaxed">{text}</span>
+    </div>
+  );
+}
 
 function MessengerBackground() {
   return (
@@ -47,6 +107,23 @@ export default function MessengerPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+  const [showProfile, setShowProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<string>('general');
+
+  // Saved Messages virtual chat
+  const savedMessagesChat: Chat = {
+    id: '_saved_messages_',
+    type: 'personal',
+    name: 'Избранное',
+    username: null,
+    avatar: null,
+    description: 'Ваши заметки и сохранённые сообщения',
+    createdAt: new Date().toISOString(),
+    members: [],
+    messages: [],
+    unreadCount: 0,
+  };
 
   // ─── Fetch chats ──────────────────────────────────────────────────────
   const fetchChats = useCallback(async () => {
@@ -79,14 +156,23 @@ export default function MessengerPage() {
     setMobileView('list');
   }, []);
 
+  // ─── Handlers for modals ──────────────────────────────────────────────
+  const handleOpenProfile = useCallback(() => setShowProfile(true), []);
+  const handleOpenSettings = useCallback((tab?: string) => {
+    if (tab) setSettingsTab(tab);
+    setShowSettings(true);
+  }, []);
+
   // ─── Filter chats by search ──────────────────────────────────────────
+  const allChats = [savedMessagesChat, ...chats];
   const filteredChats = searchQuery
-    ? chats.filter(chat =>
+    ? allChats.filter(chat =>
         chat.name?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : chats;
+    : allChats;
 
-  const selectedChat = chats.find(c => c.id === selectedChatId) || null;
+  const selectedChat = allChats.find(c => c.id === selectedChatId) || null;
+  const isSavedMessages = selectedChat?.id === '_saved_messages_';
 
   // ─── Render ───────────────────────────────────────────────────────────
   return (
@@ -116,6 +202,8 @@ export default function MessengerPage() {
             loading={loading}
             user={user}
             onLogout={logout}
+            onOpenProfile={handleOpenProfile}
+            onOpenSettings={() => handleOpenSettings('general')}
           />
         </div>
 
@@ -128,7 +216,9 @@ export default function MessengerPage() {
             liquid-glass
           `}
         >
-          {selectedChat ? (
+          {isSavedMessages ? (
+            <SavedMessagesView onBack={handleBackToList} />
+          ) : selectedChat ? (
             <MessageArea
               chat={selectedChat}
               onBack={handleBackToList}
@@ -158,6 +248,28 @@ export default function MessengerPage() {
           )}
         </div>
       </div>
+
+      {/* ═══ Modals ═══ */}
+      <AnimatePresence>
+        {showProfile && user && (
+          <UserProfileModal
+            user={user}
+            onClose={() => setShowProfile(false)}
+            onOpenSettings={handleOpenSettings}
+            onLogout={logout}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSettings && user && (
+          <SettingsModal
+            user={user}
+            initialTab={settingsTab}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
