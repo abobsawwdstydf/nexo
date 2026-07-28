@@ -28,6 +28,7 @@ export interface Channel {
 }
 
 export interface User extends UserPresence {
+  email?: string;
   bio: string | null;
   birthday?: string;
   createdAt: string;
@@ -457,4 +458,263 @@ export interface WebhookConfig {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── AI Browsing ───────────────────────────────────────────────────────
+
+export interface AIBrowseTask {
+  id: string;
+  userId: string;
+  chatId: string;
+  query: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  result: string;
+  sources: string;
+  pagesViewed: number;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Kanban ───────────────────────────────────────────────────────────
+
+export interface KanbanBoard {
+  id: string;
+  chatId: string;
+  name: string;
+  creatorId: string;
+  createdAt: string;
+  updatedAt: string;
+  columns?: KanbanColumn[];
+}
+
+export interface KanbanColumn {
+  id: string;
+  boardId: string;
+  name: string;
+  order: number;
+  color: string;
+  tasks?: KanbanTask[];
+}
+
+export interface KanbanTask {
+  id: string;
+  columnId: string;
+  boardId: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  deadline: string | null;
+  order: number;
+  labels: string;
+  createdAt: string;
+  updatedAt: string;
+  assignee?: UserBasic;
+}
+
+// ─── Chat Theme ───────────────────────────────────────────────────────
+
+export interface ChatTheme {
+  id: string;
+  chatId: string;
+  backgroundImage: string;
+  backgroundColor: string;
+  bubbleColor: string;
+  bubbleTextColor: string;
+  accentColor: string;
+}
+
+// ─── Bookmarks ────────────────────────────────────────────────────────
+
+export interface MessageBookmark {
+  id: string;
+  userId: string;
+  messageId: string;
+  chatId: string;
+  note: string;
+  tags: string;
+  createdAt: string;
+  message?: Message;
+  chat?: Chat;
+}
+
+// ─── Scheduled Messages ───────────────────────────────────────────────
+
+export interface ScheduledMessage {
+  id: string;
+  userId: string;
+  chatId: string;
+  content: string;
+  type: string;
+  mediaUrl: string;
+  scheduleAt: string;
+  repeat: string;
+  isSent: boolean;
+  createdAt: string;
+}
+
+// ─── Photo Album ──────────────────────────────────────────────────────
+
+export interface PhotoAlbum {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  coverUrl: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  photos?: PhotoAlbumItem[];
+}
+
+export interface PhotoAlbumItem {
+  id: string;
+  albumId: string;
+  mediaId: string;
+  caption: string;
+  order: number;
+  createdAt: string;
+}
+
+// ─── Calendar Event ───────────────────────────────────────────────────
+
+export interface CalendarEvent {
+  id: string;
+  userId: string;
+  chatId: string;
+  title: string;
+  description: string;
+  location: string;
+  startTime: string;
+  endTime: string;
+  isAllDay: boolean;
+  reminder: number;
+  recurrence: string;
+  createdAt: string;
+}
+
+// ─── Screen Recording ─────────────────────────────────────────────────
+
+export interface ScreenRecording {
+  id: string;
+  userId: string;
+  chatId: string;
+  url: string;
+  duration: number;
+  size: number;
+  thumbnail: string;
+  createdAt: string;
+}
+
+// ─── Vault File ───────────────────────────────────────────────────────
+
+export interface VaultFile {
+  id: string;
+  userId: string;
+  filename: string;
+  encryptedUrl: string;
+  size: number;
+  mimeType: string;
+  checksum: string;
+  createdAt: string;
+}
+
+// ─── Incognito Chat ───────────────────────────────────────────────────
+
+export interface IncognitoChat {
+  id: string;
+  creatorId: string;
+  inviteCode: string;
+  isEncrypted: boolean;
+  maxMembers: number;
+  messageCount: number;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+// ─── Device Session ───────────────────────────────────────────────────
+
+export interface DeviceSession {
+  id: string;
+  userId: string;
+  deviceId: string;
+  deviceName: string;
+  deviceType: string;
+  platform: string;
+  browser: string;
+  ipAddress: string;
+  location: string;
+  isActive: boolean;
+  lastActive: string;
+  createdAt: string;
+}
+
+// ─── Dead Man's Switch ────────────────────────────────────────────────
+
+export interface DeadManSwitch {
+  id: string;
+  userId: string;
+  isEnabled: boolean;
+  inactivityDays: number;
+  lastCheckIn: string;
+  messageTemplate: string;
+  recipientIds: string;
+  isTriggered: boolean;
+  triggeredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Whiteboard ───────────────────────────────────────────────────────
+
+export interface Whiteboard {
+  id: string;
+  chatId: string;
+  name: string;
+  creatorId: string;
+  data: string;
+  version: number;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Smart Reminder ───────────────────────────────────────────────────
+
+export interface SmartReminder {
+  id: string;
+  userId: string;
+  chatId: string;
+  messageId: string;
+  triggerText: string;
+  remindAt: string;
+  isCompleted: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+
+// ─── Privacy Audit ────────────────────────────────────────────────────
+
+export interface PrivacyAuditIssue {
+  id: string;
+  userId: string;
+  category: string;
+  issue: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  suggestion: string;
+  isFixed: boolean;
+  createdAt: string;
+}
+
+// ─── Voice Room Activity ──────────────────────────────────────────────
+
+export interface VoiceRoomActivity {
+  id: string;
+  roomId: string;
+  type: string;
+  url: string;
+  title: string;
+  isActive: boolean;
+  startedBy: string;
 }

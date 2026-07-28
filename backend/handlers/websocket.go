@@ -3,12 +3,15 @@ package handlers
 import (
 	"encoding/json"
 	"log"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
+
+	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/middleware"
@@ -343,13 +346,27 @@ func handleChatMembers(client *ws.Client, env *wsEnvelope) error {
 	return &wsDataResponse{Data: map[string]interface{}{"members": result}}
 }
 
+// MediaPayload is the JSON shape of media items sent with a WS message.
+type MediaPayload struct {
+	ID        string  `json:"id"`
+	Type      string  `json:"type"`
+	URL       string  `json:"url"`
+	Filename  string  `json:"filename"`
+	Thumbnail string  `json:"thumbnail"`
+	Size      int     `json:"size"`
+	Duration  float64 `json:"duration"`
+	Width     int     `json:"width"`
+	Height    int     `json:"height"`
+}
+
 // handleSendMessage sends a message via WS (alternative to HTTP POST).
 func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	var payload struct {
-		ChatID   string `json:"chatId"`
-		Content  string `json:"content"`
-		Type     string `json:"type"`
-		ReplyTo  string `json:"replyToId"`
+		ChatID   string           `json:"chatId"`
+		Content  string           `json:"content"`
+		Type     string           `json:"type"`
+		ReplyTo  string           `json:"replyToId"`
+		Media    []MediaPayload   `json:"media"`
 	}
 	if env.Payload != nil {
 		if err := json.Unmarshal(env.Payload, &payload); err != nil {
@@ -406,6 +423,29 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 		return errWSServerError
 	}
 
+	// Attach media to message
+	if len(payload.Media) > 0 {
+		for i, m := range payload.Media {
+			mediaRecord := models.Media{
+				ID:        m.ID,
+				MessageID: msg.ID,
+				Type:      m.Type,
+				URL:       m.URL,
+				Filename:  m.Filename,
+				Thumbnail: m.Thumbnail,
+				Size:      m.Size,
+				Duration:  m.Duration,
+				Width:     m.Width,
+				Height:    m.Height,
+				Order:     i,
+			}
+			if mediaRecord.ID == "" {
+				mediaRecord.ID = generateID()
+			}
+			db.GetDB().Create(&mediaRecord)
+		}
+	}
+
 	// Update chat's last message time
 	now := time.Now()
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", payload.ChatID).Update("updated_at", now)
@@ -418,6 +458,225 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	ws.HubInstance.SendToChat(payload.ChatID, []byte(`{"type":"message:new","message":`+msgJSON+`}`), "")
 
 	return &wsDataResponse{Data: map[string]interface{}{"messageId": msg.ID, "createdAt": msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00")}}
+}
+
+// ─── WS RPC: fetch_messages ───────────────────────────────────────────────
+func handleFetchMessages(client *ws.Client, env *wsEnvelope) error {
+	var payload struct {
+		ChatID string `json:"chatId"`
+		Cursor string `json:"cursor"`
+		Limit  int    `json:"limit"`
+	}
+	if env.Payload != nil {
+		if err := json.Unmarshal(env.Payload, &payload); err != nil {
+			return err
+		}
+	}
+	if payload.ChatID == "" {
+		return errWSMissingField("chatId")
+	}
+	if payload.Limit <= 0 || payload.Limit > 100 {
+		payload.Limit = 50
+	}
+
+	userID := client.UserID
+
+	// Verify membership
+	var count int64
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", payload.ChatID, userID).
+		Count(&count)
+	if count == 0 {
+		return errWSNotMember
+	}
+
+	var messages []models.Message
+	query := db.GetDB().
+		Preload("Sender").
+		Preload("Media").
+		Preload("Reactions").
+		Preload("Reactions.User").
+		Where("chat_id = ?", payload.ChatID)
+
+	if payload.Cursor != "" {
+		query = query.Where("created_at < (SELECT created_at FROM messages WHERE id = ?)", payload.Cursor)
+	}
+
+	query.Order("created_at DESC").Limit(payload.Limit + 1).Find(&messages)
+
+	hasMore := len(messages) > payload.Limit
+	if hasMore {
+		messages = messages[:payload.Limit]
+	}
+
+	return &wsDataResponse{Data: map[string]interface{}{
+		"messages": messages,
+		"hasMore":  hasMore,
+	}}
+}
+
+// ─── WS RPC: fetch_friends ────────────────────────────────────────────────
+func handleFetchFriends(client *ws.Client, env *wsEnvelope) error {
+	userID := client.UserID
+
+	var friendships []models.Friendship
+	db.GetDB().
+		Preload("User").
+		Preload("Friend").
+		Where("(user_id = ? OR friend_id = ?) AND status = 'accepted'", userID, userID).
+		Find(&friendships)
+
+	friends := make([]models.User, 0)
+	for _, f := range friendships {
+		if f.UserID == userID {
+			friends = append(friends, f.Friend)
+		} else {
+			friends = append(friends, f.User)
+		}
+	}
+
+	return &wsDataResponse{Data: map[string]interface{}{"friends": friends}}
+}
+
+// ─── WS RPC: fetch_friend_requests ─────────────────────────────────────────
+func handleFetchFriendRequests(client *ws.Client, _ *wsEnvelope) error {
+	userID := client.UserID
+
+	var friendships []models.Friendship
+	db.GetDB().
+		Preload("User").
+		Where("friend_id = ? AND status = 'pending'", userID).
+		Order("created_at DESC").
+		Find(&friendships)
+
+	return &wsDataResponse{Data: map[string]interface{}{"requests": friendships}}
+}
+
+// ─── WS RPC: fetch_init ─────────────────────────────────────────────────────
+func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
+	userID := client.UserID
+
+	// 1. User profile
+	var user models.User
+	if result := db.GetDB().First(&user, "id = ?", userID); result.Error != nil {
+		return errWSNotFound("user")
+	}
+
+	// 2. Chats
+	var memberChatIDs []string
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("user_id = ?", userID).
+		Pluck("chat_id", &memberChatIDs)
+
+	chats := make([]models.Chat, 0)
+	if len(memberChatIDs) > 0 {
+		db.GetDB().
+			Preload("Members").
+			Preload("Members.User").
+			Preload("Messages", func(db *gorm.DB) *gorm.DB {
+				return db.Order("created_at DESC").Limit(1)
+			}).
+			Where("id IN ?", memberChatIDs).
+			Order("updated_at DESC").
+			Limit(50).
+			Find(&chats)
+	}
+
+	// 3. Settings
+	settings := UserSettingsJSON{
+		NotifyAll:        user.NotifyAll,
+		NotifyMessages:   user.NotifyMessages,
+		NotifyCalls:      user.NotifyCalls,
+		NotifyFriends:    user.NotifyFriends,
+		TwoFactorEnabled: user.TwoFactorEnabled,
+	}
+
+	// 4. Smart folders
+	smartFolders := make([]models.SmartFolder, 0)
+	db.GetDB().Where("user_id = ?", userID).Order(`"order" ASC`).Find(&smartFolders)
+
+	// 5. Stories (only active, non-expired)
+	var stories []models.Story
+	db.GetDB().
+		Preload("User").
+		Where("expires_at > ?", time.Now()).
+		Order("created_at DESC").
+		Find(&stories)
+
+	storyMap := make(map[string]*StoryGroupJSON)
+	for _, s := range stories {
+		group, exists := storyMap[s.UserID]
+		if !exists {
+			group = &StoryGroupJSON{
+				UserID:      s.UserID,
+				DisplayName: s.User.DisplayName,
+				Avatar:      s.User.Avatar,
+				IsOnline:    s.User.IsOnline,
+				Stories:     []StoryJSON{},
+			}
+			storyMap[s.UserID] = group
+		}
+		group.Stories = append(group.Stories, StoryJSON{
+			ID:        s.ID,
+			Type:      s.Type,
+			MediaURL:  s.MediaURL,
+			Content:   s.Content,
+			BgColor:   s.BgColor,
+			CreatedAt: s.CreatedAt.Format(time.RFC3339),
+			ExpiresAt: s.ExpiresAt.Format(time.RFC3339),
+		})
+	}
+
+	storyGroups := make([]StoryGroupJSON, 0, len(storyMap))
+	for _, g := range storyMap {
+		storyGroups = append(storyGroups, *g)
+	}
+	sort.Slice(storyGroups, func(i, j int) bool {
+		return len(storyGroups[i].Stories) > len(storyGroups[j].Stories)
+	})
+
+	return &wsDataResponse{Data: map[string]interface{}{
+		"user":         user,
+		"chats":        chats,
+		"settings":     settings,
+		"smartFolders": smartFolders,
+		"stories":      storyGroups,
+	}}
+}
+
+// ─── WS RPC: fetch_notifications ───────────────────────────────────────────
+func handleFetchNotifications(client *ws.Client, _ *wsEnvelope) error {
+	userID := client.UserID
+
+	var user models.User
+	if result := db.GetDB().First(&user, "id = ?", userID); result.Error != nil {
+		return errWSNotFound("user")
+	}
+
+	return &wsDataResponse{Data: map[string]interface{}{
+		"notifyAll":      user.NotifyAll,
+		"notifyMessages": user.NotifyMessages,
+		"notifyCalls":    user.NotifyCalls,
+		"notifyFriends":  user.NotifyFriends,
+	}}
+}
+
+// ─── WS RPC: push_subscribe ─────────────────────────────────────────────────
+func handlePushSubscribe(client *ws.Client, env *wsEnvelope) error {
+	var payload struct {
+		Subscription json.RawMessage `json:"subscription"`
+	}
+	if env.Payload != nil {
+		if err := json.Unmarshal(env.Payload, &payload); err != nil {
+			return err
+		}
+	}
+	if len(payload.Subscription) == 0 {
+		return errWSMissingField("subscription")
+	}
+
+	log.Printf("[Push] Subscription from user=%s: %s", client.UserID, string(payload.Subscription))
+	return nil
 }
 
 // Custom error types for WS RPC
@@ -525,6 +784,66 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 
 	case "send_message", "send-message":
 		err := handleSendMessage(client, &env)
+		if env.ID != "" {
+			if err != nil {
+				wsResponse(client, env.ID, err)
+			} else {
+				wsResponse(client, env.ID, nil)
+			}
+		}
+
+	case "fetch_messages", "fetch-messages":
+		err := handleFetchMessages(client, &env)
+		if env.ID != "" {
+			if err != nil {
+				wsResponse(client, env.ID, err)
+			} else {
+				wsResponse(client, env.ID, nil)
+			}
+		}
+
+	case "fetch_friends", "fetch-friends":
+		err := handleFetchFriends(client, &env)
+		if env.ID != "" {
+			if err != nil {
+				wsResponse(client, env.ID, err)
+			} else {
+				wsResponse(client, env.ID, nil)
+			}
+		}
+
+	case "fetch_friend_requests", "fetch-friend-requests":
+		err := handleFetchFriendRequests(client, &env)
+		if env.ID != "" {
+			if err != nil {
+				wsResponse(client, env.ID, err)
+			} else {
+				wsResponse(client, env.ID, nil)
+			}
+		}
+
+	case "fetch_notifications", "fetch-notifications":
+		err := handleFetchNotifications(client, &env)
+		if env.ID != "" {
+			if err != nil {
+				wsResponse(client, env.ID, err)
+			} else {
+				wsResponse(client, env.ID, nil)
+			}
+		}
+
+	case "fetch_init", "fetch-init":
+		err := handleFetchInit(client, &env)
+		if env.ID != "" {
+			if err != nil {
+				wsResponse(client, env.ID, err)
+			} else {
+				wsResponse(client, env.ID, nil)
+			}
+		}
+
+	case "push_subscribe", "push-subscribe":
+		err := handlePushSubscribe(client, &env)
 		if env.ID != "" {
 			if err != nil {
 				wsResponse(client, env.ID, err)

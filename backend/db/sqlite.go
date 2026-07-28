@@ -43,15 +43,14 @@ func InitLocal(dsn string) {
 		log.Printf("Warning: Could not set WAL mode: %v", err)
 	}
 
-	// Crash safety: FULL sync ensures every write is flushed to disk before returning.
-	// Slower, but data survives power loss. NORMAL loses ~500ms of writes on crash.
-	_, err = sqlDB.Exec("PRAGMA synchronous=FULL")
+	// Performance: NORMAL sync is faster and safe enough for most use cases
+	_, err = sqlDB.Exec("PRAGMA synchronous=NORMAL")
 	if err != nil {
-		log.Printf("Warning: Could not set synchronous=FULL: %v", err)
+		log.Printf("Warning: Could not set synchronous=NORMAL: %v", err)
 	}
 
-	// Busy timeout: wait up to 5s before returning "database is locked"
-	_, err = sqlDB.Exec("PRAGMA busy_timeout=5000")
+	// Busy timeout: wait up to 3s before returning "database is locked"
+	_, err = sqlDB.Exec("PRAGMA busy_timeout=3000")
 	if err != nil {
 		log.Printf("Warning: Could not set busy_timeout: %v", err)
 	}
@@ -62,7 +61,25 @@ func InitLocal(dsn string) {
 		log.Printf("Warning: Could not enable foreign keys: %v", err)
 	}
 
-	// Start periodic backup goroutine (WAL checkpoint + VACUUM backup every 5 min)
+	// Performance: Increase cache size to 64MB
+	_, err = sqlDB.Exec("PRAGMA cache_size=-65536")
+	if err != nil {
+		log.Printf("Warning: Could not set cache_size: %v", err)
+	}
+
+	// Performance: Memory-mapped I/O for faster reads
+	_, err = sqlDB.Exec("PRAGMA mmap_size=268435456")
+	if err != nil {
+		log.Printf("Warning: Could not set mmap_size: %v", err)
+	}
+
+	// Performance: Optimize page size
+	_, err = sqlDB.Exec("PRAGMA page_size=4096")
+	if err != nil {
+		log.Printf("Warning: Could not set page_size: %v", err)
+	}
+
+	// Start periodic backup goroutine (WAL checkpoint + VACUUM backup every 10 min)
 	go periodicBackup(sqlDB, dsn)
 
 	// AutoMigrate all models
@@ -144,13 +161,82 @@ func InitLocal(dsn string) {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
+	// Add performance indexes
+	addIndexes(DB)
+
 	log.Printf("Local SQLite database: %s", dsn)
 }
 
-// periodicBackup creates a backup of the SQLite database every 5 minutes
+// addIndexes creates indexes for frequently queried columns
+func addIndexes(db *gorm.DB) {
+	indexes := []string{
+		// Messages - most queried table
+		"CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id)",
+		"CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_messages_chat_created ON messages(chat_id, created_at)",
+
+		// Chat members
+		"CREATE INDEX IF NOT EXISTS idx_chat_members_chat_id ON chat_members(chat_id)",
+		"CREATE INDEX IF NOT EXISTS idx_chat_members_user_id ON chat_members(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_chat_members_chat_user ON chat_members(chat_id, user_id)",
+
+		// Read receipts
+		"CREATE INDEX IF NOT EXISTS idx_read_receipts_message_id ON read_receipts(message_id)",
+		"CREATE INDEX IF NOT EXISTS idx_read_receipts_user_id ON read_receipts(user_id)",
+
+		// Reactions
+		"CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions(message_id)",
+
+		// Stories
+		"CREATE INDEX IF NOT EXISTS idx_stories_user_id ON stories(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_stories_created_at ON stories(created_at)",
+
+		// Friendships
+		"CREATE INDEX IF NOT EXISTS idx_friendships_user_id ON friendships(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_friendships_friend_id ON friendships(friend_id)",
+
+		// Bots
+		"CREATE INDEX IF NOT EXISTS idx_bots_owner_id ON bots(owner_id)",
+		"CREATE INDEX IF NOT EXISTS idx_bot_installations_chat_id ON bot_installations(chat_id)",
+
+		// Search history
+		"CREATE INDEX IF NOT EXISTS idx_search_history_user_id ON search_history(user_id)",
+
+		// Webhooks
+		"CREATE INDEX IF NOT EXISTS idx_webhook_configs_user_id ON webhook_configs(user_id)",
+
+		// Smart folders
+		"CREATE INDEX IF NOT EXISTS idx_smart_folders_user_id ON smart_folders(user_id)",
+
+		// Chat notes
+		"CREATE INDEX IF NOT EXISTS idx_chat_notes_chat_id ON chat_notes(chat_id)",
+
+		// Collected links
+		"CREATE INDEX IF NOT EXISTS idx_collected_links_user_id ON collected_links(user_id)",
+
+		// Voice rooms
+		"CREATE INDEX IF NOT EXISTS idx_voice_room_participants_room_id ON voice_room_participants(room_id)",
+
+		// User devices
+		"CREATE INDEX IF NOT EXISTS idx_user_devices_user_id ON user_devices(user_id)",
+
+		// Bookmarks
+		"CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id)",
+
+		// Scheduled messages
+		"CREATE INDEX IF NOT EXISTS idx_scheduled_messages_user_id ON scheduled_messages(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_scheduled_messages_send_at ON scheduled_messages(send_at)",
+	}
+	for _, idx := range indexes {
+		db.Exec(idx)
+	}
+}
+
+// periodicBackup creates a backup of the SQLite database every 10 minutes
 // and forces a WAL checkpoint to minimize data loss on power failure.
 func periodicBackup(sqlDB *sql.DB, dsn string) {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {

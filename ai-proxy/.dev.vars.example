@@ -1,0 +1,30 @@
+# Local development keys for Cloudflare Worker
+# Copy this file to .dev.vars and fill in your actual keys
+# DO NOT commit .dev.vars to git!
+
+CEREBRAS_KEY_1=
+CEREBRAS_KEY_2=
+CEREBRAS_KEY_3=
+CEREBRAS_KEY_4=
+
+GROQ_KEY_1=
+GROQ_KEY_2=
+GROQ_KEY_3=
+GROQ_KEY_4=
+
+SAMBANOVA_KEY_1=
+SAMBANOVA_KEY_2=
+SAMBANOVA_KEY_3=
+SAMBANOVA_KEY_4=
+
+MISTRAL_KEY_1=
+
+OPENROUTER_KEY_1=
+OPENROUTER_KEY_2=
+OPENROUTER_KEY_3=
+OPENROUTER_KEY_4=
+
+FAL_KEY_1=
+FAL_KEY_2=
+FAL_KEY_3=
+FAL_KEY_4=

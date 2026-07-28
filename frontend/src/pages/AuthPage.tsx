@@ -506,6 +506,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
     if (!emailDraft.includes('@') || emailDraft.endsWith('@')) return [];
     const [local, domain] = emailDraft.split('@');
     if (!domain) return [];
+    if (EMAIL_PROVIDERS.includes(domain.toLowerCase())) return [];
     return EMAIL_PROVIDERS
       .filter(p => p.startsWith(domain.toLowerCase()))
       .slice(0, 6)
@@ -516,6 +517,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
     if (!regEmailDraft.includes('@') || regEmailDraft.endsWith('@')) return [];
     const [local, domain] = regEmailDraft.split('@');
     if (!domain) return [];
+    if (EMAIL_PROVIDERS.includes(domain.toLowerCase())) return [];
     return EMAIL_PROVIDERS
       .filter(p => p.startsWith(domain.toLowerCase()))
       .slice(0, 6)
@@ -533,7 +535,6 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
       justifyContent: 'center',
       fontFamily: FONT,
       position: 'relative',
-      overflow: 'hidden',
     }}>
       {/* Sound toggle */}
       <motion.button
@@ -714,7 +715,44 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <div style={{ position: 'relative', marginBottom: 12, paddingBottom: emailSuggestions.length > 0 ? 160 : 0 }}>
+                <div style={{ marginBottom: 16 }}>
+                  {/* Email autocomplete hints - horizontal chips above input */}
+                  <AnimatePresence>
+                    {emailSuggestions.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                          justifyContent: 'center',
+                          marginBottom: 12,
+                        }}
+                      >
+                        {emailSuggestions.map(s => (
+                          <motion.button
+                            key={s}
+                            onClick={() => { setEmailDraft(s); setEmail(s); }}
+                            whileHover={{ background: 'rgba(255,255,255,0.1)' }}
+                            style={{
+                              padding: '6px 14px',
+                              background: 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${D.border}`,
+                              borderRadius: 8,
+                              color: D.textMuted,
+                              fontSize: 13,
+                              fontFamily: FONT,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                            }}
+                          >{s}</motion.button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <input
                     ref={emailInputRef}
                     type="email"
@@ -740,50 +778,6 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                     onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}
                     onBlur={e => { e.currentTarget.style.borderColor = D.border; }}
                   />
-
-                  {/* Email autocomplete dropdown */}
-                  <AnimatePresence>
-                    {emailSuggestions.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          marginTop: 4,
-                          background: 'rgba(18,18,24,0.95)',
-                          border: `1px solid ${D.border}`,
-                          borderRadius: 12,
-                          zIndex: 20,
-                          backdropFilter: 'blur(20px)',
-                          maxHeight: 140,
-                          overflowY: 'auto',
-                        }}
-                      >
-                        {emailSuggestions.map(s => (
-                          <motion.button
-                            key={s}
-                            onClick={() => { setEmailDraft(s); setEmail(s); }}
-                            whileHover={{ background: 'rgba(255,255,255,0.06)' }}
-                            style={{
-                              width: '100%',
-                              padding: '12px 16px',
-                              background: 'transparent',
-                              border: 'none',
-                              color: D.textPrimary,
-                              fontSize: 14,
-                              fontFamily: FONT,
-                              textAlign: 'left',
-                              cursor: 'pointer',
-                            }}
-                          >{s}</motion.button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
 
                 {/* Continue button - gray with border */}
@@ -854,7 +848,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              style={{ color: D.textMuted, fontSize: 13, fontFamily: FONT, marginBottom: 32 }}
+              style={{ color: D.textMuted, fontSize: 16, fontFamily: FONT, marginBottom: 32 }}
             >Код отправлен на {email}</motion.p>
 
             {loginCodeLabel.phase === 'done' && (
@@ -871,7 +865,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                   whileHover={{ color: D.primary }}
                   style={{
                     marginTop: 20, background: 'none', border: 'none',
-                    color: D.textMuted, fontSize: 13, fontFamily: FONT, cursor: 'pointer',
+                    color: D.textMuted, fontSize: 16, fontFamily: FONT, cursor: 'pointer',
                   }}
                 >Изменить email</motion.button>
               </motion.div>
@@ -1241,7 +1235,44 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
             </div>
             {regEmailLabel.phase === 'done' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <div style={{ position: 'relative', marginBottom: 12, paddingBottom: regEmailSuggestions.length > 0 ? 160 : 0 }}>
+                <div style={{ marginBottom: 16 }}>
+                  {/* Email autocomplete hints - horizontal chips above input */}
+                  <AnimatePresence>
+                    {regEmailSuggestions.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                          justifyContent: 'center',
+                          marginBottom: 12,
+                        }}
+                      >
+                        {regEmailSuggestions.map(s => (
+                          <motion.button
+                            key={s}
+                            onClick={() => { setRegEmailDraft(s); setRegEmail(s); }}
+                            whileHover={{ background: 'rgba(255,255,255,0.1)' }}
+                            style={{
+                              padding: '6px 14px',
+                              background: 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${D.border}`,
+                              borderRadius: 8,
+                              color: D.textMuted,
+                              fontSize: 13,
+                              fontFamily: FONT,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                            }}
+                          >{s}</motion.button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <input
                     ref={regEmailInputRef}
                     type="email"
@@ -1267,35 +1298,6 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                     onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}
                     onBlur={e => { e.currentTarget.style.borderColor = D.border; }}
                   />
-
-                  <AnimatePresence>
-                    {regEmailSuggestions.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        style={{
-                          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
-                          background: 'rgba(18,18,24,0.95)', border: `1px solid ${D.border}`,
-                          borderRadius: 12, zIndex: 20, backdropFilter: 'blur(20px)',
-                          maxHeight: 140, overflowY: 'auto',
-                        }}
-                      >
-                        {regEmailSuggestions.map(s => (
-                          <motion.button
-                            key={s}
-                            onClick={() => { setRegEmailDraft(s); setRegEmail(s); }}
-                            whileHover={{ background: 'rgba(255,255,255,0.06)' }}
-                            style={{
-                              width: '100%', padding: '12px 16px', background: 'transparent',
-                              border: 'none', color: D.textPrimary, fontSize: 14,
-                              fontFamily: FONT, textAlign: 'left', cursor: 'pointer',
-                            }}
-                          >{s}</motion.button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
 
                 {/* Continue button - gray with border */}
@@ -1477,8 +1479,8 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 0.6 }}
-        className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-4 px-4"
-        style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
+        className="fixed bottom-6 left-0 right-0 flex items-center justify-center gap-4 px-4 z-50"
+        style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif", pointerEvents: 'auto' }}
       >
         <button
           onClick={() => onLegalClick?.('privacy')}

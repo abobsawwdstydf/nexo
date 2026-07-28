@@ -43,7 +43,7 @@ export function installMessages(api: ApiClient): void {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 300_000);
     const storedToken = api.getStoredAccessToken();
-    const response = await fetch(`${getApiBase()}/messages/upload`, {
+    const response = await fetch(`${getApiBase()}/upload`, {
       method: 'POST',
       credentials: 'include',
       headers: {

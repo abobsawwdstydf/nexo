@@ -346,6 +346,31 @@ export function getSocket(): SocketInterface | null {
   return socket;
 }
 
+/**
+ * Wait for the WebSocket to become connected (with timeout).
+ * Rejects after timeoutMs if connection doesn't happen.
+ */
+export function waitForSocketConnected(timeoutMs = 5000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      resolve();
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      reject(new Error('WebSocket connection timeout'));
+    }, timeoutMs);
+
+    const unsub = onConnectionStatusChange((status) => {
+      if (status === 'connected') {
+        clearTimeout(timeout);
+        unsub();
+        resolve();
+      }
+    });
+  });
+}
+
 export function disconnectSocket() {
   if (ws) {
     clearReconnectState();

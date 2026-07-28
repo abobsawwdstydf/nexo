@@ -1,4 +1,4 @@
-import type { User, Message } from '../types';
+import type { User, Chat, SmartFolder, Message } from '../types';
 import { ApiClient } from './core';
 import { wsRequest, getSocket } from '../socket';
 
@@ -10,7 +10,26 @@ declare module './core' {
     getOnlineStatuses(userIds: string[]): Promise<Record<string, boolean>>;
     setUserStatusWS(text: string, emoji?: string, duration?: number): Promise<void>;
     getChatMembersWS(chatId: string): Promise<Array<{ userId: string; username: string; displayName: string; avatar: string; role: string }>>;
-    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string }): Promise<{ messageId: string; createdAt: string }>;
+    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: any[] }): Promise<{ messageId: string; createdAt: string }>;
+    // WS RPC data fetchers
+    fetchMessagesWS(chatId: string, cursor?: string, limit?: number): Promise<{ messages: any[]; hasMore: boolean }>;
+    fetchFriendsWS(): Promise<any[]>;
+    fetchFriendRequestsWS(): Promise<any[]>;
+    fetchNotificationsWS(): Promise<{ notifyAll: boolean; notifyMessages: boolean; notifyCalls: boolean; notifyFriends: boolean }>;
+    fetchInitWS(): Promise<{
+      user: User;
+      chats: Chat[];
+      settings: {
+        notifyAll: boolean;
+        notifyMessages: boolean;
+        notifyCalls: boolean;
+        notifyFriends: boolean;
+        twoFactorEnabled: boolean;
+      };
+      smartFolders: SmartFolder[];
+      stories: any[];
+    }>;
+    pushSubscribeWS(subscription: any): Promise<void>;
   }
 }
 
@@ -117,15 +136,58 @@ export function installRealtime(api: ApiClient): void {
    * Send message via WebSocket.
    * Falls back to HTTP if WS is not connected.
    */
-  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string }): Promise<{ messageId: string; createdAt: string }> => {
+  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: any[] }): Promise<{ messageId: string; createdAt: string }> => {
     const socket = getSocket();
     if (socket?.connected) {
-      return wsRequest('send_message', { chatId, content, type: options?.type, replyToId: options?.replyToId });
+      return wsRequest('send_message', { chatId, content, type: options?.type, replyToId: options?.replyToId, media: options?.media });
     }
     const result = await api.request<Message>(`/chats/${chatId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content, type: options?.type, replyToId: options?.replyToId }),
+      body: JSON.stringify({ content, type: options?.type, replyToId: options?.replyToId, media: options?.media }),
     });
     return { messageId: result.id, createdAt: result.createdAt };
+  };
+
+  // ─── WS RPC: fetch_messages ─────────────────────────────────────────────
+  api.fetchMessagesWS = async (chatId: string, cursor?: string, limit?: number): Promise<{ messages: any[]; hasMore: boolean }> => {
+    const params: Record<string, any> = { chatId };
+    if (cursor) params.cursor = cursor;
+    if (limit) params.limit = limit;
+    return wsRequest('fetch_messages', params);
+  };
+
+  // ─── WS RPC: fetch_friends ──────────────────────────────────────────────
+  api.fetchFriendsWS = async (): Promise<any[]> => {
+    const resp = await wsRequest<{ friends: any[] }>('fetch_friends', {});
+    return resp.friends ?? [];
+  };
+
+  // ─── WS RPC: fetch_friend_requests ──────────────────────────────────────
+  api.fetchFriendRequestsWS = async (): Promise<any[]> => {
+    const resp = await wsRequest<{ requests: any[] }>('fetch_friend_requests', {});
+    return resp.requests ?? [];
+  };
+
+  // ─── WS RPC: fetch_notifications ────────────────────────────────────────
+  api.fetchNotificationsWS = async (): Promise<{ notifyAll: boolean; notifyMessages: boolean; notifyCalls: boolean; notifyFriends: boolean }> => {
+    return wsRequest('fetch_notifications', {});
+  };
+
+  // ─── WS RPC: fetch_init ─────────────────────────────────────────────────
+  api.fetchInitWS = async () => {
+    return wsRequest('fetch_init', {});
+  };
+
+  // ─── WS RPC: push_subscribe ─────────────────────────────────────────────
+  api.pushSubscribeWS = async (subscription: any): Promise<void> => {
+    const socket = getSocket();
+    if (socket?.connected) {
+      await wsRequest('push_subscribe', { subscription });
+      return;
+    }
+    await api.request('/users/push-subscription', {
+      method: 'POST',
+      body: JSON.stringify({ subscription }),
+    });
   };
 }

@@ -1044,6 +1044,404 @@ textarea:focus-visible {
   animation: emoji-flicker 2s ease-in-out infinite;
 }
 
+/* ======================== */
+/*   ADVANCED LIQUID GLASS   */
+/* ======================== */
+
+/* Dynamic glass with color shift on hover */
+.liquid-glass-dynamic {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation-strong));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation-strong));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.liquid-glass-dynamic::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.15) 80%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+.liquid-glass-dynamic::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.03) 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.liquid-glass-dynamic:hover {
+  border-color: var(--glass-border-active);
+  box-shadow:
+    var(--glass-shadow-lg),
+    0 0 40px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  transform: translateY(-2px);
+}
+.liquid-glass-dynamic:hover::after {
+  opacity: 1;
+}
+
+/* Glass morphism with animated gradient border */
+.liquid-glass-border {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation-strong));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation-strong));
+  border: 1px solid transparent;
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 0;
+}
+.liquid-glass-border::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.05) 75%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  background-size: 200% 200%;
+  animation: borderGlow 8s ease infinite;
+}
+@keyframes borderGlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Glass with frosted effect */
+.liquid-glass-frosted {
+  background: rgba(20, 20, 28, 0.85);
+  backdrop-filter: blur(40px) saturate(180%) brightness(1.1);
+  -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+}
+.liquid-glass-frosted::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 15%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.25) 85%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Glass with depth layers */
+.liquid-glass-depth {
+  background: linear-gradient(
+    160deg,
+    rgba(25, 25, 35, 0.95) 0%,
+    rgba(15, 15, 22, 0.98) 100%
+  );
+  backdrop-filter: blur(48px) saturate(200%);
+  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 32px 100px rgba(0, 0, 0, 0.7),
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.04),
+    inset 2px 0 0 rgba(255, 255, 255, 0.06),
+    inset -2px 0 0 rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+.liquid-glass-depth::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 10%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.2) 90%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+.liquid-glass-depth::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 50%, rgba(255, 255, 255, 0.04) 100%);
+  pointer-events: none;
+}
+
+/* ======================== */
+/*   ADVANCED ANIMATIONS     */
+/* ======================== */
+
+/* Smooth page transitions */
+@keyframes pageSlideIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pageSlideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-30px); }
+}
+
+.animate-page-in {
+  animation: pageSlideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-page-out {
+  animation: pageSlideOut 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Staggered list animations */
+@keyframes staggerItem {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-stagger-1 { animation: staggerItem 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s forwards; opacity: 0; }
+.animate-stagger-2 { animation: staggerItem 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards; opacity: 0; }
+.animate-stagger-3 { animation: staggerItem 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.15s forwards; opacity: 0; }
+.animate-stagger-4 { animation: staggerItem 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards; opacity: 0; }
+.animate-stagger-5 { animation: staggerItem 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.25s forwards; opacity: 0; }
+
+/* Magnetic hover effect */
+.magnetic-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.magnetic-hover:hover {
+  transform: scale(1.02);
+}
+
+/* 3D tilt effect */
+.tilt-3d {
+  transition: transform 0.3s ease;
+  transform-style: preserve-3d;
+}
+.tilt-3d:hover {
+  transform: perspective(1000px) rotateX(2deg) rotateY(2deg);
+}
+
+/* Glass press effect */
+.glass-press {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-press:active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+
+/* Glow pulse animation */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(163, 163, 163, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(163, 163, 163, 0.2); }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Floating animation with depth */
+@keyframes floatDepth {
+  0%, 100% { transform: translateY(0) translateZ(0); }
+  50% { transform: translateY(-10px) translateZ(20px); }
+}
+
+.animate-float-depth {
+  animation: floatDepth 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+/* Glass morphism transition */
+.glass-morph-transition {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-morph-transition:hover {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* ======================== */
+/*   SKELETON LOADING        */
+/* ======================== */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+}
+
+.skeleton-title {
+  height: 20px;
+  width: 60%;
+  margin-bottom: 12px;
+}
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.skeleton-bubble {
+  height: 48px;
+  width: 70%;
+  border-radius: 16px;
+}
+
+/* ======================== */
+/*   MICRO-INTERACTIONS      */
+/* ======================== */
+
+/* Button hover glow */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+}
+.btn-glow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+.btn-glow:hover::after {
+  width: 200%;
+  height: 200%;
+}
+
+/* Icon bounce on hover */
+.icon-bounce {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.icon-bounce:hover {
+  transform: scale(1.2) translateY(-2px);
+}
+
+/* Focus ring animation */
+@keyframes focusRing {
+  0% { box-shadow: 0 0 0 0 rgba(163, 163, 163, 0.4); }
+  100% { box-shadow: 0 0 0 4px rgba(163, 163, 163, 0); }
+}
+
+.focus-ring:focus {
+  animation: focusRing 0.3s ease forwards;
+}
+
+/* Smooth color transition */
+.color-transition {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Text selection glow */
+::selection {
+  background: rgba(163, 163, 163, 0.3);
+  text-shadow: 0 0 8px rgba(163, 163, 163, 0.4);
+}
+
+/* Scrollbar glow on hover */
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+}
+
+/* Shimmer effect for loading states */
+@keyframes shimmerWave {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-wave {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-wave::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+  animation: shimmerWave 2s infinite;
+}
+
 /* Shimmer эффект для скелетонов */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
@@ -3053,6 +3451,214 @@ em-emoji-picker .Search {
 
 
 /* ======================== */
+/*   Link Preview Styles    */
+/* ======================== */
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ======================== */
+/*   Call Overlay Styles    */
+/* ======================== */
+
+.call-video-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.call-local-pip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 140px;
+  height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
+.call-local-pip video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.call-remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.call-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 40px;
+  margin: 0 auto;
+  max-width: 500px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.call-control-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.call-control-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.call-control-btn:active {
+  transform: scale(0.95);
+}
+
+.call-control-btn.active {
+  background: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.call-control-btn.danger {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+.call-control-btn.danger:hover {
+  background: rgba(239, 68, 68, 1);
+}
+
+/* Ringing animation */
+@keyframes call-ring {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.call-ringing {
+  animation: call-ring 1.5s ease-in-out infinite;
+}
+
+/* Connected pulse */
+@keyframes call-connected {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+}
+
+.call-connected-pulse {
+  animation: call-connected 2s ease-in-out infinite;
+}
+
+/* ======================== */
+/*   Encryption Badge       */
+/* ======================== */
+
+.encryption-layer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.2s ease;
+}
+
+.encryption-layer:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.encryption-fingerprint {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+}
+
+/* ======================== */
+/*   Wallpaper / Chat BG    */
+/* ======================== */
+
+.wallpaper-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.wallpaper-preset {
+  aspect-ratio: 3/4;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.wallpaper-preset:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.wallpaper-preset.selected {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.3);
+}
+
+.wallpaper-preset-check {
+  position: absolute;
+  inset: 0;
+  background: rgba(59, 130, 246, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Upload area */
+.wallpaper-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 112px;
+  border-radius: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wallpaper-upload:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ======================== */
 /*   Liquid Glass Chat UI   */
 /* ======================== */
 
@@ -3332,5 +3938,147 @@ em-emoji-picker .Search {
 
 .animate-glass-entrance {
   animation: glass-entrance 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ======================== */
+/*   Micro-interactions     */
+/* ======================== */
+
+/* Smooth focus ring */
+.focus-ring {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(163, 163, 163, 0.3);
+  border-color: rgba(163, 163, 163, 0.5);
+}
+
+/* Interactive hover lift */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Press feedback */
+.press-feedback {
+  transition: transform 0.1s ease;
+}
+.press-feedback:active {
+  transform: scale(0.98);
+}
+
+/* Stagger animation for lists */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: stagger-fade-in 0.3s ease forwards;
+}
+
+@keyframes stagger-fade-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ripple effect */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+}
+.ripple:active::after {
+  width: 200%;
+  height: 200%;
+  opacity: 1;
+  transition: width 0s, height 0s, opacity 0s;
+}
+
+/* Skeleton loading animation */
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Toast slide in */
+.toast-slide-in {
+  animation: toast-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Badge pulse */
+.badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Smooth scroll */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Glass morphism transition */
+.glass-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile touch feedback */
+@media (hover: none) {
+  .touch-feedback:active {
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background-color 0s;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 

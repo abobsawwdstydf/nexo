@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './stores/authStore';
-import AuthPage from './pages/AuthPage';
-import MessengerPage from './pages/MessengerPage';
-import LegalPages from './pages/LegalPages';
 import CookieConsent from './components/CookieConsent';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AudioClickWrapper } from './lib/useClickSound';
 import { ToastContainer } from './components/ToastContainer';
+import { CallProvider } from './lib/callContext';
+
+// Lazy load heavy pages for better initial load
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const MessengerPage = lazy(() => import('./pages/MessengerPage'));
+const LegalPages = lazy(() => import('./pages/LegalPages'));
 
 export default function App() {
   const { user, checkAuth } = useAuthStore();
@@ -24,6 +27,13 @@ export default function App() {
     setShowLegal(true);
   };
 
+  // Loading fallback
+  const LoadingFallback = () => (
+    <div className="h-full w-full flex items-center justify-center">
+      <div className="skeleton skeleton-bubble w-20 h-20 rounded-full" />
+    </div>
+  );
+
   return (
     <ErrorBoundary>
     <AudioClickWrapper>
@@ -39,7 +49,11 @@ export default function App() {
             transition={{ duration: 0.3 }}
             className="h-full w-full"
           >
-            <MessengerPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <CallProvider>
+                <MessengerPage />
+              </CallProvider>
+            </Suspense>
           </motion.div>
         ) : (
           <motion.div
@@ -50,7 +64,9 @@ export default function App() {
             transition={{ duration: 0.3 }}
             className="h-full w-full"
           >
-            <AuthPage onLegalClick={openLegal} />
+            <Suspense fallback={<LoadingFallback />}>
+              <AuthPage onLegalClick={openLegal} />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>
@@ -66,10 +82,12 @@ export default function App() {
             transition={{ duration: 0.25 }}
             className="absolute inset-0 z-50 h-full w-full"
           >
-            <LegalPages
-              initialTab={legalTab}
-              onBack={() => setShowLegal(false)}
-            />
+            <Suspense fallback={<LoadingFallback />}>
+              <LegalPages
+                initialTab={legalTab}
+                onBack={() => setShowLegal(false)}
+              />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>

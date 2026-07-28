@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"nexo/ai"
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
@@ -1183,9 +1184,13 @@ func HandleAICommand(userID, chatID, messageID, content string) {
 
 	startTime := time.Now()
 
-	// Here you would call your AI API
-	// For now, we create a log entry with a placeholder response
-	response := "AI ответ: " + prompt + " (модель: " + model + ")"
+	// Use embedded AI agent
+	agent := ai.NewAgent()
+	response, _, err := agent.LLM.Simple("Ты — AI-ассистент NEXO мессенджера. Отвечай на русском языке. Будь полезным и информативным.", prompt)
+	if err != nil {
+		response = "Ошибка AI: " + err.Error()
+	}
+	agent.Close()
 
 	duration := time.Since(startTime).Milliseconds()
 

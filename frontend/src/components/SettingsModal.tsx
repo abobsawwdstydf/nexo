@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -23,11 +23,18 @@ import {
   Monitor,
   Radio,
   Loader,
+  Crown,
+  Star,
+  Download,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import type { User as UserType } from '../lib/types';
 import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotification } from '../lib/notifications';
+import { api } from '../lib/api';
+import { toast } from '../lib/toast';
 
-type SettingsTab = 'general' | 'notifications' | 'appearance' | 'privacy' | 'profile';
+type SettingsTab = 'general' | 'notifications' | 'appearance' | 'privacy' | 'profile' | 'premium';
 
 interface SettingsModalProps {
   user: UserType;
@@ -40,6 +47,7 @@ const tabs: { id: SettingsTab; label: string; icon: typeof Bell }[] = [
   { id: 'notifications', label: 'Уведомления', icon: Bell },
   { id: 'appearance', label: 'Внешний вид', icon: Palette },
   { id: 'privacy', label: 'Конфиденциальность', icon: Shield },
+  { id: 'premium', label: 'Премиум', icon: Crown },
   { id: 'profile', label: 'Профиль', icon: User },
 ];
 
@@ -246,6 +254,46 @@ function AppearanceSettings() {
 }
 
 function PrivacySettings() {
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await fetch('/api/account/export', { credentials: 'include' });
+      if (!response.ok) throw new Error('Export failed');
+      const data = await response.json();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nexo-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Данные экспортированы');
+    } catch (err) {
+      toast.error('Ошибка экспорта данных');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await api.request('/account/delete', { method: 'DELETE' });
+      toast.success('Аккаунт удалён');
+      localStorage.clear();
+      window.location.href = '/login';
+    } catch (err) {
+      toast.error('Ошибка удаления аккаунта');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-1">
       <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Приватность</h3>
@@ -254,6 +302,61 @@ function PrivacySettings() {
       <SettingRow icon={Check} label="Подтверждение прочтения" value="Вкл" toggle />
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
       <SettingRow icon={Shield} label="Безопасность" value="" />
+
+      <div className="h-px bg-white/[0.04] my-3 mx-1" />
+
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2 pt-3">Данные</h3>
+
+      {/* Export data */}
+      <motion.button
+        onClick={handleExport}
+        disabled={exporting}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors disabled:opacity-50"
+        whileTap={{ scale: 0.99 }}
+      >
+        <Download size={15} className="text-white/25" />
+        <span className="text-xs text-white/60 flex-1 text-left">Экспорт данных</span>
+        {exporting ? (
+          <Loader size={12} className="text-white/30 animate-spin" />
+        ) : (
+          <ChevronRight size={12} className="text-white/15" />
+        )}
+      </motion.button>
+
+      {/* Delete account */}
+      {!confirmDelete ? (
+        <motion.button
+          onClick={() => setConfirmDelete(true)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors"
+          whileTap={{ scale: 0.99 }}
+        >
+          <Trash2 size={15} className="text-red-400/60" />
+          <span className="text-xs text-red-400/70 flex-1 text-left">Удалить аккаунт</span>
+          <ChevronRight size={12} className="text-white/15" />
+        </motion.button>
+      ) : (
+        <div className="px-3 py-3 space-y-2">
+          <div className="flex items-center gap-2 text-xs text-red-400/70">
+            <AlertTriangle size={14} />
+            <span>Вы уверены? Это действие необратимо.</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="flex-1 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white/60 transition-colors"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleting}
+              className="flex-1 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-xs text-white font-medium transition-colors disabled:opacity-50"
+            >
+              {deleting ? 'Удаление...' : 'Удалить'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -293,6 +396,138 @@ function ProfileSettings({ user }: { user: UserType }) {
         <SettingRow icon={Globe} label="Username" value={`@${user.username}`} />
         <SettingRow icon={Smartphone} label="Дата регистрации" value={new Date(user.createdAt).toLocaleDateString('ru-RU')} />
       </div>
+    </div>
+  );
+}
+
+function PremiumSettings() {
+  const [premiumStatus, setPremiumStatus] = useState<{ isPremium: boolean; premiumUntil: string | null } | null>(null);
+  const [prices, setPrices] = useState<Record<number, number>>({});
+  const [currency, setCurrency] = useState('RUB');
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [paying, setPaying] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      api.getPremiumStatus().catch(() => ({ isPremium: false, premiumUntil: null })),
+      api.getPremiumPrices().catch(() => ({ prices: {}, currency: 'RUB' })),
+    ]).then(([status, priceData]) => {
+      setPremiumStatus(status);
+      setPrices(priceData.prices || {});
+      setCurrency(priceData.currency || 'RUB');
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const handlePurchase = async () => {
+    if (!selected) return;
+    setPaying(true);
+    try {
+      const result = await api.createPayment({ type: 'premium', premiumMonths: selected });
+      if (result.confirmationUrl) {
+        window.open(result.confirmationUrl, '_blank', 'noopener,noreferrer');
+        toast.success('Страница оплаты открыта');
+      }
+    } catch (err) {
+      console.error('[Premium] Payment error:', err);
+      toast.error('Ошибка создания платежа');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const months = [1, 3, 6, 12];
+  const currencySymbol = currency === 'RUB' ? '₽' : currency === 'USD' ? '$' : currency;
+  const isPremium = premiumStatus?.isPremium ?? false;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 px-1 pb-2">
+        <div className="p-2 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-400/20 border border-amber-400/20">
+          <Crown size={18} className="text-amber-400" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-white/90">Нексо Премиум</h3>
+          <p className="text-[10px] text-white/40">
+            {isPremium
+              ? `Действует до ${new Date(premiumStatus!.premiumUntil!).toLocaleDateString('ru-RU')}`
+              : 'Разблокируйте все возможности'}
+          </p>
+        </div>
+        {isPremium && (
+          <div className="ml-auto px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-400/20 to-orange-400/20 border border-amber-400/20">
+            <span className="text-[10px] font-semibold text-amber-400">АКТИВЕН</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 px-1">
+        {[
+          { icon: '🎨', label: 'Уникальные темы' },
+          { icon: '📎', label: 'Файлы до 2 ГБ' },
+          { icon: '🏆', label: 'Особый значок' },
+          { icon: '🎮', label: 'Эксклюзивные стикеры' },
+          { icon: '☁️', label: 'Облако 100 ГБ' },
+          { icon: '👑', label: 'Приоритетная поддержка' },
+        ].map((feat, i) => (
+          <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+            <span className="text-sm">{feat.icon}</span>
+            <span className="text-[10px] text-white/60 whitespace-nowrap">{feat.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {!isPremium && (
+        <>
+          <div className="h-px bg-white/[0.04] my-1 mx-1" />
+          <div className="grid grid-cols-2 gap-2 px-1">
+            {months.map(m => {
+              const price = prices[m];
+              const isSelected = selected === m;
+              const monthlyPrice = price ? (price / m) : null;
+              return (
+                <button
+                  key={m}
+                  onClick={() => setSelected(m)}
+                  className={`relative p-3 rounded-xl border transition-all text-left ${
+                    isSelected
+                      ? 'border-amber-500/50 bg-amber-500/10'
+                      : 'border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <span className="text-sm font-medium text-white/80">{m} {m === 1 ? 'месяц' : m < 5 ? 'месяца' : 'месяцев'}</span>
+                  {price && (
+                    <div className="mt-1">
+                      <span className="text-lg font-bold text-white/90">{price} {currencySymbol}</span>
+                      {monthlyPrice && (
+                        <span className="text-[10px] text-white/30 ml-1">
+                          {monthlyPrice} {currencySymbol}/мес
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={handlePurchase}
+            disabled={!selected || paying}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {paying ? 'Создание платежа...' : selected ? `Купить за ${prices[selected]} ${currencySymbol}` : 'Выберите тариф'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -426,6 +661,7 @@ export default function SettingsModal({ user, initialTab = 'general', onClose }:
               {activeTab === 'notifications' && <NotificationSettings />}
               {activeTab === 'appearance' && <AppearanceSettings />}
               {activeTab === 'privacy' && <PrivacySettings />}
+              {activeTab === 'premium' && <PremiumSettings />}
               {activeTab === 'profile' && <ProfileSettings user={user} />}
             </motion.div>
           </AnimatePresence>

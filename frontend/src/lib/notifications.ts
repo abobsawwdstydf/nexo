@@ -152,25 +152,12 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
 }
 
 /**
- * Send push subscription to server
+ * Send push subscription to server (tries WS first, falls back to HTTP)
  */
 async function sendSubscriptionToServer(subscription: PushSubscription): Promise<boolean> {
   try {
-    const response = await fetch(`${getApiUrl()}/api/users/push-subscription`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ subscription: subscription.toJSON() })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Push] Server rejected subscription:', response.status, errorText);
-      return false;
-    }
-
+    const { api } = await import('../lib/api');
+    await api.pushSubscribeWS(subscription.toJSON());
     console.log('[Push] Subscription saved to server');
     return true;
   } catch (error) {

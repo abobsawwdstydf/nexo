@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useCallSettingsStore, CallSettings } from '../stores/callSettingsStore';
+import { useCallSettingsStore, type CallSettings, type CallSettingsStore } from '../stores/callSettingsStore';
 import { getSocket } from '../lib/socket';
 
 /**
@@ -14,7 +14,7 @@ export function useCallSettingsSync() {
     
     // Send settings to server when they change
     const unsubscribe = useCallSettingsStore.subscribe(
-      (state) => {
+      (state: CallSettingsStore) => {
         const newSettings = {
           callLayout: state.callLayout,
           buttonSize: state.buttonSize,

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
-import { connectSocket, disconnectSocket } from '../lib/socket';
+import { connectSocket, disconnectSocket, wsRequest, waitForSocketConnected } from '../lib/socket';
 import { subscribeToNotifications, unsubscribeFromNotifications } from '../lib/notifications';
+import { useInitStore } from './initStore';
 import type { User } from '../lib/types';
 
 interface AuthState {
@@ -117,12 +118,38 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     checkAuth: async () => {
+      const token = localStorage.getItem('nexo_access_token');
+      if (!token) {
+        set({ isLoading: false });
+        return;
+      }
+
+      // Try WS first (minimizes HTTP requests)
+      try {
+        connectSocket(token);
+        await waitForSocketConnected(3000);
+        const initData = await wsRequest<any>('fetch_init');
+        const { user, chats, settings, smartFolders, stories } = initData;
+        if (user) {
+          localStorage.setItem('nexo_user', JSON.stringify(user));
+          useInitStore.getState().setInit({ chats, settings, smartFolders, stories });
+          set({ user, isLoading: false });
+
+          setTimeout(() => {
+            subscribeToNotifications().catch(() => {});
+          }, 2000);
+          return;
+        }
+      } catch (wsErr) {
+        console.warn('[Auth] WS init failed, falling back to HTTP:', wsErr);
+      }
+
+      // HTTP fallback
       try {
         const initData = await api.getInit();
-        const { user } = initData;
+        const { user, chats, settings, smartFolders, stories } = initData;
         localStorage.setItem('nexo_user', JSON.stringify(user));
-        // Always reconnect WS after successful auth
-        const token = localStorage.getItem('nexo_access_token');
+        useInitStore.getState().setInit({ chats, settings, smartFolders, stories });
         if (token) {
           connectSocket(token);
         }
@@ -132,9 +159,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
           subscribeToNotifications().catch(() => {});
         }, 2000);
       } catch (err) {
-        // api.request() already attempted refresh+retry internally.
-        // If we're here, both the original request AND the refresh
-        // retry failed — session is genuinely gone.
         localStorage.removeItem('nexo_user');
         localStorage.removeItem('nexo_access_token');
         localStorage.removeItem('nexo_refresh_token');

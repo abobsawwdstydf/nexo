@@ -1,0 +1,596 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Phone,
+  PhoneOff,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Monitor,
+  MonitorOff,
+  X,
+  Maximize2,
+  Minimize2,
+  Users,
+  Bluetooth,
+  Copy,
+  Check,
+} from 'lucide-react';
+import { getSocket, wsRequest } from '../lib/socket';
+import type { UserBasic } from '../lib/types';
+
+interface CallOverlayProps {
+  open: boolean;
+  type: 'voice' | 'video';
+  target?: UserBasic | null;
+  chatId?: string;
+  onClose: () => void;
+}
+
+type CallState = 'connecting' | 'ringing' | 'connected' | 'ended' | 'failed';
+
+export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlayProps) {
+  const [callState, setCallState] = useState<CallState>('connecting');
+  const [duration, setDuration] = useState(0);
+  const [micOn, setMicOn] = useState(true);
+  const [videoOn, setVideoOn] = useState(type === 'video');
+  const [screenShare, setScreenShare] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isPip, setIsPip] = useState(false);
+  const [audioOutput, setAudioOutput] = useState<'speaker' | 'earpiece'>('speaker');
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const screenVideoRef = useRef<HTMLVideoElement>(null);
+  const peerRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // ICE config with STUN/TURN
+  const iceConfig: RTCConfiguration = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      {
+        urls: 'turn:relay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+    ],
+    iceCandidatePoolSize: 2,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+  };
+
+  const initLocalStream = useCallback(async () => {
+    try {
+      const constraints: MediaStreamConstraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: videoOn ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
+        } : false,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamRef.current = stream;
+
+      if (localVideoRef.current && videoOn) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // Audio processing for noise suppression
+      audioContextRef.current = new AudioContext();
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      const gain = audioContextRef.current.createGain();
+      gain.gain.value = 1.0;
+      source.connect(gain);
+
+      return stream;
+    } catch (err) {
+      console.error('[Call] Failed to get media:', err);
+      setCallState('failed');
+      return null;
+    }
+  }, [videoOn]);
+
+  const createPeerConnection = useCallback((stream: MediaStream) => {
+    const pc = new RTCPeerConnection(iceConfig);
+    peerRef.current = pc;
+
+    // Add local tracks
+    stream.getTracks().forEach(track => {
+      pc.addTrack(track, stream);
+    });
+
+    // Handle remote stream
+    pc.ontrack = (event) => {
+      if (remoteVideoRef.current && event.streams[0]) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    // ICE candidate handling
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        wsRequest('call:ice-candidate', {
+          candidate: event.candidate.toJSON(),
+          targetUserId: target?.id,
+          chatId,
+        }).catch(() => {});
+      }
+    };
+
+    // Connection state
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      if (state === 'connected') {
+        setCallState('connected');
+      } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+        setCallState('ended');
+        cleanupCall();
+      }
+    };
+
+    // ICE connection state
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === 'failed') {
+        pc.restartIce();
+      }
+    };
+
+    return pc;
+  }, [target, chatId]);
+
+  const startCall = useCallback(async () => {
+    const stream = await initLocalStream();
+    if (!stream) return;
+
+    const pc = createPeerConnection(stream);
+    setCallState('ringing');
+
+    try {
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: videoOn,
+      });
+      await pc.setLocalDescription(offer);
+
+      await wsRequest('call:offer', {
+        offer: pc.localDescription,
+        targetUserId: target?.id,
+        chatId,
+        callType: type,
+      });
+
+      // Listen for answer
+      const socket = getSocket();
+      if (socket) {
+        socket.on('call:answer', async (data: any) => {
+          if (data.answer && peerRef.current) {
+            await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+          }
+        });
+
+        socket.on('call:ice-candidate', async (data: any) => {
+          if (data.candidate && peerRef.current) {
+            try {
+              await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } catch {}
+          }
+        });
+
+        socket.on('call:ended', () => {
+          cleanupCall();
+          setCallState('ended');
+        });
+      }
+    } catch (err) {
+      console.error('[Call] Failed to create offer:', err);
+      setCallState('failed');
+    }
+  }, [initLocalStream, createPeerConnection, target, chatId, type, videoOn]);
+
+  const cleanupCall = useCallback(() => {
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(t => t.stop());
+      screenStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('call:end', { targetUserId: target?.id, chatId });
+    }
+  }, [target, chatId]);
+
+  const endCall = useCallback(() => {
+    cleanupCall();
+    onClose();
+  }, [cleanupCall, onClose]);
+
+  // Timer
+  useEffect(() => {
+    if (callState === 'connected') {
+      timerRef.current = setInterval(() => {
+        setDuration(d => d + 1);
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [callState]);
+
+  // Start call on mount
+  useEffect(() => {
+    if (open) {
+      startCall();
+    }
+    return () => {
+      cleanupCall();
+    };
+  }, [open]);
+
+  // Toggle mic
+  const toggleMic = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(t => {
+        t.enabled = !t.enabled;
+      });
+      setMicOn(v => !v);
+    }
+  }, []);
+
+  // Toggle video
+  const toggleVideo = useCallback(async () => {
+    if (!localStreamRef.current) return;
+
+    if (videoOn) {
+      localStreamRef.current.getVideoTracks().forEach(t => {
+        t.stop();
+        localStreamRef.current?.removeTrack(t);
+      });
+      setVideoOn(false);
+    } else {
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        });
+        videoStream.getVideoTracks().forEach(track => {
+          localStreamRef.current?.addTrack(track);
+          peerRef.current?.addTrack(track, localStreamRef.current!);
+        });
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = localStreamRef.current;
+        }
+        setVideoOn(true);
+      } catch {}
+    }
+  }, [videoOn]);
+
+  // Screen share
+  const toggleScreenShare = useCallback(async () => {
+    if (screenShare) {
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(t => t.stop());
+        screenStreamRef.current = null;
+      }
+      setScreenShare(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+        audio: true,
+      });
+
+      screenStreamRef.current = stream;
+
+      stream.getVideoTracks().forEach(track => {
+        if (localStreamRef.current) {
+          const oldVideo = localStreamRef.current.getVideoTracks()[0];
+          if (oldVideo) {
+            localStreamRef.current.removeTrack(oldVideo);
+            oldVideo.stop();
+          }
+          localStreamRef.current.addTrack(track);
+          const senders = peerRef.current?.getSenders();
+          const sender = senders?.find(s => s.track?.kind === 'video');
+          if (sender) {
+            sender.replaceTrack(track).catch(() => {});
+          }
+        }
+        if (screenVideoRef.current) {
+          screenVideoRef.current.srcObject = stream;
+        }
+      });
+
+      stream.addEventListener('inactive', () => {
+        setScreenShare(false);
+        if (peerRef.current && localStreamRef.current) {
+          navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } })
+            .then(videoStream => {
+              const newTrack = videoStream.getVideoTracks()[0];
+              if (newTrack && localStreamRef.current) {
+                localStreamRef.current.addTrack(newTrack);
+                const sender = peerRef.current?.getSenders().find(s => s.track?.kind === 'video');
+                if (sender) sender.replaceTrack(newTrack);
+              }
+            })
+            .catch(() => {});
+        }
+      });
+      setScreenShare(true);
+    } catch (err) {
+      console.error('[Call] Screen share failed:', err);
+    }
+  }, [screenShare]);
+
+  const formatDuration = (sec: number) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const getStateText = () => {
+    switch (callState) {
+      case 'connecting': return 'Подключение...';
+      case 'ringing': return 'Звонок...';
+      case 'connected': return formatDuration(duration);
+      case 'ended': return 'Разговор завершён';
+      case 'failed': return 'Не удалось подключиться';
+    }
+  };
+
+  const callId = chatId || `p2p_${target?.id || Date.now()}`;
+
+  const copyCallId = () => {
+    navigator.clipboard.writeText(callId).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
+  };
+
+  const toggleAudioOutput = () => {
+    setAudioOutput(prev => prev === 'speaker' ? 'earpiece' : 'speaker');
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.setSinkId?.(audioOutput === 'speaker' ? '' : 'default').catch(() => {});
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={`fixed inset-0 z-[90] ${isMinimized ? '' : 'bg-black/80 backdrop-blur-xl'}`}
+        >
+          {isMinimized ? (
+            // Minimized call bar
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              className="absolute bottom-4 left-4 right-4 max-w-md mx-auto"
+            >
+              <div className="glass-strong rounded-2xl p-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <Phone size={16} className="text-green-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-white/80 truncate">
+                    {target?.displayName || target?.username || 'Звонок'}
+                  </p>
+                  <p className="text-[10px] text-green-400/60">{type === 'video' ? 'Видео' : 'Голос'} · {getStateText()}</p>
+                </div>
+                <button
+                  onClick={() => setIsMinimized(false)}
+                  className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
+                >
+                  <Maximize2 size={14} className="text-white/50" />
+                </button>
+                <button
+                  onClick={endCall}
+                  className="p-2 rounded-xl bg-red-500/80 hover:bg-red-500 transition-colors"
+                >
+                  <PhoneOff size={14} className="text-white" />
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="h-full flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <button
+                  onClick={() => setIsMinimized(true)}
+                  className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
+                >
+                  <Minimize2 size={16} className="text-white/50" />
+                </button>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-white/90">
+                    {target?.displayName || target?.username || 'Звонок'}
+                  </p>
+                  <p className={`text-[11px] mt-0.5 ${
+                    callState === 'connected' ? 'text-green-400/70' :
+                    callState === 'ringing' ? 'text-blue-400/70' :
+                    callState === 'failed' ? 'text-red-400/70' : 'text-white/40'
+                  }`}>
+                    {getStateText()}
+                  </p>
+                </div>
+                <button
+                  onClick={endCall}
+                  className="p-2 rounded-xl bg-red-500/80 hover:bg-red-500 transition-colors"
+                >
+                  <X size={16} className="text-white" />
+                </button>
+              </div>
+
+              {/* Video / Main area */}
+              <div className="flex-1 flex items-center justify-center p-4 relative">
+                {type === 'video' ? (
+                  <div className="relative w-full h-full max-w-4xl mx-auto">
+                    {/* Remote video */}
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover rounded-3xl bg-black/40"
+                    />
+
+                    {/* Local video (PIP) */}
+                    {videoOn && (
+                      <div className={`absolute ${isPip ? 'inset-0 z-10' : 'top-4 right-4 w-36 h-64'}`}>
+                        <video
+                          ref={localVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className={`w-full h-full object-cover rounded-2xl bg-black/60 border border-white/[0.1] ${isPip ? '' : 'shadow-2xl'}`}
+                        />
+                        <button
+                          onClick={() => setIsPip(!isPip)}
+                          className={`absolute ${isPip ? 'top-4 right-4' : 'top-2 right-2'} p-1 rounded-lg bg-black/40 hover:bg-black/60 transition-colors`}
+                        >
+                          {isPip ? <Minimize2 size={12} className="text-white/70" /> : <Maximize2 size={12} className="text-white/70" />}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Screen share */}
+                    {screenShare && (
+                      <div className="absolute bottom-4 right-4 w-36 h-24">
+                        <video
+                          ref={screenVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover rounded-xl bg-black/60 border border-white/[0.1]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/20 flex items-center justify-center">
+                      <Phone size={36} className="text-green-400/60" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-white/90">
+                      {target?.displayName || target?.username || 'Звонок'}
+                    </h2>
+                    {callState === 'ringing' && (
+                      <div className="flex items-center justify-center gap-1 mt-3">
+                        {[0, 1, 2].map(i => (
+                          <motion.div
+                            key={i}
+                            animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.4 }}
+                            className="w-2 h-2 rounded-full bg-green-400/60"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center justify-center gap-3 px-4 pb-8 pt-3">
+                {/* Mic */}
+                <button
+                  onClick={toggleMic}
+                  className={`p-4 rounded-full transition-all ${
+                    micOn ? 'bg-white/[0.08] hover:bg-white/[0.12]' : 'bg-red-500/80 hover:bg-red-500'
+                  }`}
+                >
+                  {micOn ? <Mic size={20} className="text-white/80" /> : <MicOff size={20} className="text-white" />}
+                </button>
+
+                {/* Video (only in video mode) */}
+                {type === 'video' && (
+                  <button
+                    onClick={toggleVideo}
+                    className={`p-4 rounded-full transition-all ${
+                      videoOn ? 'bg-white/[0.08] hover:bg-white/[0.12]' : 'bg-red-500/80 hover:bg-red-500'
+                    }`}
+                  >
+                    {videoOn ? <Video size={20} className="text-white/80" /> : <VideoOff size={20} className="text-white" />}
+                  </button>
+                )}
+
+                {/* Screen share */}
+                <button
+                  onClick={toggleScreenShare}
+                  className={`p-4 rounded-full transition-all ${
+                    screenShare ? 'bg-blue-500/80 hover:bg-blue-500' : 'bg-white/[0.08] hover:bg-white/[0.12]'
+                  }`}
+                >
+                  {screenShare ? <MonitorOff size={20} className="text-white" /> : <Monitor size={20} className="text-white/80" />}
+                </button>
+
+                {/* Audio output */}
+                <button
+                  onClick={toggleAudioOutput}
+                  className="p-4 rounded-full bg-white/[0.08] hover:bg-white/[0.12] transition-all"
+                >
+                  <Bluetooth size={20} className="text-white/60" />
+                </button>
+
+                {/* Copy call ID (for debugging / direct connection) */}
+                <button
+                  onClick={copyCallId}
+                  className="p-4 rounded-full bg-white/[0.08] hover:bg-white/[0.12] transition-all"
+                >
+                  {copySuccess ? <Check size={20} className="text-green-400" /> : <Copy size={20} className="text-white/60" />}
+                </button>
+
+                {/* End call */}
+                <button
+                  onClick={endCall}
+                  className="p-4 rounded-full bg-red-500 hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
+                >
+                  <PhoneOff size={24} className="text-white" />
+                </button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

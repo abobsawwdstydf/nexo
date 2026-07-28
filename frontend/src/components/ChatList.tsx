@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -11,7 +11,11 @@ import {
   Users,
   UserPlus,
   Plus,
-  Radio,
+  X,
+  Clock,
+  ArrowRight,
+  Shield,
+  Globe,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
 
@@ -29,6 +33,7 @@ interface ChatListProps {
   onOpenFriends: () => void;
   onNewChat: () => void;
   onNewChannel: () => void;
+  onOpenAccountManager: () => void;
 }
 
 function ActionButton({
@@ -36,7 +41,7 @@ function ActionButton({
   label,
   onClick,
 }: {
-  icon: typeof Users;
+  icon?: typeof Users;
   label: string;
   onClick: () => void;
 }) {
@@ -47,7 +52,7 @@ function ActionButton({
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
     >
-      <Icon size={12} />
+      {Icon ? <Icon size={14} /> : null}
       {label}
     </motion.button>
   );
@@ -183,9 +188,35 @@ export function ChatList({
   onOpenFriends,
   onNewChat,
   onNewChannel,
+  onOpenAccountManager,
 }: ChatListProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nexo_recent_searches');
+      if (saved) setRecentSearches(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // Save recent searches
+  const saveRecentSearch = (query: string) => {
+    if (!query.trim()) return;
+    const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('nexo_recent_searches', JSON.stringify(updated));
+  };
+
+  // Clear recent searches
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('nexo_recent_searches');
+  };
 
   // Close menu on outside click
   useEffect(() => {
@@ -200,48 +231,40 @@ export function ChatList({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showUserMenu]);
 
+  // Handle search submit
+  const handleSearchSubmit = (query: string) => {
+    if (query.trim()) {
+      saveRecentSearch(query);
+      setShowRecentSearches(false);
+    }
+  };
+
   return (
     <>
-      {/* ─── User header ───────────────────────────────────────────── */}
+      {/* ─── Logo header with menu ──────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <motion.button
-            onClick={onOpenProfile}
-            className="relative group"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.displayName}
-                className="w-9 h-9 rounded-xl object-cover cursor-pointer"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-xl bg-white/[0.08] border border-white/[0.06] flex items-center justify-center cursor-pointer">
-                <User size={16} className="text-white/50" />
-              </div>
-            )}
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400/80 border-2 border-[#0a0a0f]" />
-          </motion.button>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+            <MessageCircle size={18} className="text-white/70" />
+          </div>
           <div>
             <h1 className="text-sm font-semibold text-white/90 font-display tracking-wide">
               Нексо
             </h1>
             <p className="text-[11px] text-white/30">
-              {user?.displayName || user?.username || ''}
+              Мессенджер
             </p>
           </div>
         </div>
 
-        <div className="relative" ref={menuRef}>
+        <div className="relative flex-shrink-0" ref={menuRef}>
           <motion.button
             onClick={() => setShowUserMenu(v => !v)}
-            className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
+            className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <MoreVertical size={16} className="text-white/40" />
+            <MoreVertical size={19} className="text-white/60" />
           </motion.button>
 
           <AnimatePresence>
@@ -250,29 +273,43 @@ export function ChatList({
                 initial={{ opacity: 0, scale: 0.95, y: -5 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full mt-1 w-44 py-1.5 rounded-xl liquid-glass-strong z-50"
+                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute right-0 top-full mt-1 w-52 py-1.5 rounded-xl liquid-glass-strong z-50"
               >
                 <button
                   onClick={() => { setShowUserMenu(false); onOpenProfile(); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
                 >
-                  <User size={14} />
+                  <User size={15} />
                   Профиль
                 </button>
                 <button
                   onClick={() => { setShowUserMenu(false); onOpenSettings(); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
                 >
-                  <Settings size={14} />
+                  <Settings size={15} />
                   Настройки
+                </button>
+                <button
+                  onClick={() => { setShowUserMenu(false); onOpenSettings(); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Shield size={15} />
+                  Безопасность
+                </button>
+                <button
+                  onClick={() => { setShowUserMenu(false); onOpenAccountManager(); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Globe size={15} />
+                  Аккаунты
                 </button>
                 <div className="mx-3 my-1 h-px bg-white/[0.06]" />
                 <button
                   onClick={() => { setShowUserMenu(false); onLogout(); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-red-400/70 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-red-400/70 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
                 >
-                  <LogOut size={14} />
+                  <LogOut size={15} />
                   Выйти
                 </button>
               </motion.div>
@@ -281,20 +318,69 @@ export function ChatList({
         </div>
       </div>
 
-      {/* ─── Search ────────────────────────────────────────────────── */}
+      {/* ─── Search with recent searches ────────────────────────────── */}
       <div className="flex-shrink-0 px-3 pt-3 pb-2">
-        <div className="relative">
+        <div className="relative" ref={searchRef}>
           <Search
-            size={14}
+            size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
           />
           <input
             type="text"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            placeholder="Поиск чатов..."
-            className="w-full h-9 pl-9 pr-3 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
+            onFocus={() => setShowRecentSearches(true)}
+            onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(searchQuery); }}
+            placeholder="Поиск чатов, сообщений..."
+            className="w-full h-10 pl-10 pr-10 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06] focus:ring-2 focus:ring-white/5"
           />
+          {searchQuery && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => { onSearchChange(''); searchRef.current?.focus(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X size={14} className="text-white/30" />
+            </motion.button>
+          )}
+
+          <AnimatePresence>
+            {showRecentSearches && recentSearches.length > 0 && !searchQuery && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="absolute left-0 right-0 top-full mt-1 py-2 rounded-xl liquid-glass-strong z-50"
+              >
+                <div className="flex items-center justify-between px-3 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
+                    Недавние
+                  </span>
+                  <button
+                    onClick={clearRecentSearches}
+                    className="text-[10px] text-white/30 hover:text-white/50 transition-colors"
+                  >
+                    Очистить
+                  </button>
+                </div>
+                {recentSearches.map((query, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { onSearchChange(query); setShowRecentSearches(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+                  >
+                    <Clock size={12} className="text-white/20 flex-shrink-0" />
+                    <span className="truncate">{query}</span>
+                    <ArrowRight size={12} className="ml-auto text-white/20" />
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -302,7 +388,7 @@ export function ChatList({
       <div className="flex-shrink-0 flex items-center gap-1.5 px-3 pb-2">
         <ActionButton icon={Users} label="Друзья" onClick={onOpenFriends} />
         <ActionButton icon={UserPlus} label="Новый чат" onClick={onNewChat} />
-        <ActionButton icon={Radio} label="Канал" onClick={onNewChannel} />
+        <ActionButton icon={Plus} label="Канал" onClick={onNewChannel} />
       </div>
 
       {/* ─── Chat list ─────────────────────────────────────────────── */}
@@ -349,6 +435,37 @@ export function ChatList({
             </AnimatePresence>
           </div>
         )}
+      </div>
+
+      {/* ─── User profile at bottom ────────────────────────────────── */}
+      <div className="flex-shrink-0 px-3 py-2 border-t border-white/[0.06]">
+        <motion.button
+          onClick={onOpenProfile}
+          className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/[0.03] transition-colors"
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="relative">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.displayName}
+                className="w-9 h-9 rounded-xl object-cover"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-white/[0.08] border border-white/[0.06] flex items-center justify-center">
+                <User size={16} className="text-white/50" />
+              </div>
+            )}
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400/80 border-2 border-[#0a0a0f]" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-medium text-white/90 truncate">
+              {user?.displayName || user?.username || ''}
+            </p>
+            <p className="text-[11px] text-white/40">Личный кабинет</p>
+          </div>
+          <MoreVertical size={15} className="text-white/30" />
+        </motion.button>
       </div>
     </>
   );

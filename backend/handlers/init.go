@@ -63,7 +63,7 @@ func GetInit(c *fiber.Ctx) error {
 		Where("user_id = ?", userID).
 		Pluck("chat_id", &memberChatIDs)
 
-	var chats []models.Chat
+	chats := make([]models.Chat, 0)
 	if len(memberChatIDs) > 0 {
 		db.GetDB().
 			Preload("Members").

@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Cloudflare Worker local dev
+.dev.vars
+
 # Binaries
 *.exe
 *.exe~

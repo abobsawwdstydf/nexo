@@ -17,6 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
 
+	"nexo/ai"
 	"nexo/db"
 	"nexo/handlers"
 	"nexo/middleware"
@@ -44,6 +45,10 @@ func main() {
 	
 	middleware.InitJWT()
 
+	// Initialize AI agent (LLM + Browser)
+	ai.InitConfig()
+	log.Println("AI agent: initialized (LLM + browser embedded)")
+
 	// Start bot health checker (checks every 12 hours)
 	handlers.StartHealthChecker()
 
@@ -55,15 +60,19 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Nexo Messenger",
-		BodyLimit:    50 * 1024 * 1024,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		BodyLimit:    10 * 1024 * 1024, // 10MB
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	})
+
+	// Initialize security middleware
+	middleware.InitRequestSigning()
 
 	// Middleware
 	app.Use(recover.New())
 	app.Use(compress.New(compress.Config{
-		Level: compress.LevelBestSpeed,
+		Level: compress.LevelDefault,
 	}))
 	// CORS — allow listed origins + localhost dev + CORS_ORIGINS env
 	allowedDomains := map[string]bool{
@@ -89,7 +98,7 @@ func main() {
 	}
 	app.Use(cors.New(cors.Config{
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-CSRF-Token,X-Request-Timestamp,X-Request-Signature",
 		AllowCredentials: true,
 		AllowOriginsFunc: func(origin string) bool {
 			if origin == "" {
@@ -115,6 +124,16 @@ func main() {
 		Expiration: 1 * time.Minute,
 	}))
 
+	// Security middleware stack
+	app.Use(middleware.SecurityHeaders())
+	app.Use(middleware.IPBlockMiddleware())
+	app.Use(middleware.PathTraversalProtection())
+	app.Use(middleware.SQLInjectionProtection())
+	app.Use(middleware.XSSProtection())
+	app.Use(middleware.InputSanitization())
+	app.Use(middleware.RequestSizeLimit(10 * 1024 * 1024)) // 10MB max
+	app.Use(middleware.VerifyRequestSignature)
+
 	// Ensure uploads directory exists
 	os.MkdirAll("../uploads", 0755)
 
@@ -123,7 +142,13 @@ func main() {
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok", "engine": "go", "version": "1.0.0"})
+		return c.JSON(fiber.Map{"status": "ok", "engine": "go", "version": "2.0.0"})
+	})
+
+	// CSRF token endpoint
+	app.Get("/api/csrf-token", func(c *fiber.Ctx) error {
+		token := middleware.GenerateCSRFToken(c.IP())
+		return c.JSON(fiber.Map{"token": token})
 	})
 
 	// Bot health status (public)
@@ -148,7 +173,7 @@ func main() {
 	api.Post("/auth/email/confirm", handlers.AuthRateLimit(5, time.Minute), handlers.ConfirmEmailCode)
 
 	// Protected routes
-	auth := api.Group("", middleware.AuthenticateToken)
+	auth := api.Group("", middleware.AuthenticateToken, middleware.CSRFProtection())
 	auth.Get("/init", handlers.GetInit)
 	auth.Get("/users/me", handlers.GetProfile)
 	auth.Put("/users/me", handlers.UpdateProfile)
@@ -162,6 +187,10 @@ func main() {
 
 	// User by ID (MUST be after /settings, /notifications, /search, /me)
 	auth.Get("/users/:id", handlers.GetUser)
+
+	// Account
+	auth.Get("/account/export", handlers.ExportAccount)
+	auth.Delete("/account/delete", handlers.DeleteAccount)
 
 	// Verification
 	auth.Post("/verify/request", handlers.RequestVerification)
@@ -346,6 +375,125 @@ func main() {
 
 	// ─── Feature: Self-Destruct on Read ─────────────────────────────────
 	auth.Post("/messages/:id/read-destroy", handlers.MarkMessageRead)
+
+	// ─── AI Browsing (Agent Service) ────────────────────────────────────
+	auth.Post("/ai/browse", handlers.StartAIBrowse)
+	auth.Get("/ai/browse/status/:id", handlers.GetAIBrowseStatus)
+	auth.Get("/ai/browse/history", handlers.GetAIBrowseHistory)
+
+	// ─── AI Features ───────────────────────────────────────────────────
+	auth.Post("/ai/translate", handlers.TranslateMessage)
+	auth.Post("/ai/moderate", handlers.ModerateContent)
+	auth.Get("/ai/moderation/config/:chatId", handlers.GetModerationConfig)
+	auth.Put("/ai/moderation/config/:chatId", handlers.SetModerationConfig)
+	auth.Post("/ai/auto-reply/config", handlers.SetAutoReplyConfig)
+	auth.Get("/ai/auto-reply/config", handlers.GetAutoReplyConfig)
+	auth.Post("/ai/voice-command", handlers.ProcessVoiceCommand)
+	auth.Post("/ai/smart-reminder", handlers.CreateSmartReminder)
+	auth.Get("/ai/smart-reminders", handlers.GetSmartReminders)
+	auth.Post("/ai/privacy-audit", handlers.RunPrivacyAudit)
+	auth.Get("/ai/privacy-audit", handlers.GetPrivacyAuditResults)
+
+	// ─── Scheduled Messages ────────────────────────────────────────────
+	auth.Post("/scheduled-messages", handlers.CreateScheduledMessage)
+	auth.Get("/scheduled-messages", handlers.GetScheduledMessages)
+	auth.Put("/scheduled-messages/:id", handlers.EditScheduledMessage)
+	auth.Delete("/scheduled-messages/:id", handlers.CancelScheduledMessage)
+
+	// ─── Chat Themes ──────────────────────────────────────────────────
+	auth.Get("/chats/:id/theme", handlers.GetChatTheme)
+	auth.Post("/chats/:id/theme", handlers.SetChatTheme)
+	auth.Delete("/chats/:id/theme", handlers.DeleteChatTheme)
+
+	// ─── Kanban Boards ────────────────────────────────────────────────
+	auth.Post("/kanban", handlers.CreateKanbanBoard)
+	auth.Get("/kanban", handlers.GetKanbanBoards)
+	auth.Get("/kanban/:boardId", handlers.GetKanbanBoard)
+	auth.Post("/kanban/:boardId/tasks", handlers.CreateKanbanTask)
+	auth.Put("/kanban/tasks/:taskId", handlers.UpdateKanbanTask)
+	auth.Delete("/kanban/tasks/:taskId", handlers.DeleteKanbanTask)
+	auth.Put("/kanban/:boardId/reorder", handlers.ReorderKanbanBoard)
+
+	// ─── Message Bookmarks ────────────────────────────────────────────
+	auth.Post("/bookmarks", handlers.CreateBookmark)
+	auth.Get("/bookmarks", handlers.GetBookmarks)
+	auth.Put("/bookmarks/:id", handlers.UpdateBookmark)
+	auth.Delete("/bookmarks/:id", handlers.DeleteBookmark)
+
+	// ─── Message Templates ────────────────────────────────────────────
+	auth.Post("/templates", handlers.CreateTemplate)
+	auth.Get("/templates", handlers.GetTemplates)
+	auth.Put("/templates/:id", handlers.UpdateTemplate)
+	auth.Delete("/templates/:id", handlers.DeleteTemplate)
+
+	// ─── Calendar Events ──────────────────────────────────────────────
+	auth.Post("/calendar/events", handlers.CreateCalendarEvent)
+	auth.Get("/calendar/events", handlers.GetCalendarEvents)
+	auth.Put("/calendar/events/:id", handlers.UpdateCalendarEvent)
+	auth.Delete("/calendar/events/:id", handlers.DeleteCalendarEvent)
+	auth.Post("/calendar/events/:id/rsvp", handlers.RSVPEvent)
+
+	// ─── Photo Albums ──────────────────────────────────────────────────
+	auth.Post("/albums", handlers.CreatePhotoAlbum)
+	auth.Get("/albums", handlers.GetPhotoAlbums)
+	auth.Get("/albums/:id", handlers.GetPhotoAlbum)
+	auth.Put("/albums/:id", handlers.UpdatePhotoAlbum)
+	auth.Delete("/albums/:id", handlers.DeletePhotoAlbum)
+	auth.Post("/albums/:id/photos", handlers.AddPhotoToAlbum)
+
+	// ─── Screen Recordings ────────────────────────────────────────────
+	auth.Post("/screen-recordings", handlers.UploadScreenRecording)
+	auth.Get("/screen-recordings", handlers.GetScreenRecordings)
+
+	// ─── Encrypted Vault ──────────────────────────────────────────────
+	auth.Post("/vault/upload", handlers.VaultUpload)
+	auth.Get("/vault/files", handlers.VaultList)
+	auth.Get("/vault/files/:id/download", handlers.VaultDownload)
+	auth.Delete("/vault/files/:id", handlers.VaultDelete)
+	auth.Get("/vault/stats", handlers.VaultStats)
+
+	// ─── Incognito Chats ──────────────────────────────────────────────
+	auth.Post("/incognito/create", handlers.CreateIncognitoChat)
+	auth.Post("/incognito/join", handlers.JoinIncognitoChat)
+	auth.Get("/incognito/chats", handlers.GetIncognitoChats)
+	auth.Delete("/incognito/:id", handlers.LeaveIncognitoChat)
+
+	// ─── Device Management ────────────────────────────────────────────
+	auth.Get("/devices", handlers.GetDevices)
+	auth.Delete("/devices/:id", handlers.RevokeDevice)
+	auth.Post("/devices/check-in", handlers.DeviceCheckIn)
+
+	// ─── Dead Man's Switch ────────────────────────────────────────────
+	auth.Post("/dead-man-switch", handlers.CreateDeadManSwitch)
+	auth.Get("/dead-man-switch", handlers.GetDeadManSwitch)
+	auth.Put("/dead-man-switch", handlers.UpdateDeadManSwitch)
+	auth.Delete("/dead-man-switch", handlers.DeleteDeadManSwitch)
+	auth.Post("/dead-man-switch/check-in", handlers.DeadManSwitchCheckIn)
+
+	// ─── Whiteboard ───────────────────────────────────────────────────
+	auth.Post("/whiteboard", handlers.CreateWhiteboard)
+	auth.Get("/whiteboard/:id", handlers.GetWhiteboard)
+	auth.Put("/whiteboard/:id", handlers.UpdateWhiteboard)
+	auth.Post("/whiteboard/:id/edit", handlers.ApplyWhiteboardEdit)
+	auth.Delete("/whiteboard/:id", handlers.DeleteWhiteboard)
+
+	// ─── Voice Room Activities ────────────────────────────────────────
+	auth.Post("/voice-rooms/:roomId/activity", handlers.StartVoiceRoomActivity)
+	auth.Delete("/voice-rooms/:roomId/activity", handlers.StopVoiceRoomActivity)
+	auth.Get("/voice-rooms/:roomId/activity", handlers.GetVoiceRoomActivity)
+
+	// ─── Security Audit Log ──────────────────────────────────────────
+	auth.Get("/security/audit-log", func(c *fiber.Ctx) error {
+		limit := 100
+		if l := c.Query("limit"); l != "" {
+			for _, ch := range l {
+				if ch >= '0' && ch <= '9' {
+					limit = limit*10 + int(ch-'0')
+				}
+			}
+		}
+		return c.JSON(fiber.Map{"entries": middleware.GetAuditLog(limit)})
+	})
 
 	// WebSocket
 	app.Get("/ws/chat", websocket.New(handlers.HandleWebSocket))
