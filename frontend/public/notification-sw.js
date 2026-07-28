@@ -58,37 +58,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // API requests - network only with offline fallback
+  // API requests - let browser handle directly (auth headers, no SW interference)
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Clone and cache successful responses
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Return cached response if available
-          return caches.match(request).then((cached) => {
-            if (cached) {
-              return cached;
-            }
-            // Return offline response for API
-            return new Response(
-              JSON.stringify({ error: 'Offline', offline: true }),
-              {
-                status: 503,
-                headers: { 'Content-Type': 'application/json' }
-              }
-            );
-          });
-        })
-    );
     return;
   }
   

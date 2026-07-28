@@ -1,0 +1,9 @@
+- generic [ref=f1e6]:
+  - button [ref=f1e7] [cursor=pointer]
+  - generic [ref=f1e12]: "|"
+  - generic [ref=f1e14]:
+    - button "Политика конфиденциальности" [ref=f1e15] [cursor=pointer]
+    - generic [ref=f1e16]: ·
+    - button "Пользовательское соглашение" [ref=f1e17] [cursor=pointer]
+    - generic [ref=f1e18]: ·
+    - button "Cookie" [ref=f1e19] [cursor=pointer]

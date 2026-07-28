@@ -1,0 +1,11 @@
+uid=9_0 RootWebArea "Нексо" url="http://localhost:2274/"
+  uid=9_1 button
+  uid=9_2 button "Войти"
+  uid=9_3 StaticText " или "
+  uid=9_4 button "зарегистрироваться"
+  uid=9_5 StaticText "?"
+  uid=9_6 button "Политика конфиденциальности"
+  uid=9_7 StaticText "·"
+  uid=9_8 button "Пользовательское соглашение"
+  uid=9_9 StaticText "·"
+  uid=9_10 button "Cookie"
