@@ -4,11 +4,14 @@ import {
   Search,
   MessageCircle,
   LogOut,
-  ChevronDown,
   MoreVertical,
   User,
   Settings,
   Bookmark,
+  Users,
+  UserPlus,
+  Plus,
+  Radio,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
 
@@ -23,6 +26,31 @@ interface ChatListProps {
   onLogout: () => void;
   onOpenProfile: () => void;
   onOpenSettings: () => void;
+  onOpenFriends: () => void;
+  onNewChat: () => void;
+  onNewChannel: () => void;
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Users;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <motion.button
+      onClick={onClick}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors text-xs text-white/50 hover:text-white/70"
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+    >
+      <Icon size={12} />
+      {label}
+    </motion.button>
+  );
 }
 
 function ChatAvatar({ chat }: { chat: Chat }) {
@@ -42,19 +70,24 @@ function ChatAvatar({ chat }: { chat: Chat }) {
     .slice(0, 2)
     .toUpperCase();
 
-  if (chat.avatar) {
-    return (
-      <img
-        src={chat.avatar}
-        alt={chat.name || 'Chat'}
-        className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
-      />
-    );
-  }
+  const isOnline = chat.type === 'personal' && (chat as any).otherMember?.isOnline;
 
   return (
-    <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0">
-      <span className="text-sm font-medium text-white/50">{initials}</span>
+    <div className="relative flex-shrink-0">
+      {chat.avatar ? (
+        <img
+          src={chat.avatar}
+          alt={chat.name || 'Chat'}
+          className="w-11 h-11 rounded-xl object-cover"
+        />
+      ) : (
+        <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center">
+          <span className="text-sm font-medium text-white/50">{initials}</span>
+        </div>
+      )}
+      {isOnline && (
+        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400/80 border-2 border-[#0a0a0f]" />
+      )}
     </div>
   );
 }
@@ -147,6 +180,9 @@ export function ChatList({
   onLogout,
   onOpenProfile,
   onOpenSettings,
+  onOpenFriends,
+  onNewChat,
+  onNewChannel,
 }: ChatListProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -189,10 +225,7 @@ export function ChatList({
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400/80 border-2 border-[#0a0a0f]" />
           </motion.button>
           <div>
-            <h1
-              className="text-sm font-semibold text-white/90"
-              style={{ letterSpacing: '0.02em' }}
-            >
+            <h1 className="text-sm font-semibold text-white/90 font-display tracking-wide">
               Нексо
             </h1>
             <p className="text-[11px] text-white/30">
@@ -263,6 +296,13 @@ export function ChatList({
             className="w-full h-9 pl-9 pr-3 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
           />
         </div>
+      </div>
+
+      {/* ─── Quick Actions ─────────────────────────────────────────── */}
+      <div className="flex-shrink-0 flex items-center gap-1.5 px-3 pb-2">
+        <ActionButton icon={Users} label="Друзья" onClick={onOpenFriends} />
+        <ActionButton icon={UserPlus} label="Новый чат" onClick={onNewChat} />
+        <ActionButton icon={Radio} label="Канал" onClick={onNewChannel} />
       </div>
 
       {/* ─── Chat list ─────────────────────────────────────────────── */}

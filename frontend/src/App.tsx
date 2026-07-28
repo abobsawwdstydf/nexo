@@ -6,6 +6,8 @@ import MessengerPage from './pages/MessengerPage';
 import LegalPages from './pages/LegalPages';
 import CookieConsent from './components/CookieConsent';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AudioClickWrapper } from './lib/useClickSound';
+import { ToastContainer } from './components/ToastContainer';
 
 export default function App() {
   const { user, checkAuth } = useAuthStore();
@@ -24,6 +26,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <AudioClickWrapper>
     <div className="h-full w-full flex flex-col relative">
       {/* ═══ Main page: messenger or auth ═══ */}
       <AnimatePresence mode="wait">
@@ -72,7 +75,9 @@ export default function App() {
       </AnimatePresence>
 
       <CookieConsent />
+      <ToastContainer />
     </div>
+    </AudioClickWrapper>
     </ErrorBoundary>
   );
 }

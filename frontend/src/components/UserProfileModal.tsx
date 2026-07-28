@@ -52,8 +52,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="absolute inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
@@ -61,8 +60,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
         transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-        className="relative w-full max-w-[420px] rounded-2xl overflow-hidden"
-        style={{ background: 'rgba(15,15,20,0.96)', backdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.08)' }}
+        className="relative w-full max-w-[420px] rounded-2xl liquid-glass-strong overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* ─── Close ──────────────────────────────────────────────── */}
@@ -106,7 +104,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
         {/* ─── Info ───────────────────────────────────────────────── */}
         <div className="px-6 pt-3 pb-4 text-center">
           <div className="flex items-center justify-center gap-2">
-            <h1 className="text-lg font-bold text-white/90">
+            <h1 className="text-lg font-bold text-white/90 font-display">
               {user.displayName || user.username}
             </h1>
             {user.isPremium && <Star size={14} className="text-amber-400" />}

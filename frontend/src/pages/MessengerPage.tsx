@@ -1,58 +1,162 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Bookmark,
-  Mic,
-  Paperclip,
+  Send,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
-import type { Chat } from '../lib/types';
+import type { Chat, Message } from '../lib/types';
 import { ChatList } from '../components/ChatList';
 import { MessageArea } from '../components/MessageArea';
+import FriendsPanel from '../components/FriendsPanel';
+import CreateChannelModal from '../components/CreateChannelModal';
+import NewChatModal from '../components/NewChatModal';
 import UserProfileModal from '../components/UserProfileModal';
 import SettingsModal from '../components/SettingsModal';
+import { toast } from '../lib/toast';
+import { Confetti } from '../components/Confetti';
 
-const FONT = "'Inter', system-ui, -apple-system, sans-serif";
+const FONT = "'Koganejidainogemu', 'PreschoolPlayhouse', 'Caveat', cursive";
+
+interface SavedNote {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
+const SAVED_KEY = 'nexo_saved_notes';
+
+function loadNotes(): SavedNote[] {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveNotes(notes: SavedNote[]) {
+  localStorage.setItem(SAVED_KEY, JSON.stringify(notes));
+}
 
 function SavedMessagesView({ onBack }: { onBack: () => void }) {
+  const [notes, setNotes] = useState<SavedNote[]>(loadNotes);
+  const [input, setInput] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    saveNotes(notes);
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [notes]);
+
+  const addNote = () => {
+    const t = input.trim();
+    if (!t) return;
+    const note: SavedNote = {
+      id: `note_${Date.now()}`,
+      text: t,
+      createdAt: new Date().toLocaleString('ru-RU'),
+    };
+    setNotes(prev => [...prev, note]);
+    setInput('');
+  };
+
+  const deleteNote = (id: string) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+  };
+
   return (
     <>
-      <div className="flex-shrink-0 flex items-center px-3 py-2.5 border-b border-white/[0.06]">
-        <motion.button
-          onClick={onBack}
-          className="md:hidden p-2 -ml-1 rounded-xl hover:bg-white/[0.06] transition-colors"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <ArrowLeft size={18} className="text-white/50" />
-        </motion.button>
-      </div>
-      <div className="flex-1 flex items-center justify-center px-6">
-        <div className="text-center max-w-xs">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          <motion.button
+            onClick={onBack}
+            className="md:hidden p-2 -ml-1 rounded-xl hover:bg-white/[0.06] transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 flex items-center justify-center">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(251,191,36,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-              </svg>
+            <ArrowLeft size={18} className="text-white/50" />
+          </motion.button>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center">
+            <Bookmark size={15} className="text-amber-400/70" />
+          </div>
+          <h2 className="text-sm font-semibold text-white/90">Избранное</h2>
+        </div>
+        {notes.length > 0 && (
+          <motion.button
+            onClick={() => setNotes([])}
+            className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-red-400/50 hover:text-red-400"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            title="Очистить всё"
+          >
+            <Trash2 size={15} />
+          </motion.button>
+        )}
+      </div>
+
+      <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+        {notes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
+              <Bookmark size={22} className="text-amber-400/50" />
             </div>
-            <h2 className="text-lg font-semibold text-white/60">
-              Избранное
-            </h2>
-            <p className="text-sm text-white/30 mt-2 leading-relaxed">
-              Пересылайте сюда сообщения, фото, видео и голосовые сообщения, чтобы ничего не потерять
+            <h3 className="text-sm font-medium text-white/50">Ваше Избранное</h3>
+            <p className="text-xs text-white/30 mt-1.5 max-w-[200px] leading-relaxed">
+              Сохраняйте сюда заметки, ссылки и важные сообщения
             </p>
-            <div className="mt-6 flex flex-col gap-2 text-left">
-              <Tip icon={Bookmark} text="Нажми и удерживай сообщение → выбери «Переслать в Избранное»" />
-              <Tip icon={Mic} text="Голосовые заметки тоже сохраняются" />
-              <Tip icon={Paperclip} text="Фото и файлы — всё будет здесь" />
-            </div>
-          </motion.div>
+          </div>
+        ) : (
+          <AnimatePresence initial={false}>
+            {notes.map((note) => (
+              <motion.div
+                key={note.id}
+                initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="group relative p-3 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-colors"
+              >
+                <p className="text-sm text-white/80 pr-6 leading-relaxed whitespace-pre-wrap break-words">
+                  {note.text}
+                </p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[10px] text-white/20">{note.createdAt}</span>
+                  <button
+                    onClick={() => deleteNote(note.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-white/[0.08] transition-all text-red-400/50 hover:text-red-400"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      <div className="flex-shrink-0 px-3 py-3 border-t border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } }}
+            placeholder="Написать заметку..."
+            className="flex-1 h-10 px-4 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
+          />
+          <motion.button
+            onClick={addNote}
+            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/15 transition-colors flex-shrink-0"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            disabled={!input.trim()}
+            style={{ opacity: input.trim() ? 1 : 0.4 }}
+          >
+            <Send size={16} className="text-white/60" />
+          </motion.button>
         </div>
       </div>
     </>
@@ -110,6 +214,11 @@ export default function MessengerPage() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string>('general');
+  const [showFriends, setShowFriends] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [showNewChannel, setShowNewChannel] = useState(false);
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
+  const [firstLoad, setFirstLoad] = useState(true);
 
   // Saved Messages virtual chat
   const savedMessagesChat: Chat = {
@@ -146,6 +255,40 @@ export default function MessengerPage() {
     fetchChats();
   }, [fetchChats]);
 
+  // Confetti on first load — celebrate having chats!
+  useEffect(() => {
+    if (!loading && chats.length > 0 && firstLoad) {
+      setFirstLoad(false);
+      setTimeout(() => setConfettiTrigger(t => t + 1), 500);
+    }
+  }, [loading, chats.length, firstLoad]);
+
+  // Socket listener for incoming messages → toast notification
+  useEffect(() => {
+    let cancelled = false;
+    async function initSocket() {
+      try {
+        const { getSocket } = await import('../lib/socket');
+        const socket = getSocket();
+        if (!socket?.connected) return;
+
+        socket.on('new_message', (msg: Message) => {
+          if (cancelled) return;
+          // Show toast only if this chat is NOT currently selected
+          if (msg.chatId !== selectedChatId) {
+            const chat = chats.find(c => c.id === msg.chatId);
+            const name = chat?.name || msg.sender.displayName || msg.sender.username || 'Новое сообщение';
+            toast.info(`✉️ ${name}`, msg.content || '');
+          }
+          // Trigger confetti on first received message
+          setConfettiTrigger(t => t + 1);
+        });
+      } catch {}
+    }
+    initSocket();
+    return () => { cancelled = true; };
+  }, [selectedChatId, chats]);
+
   // ─── Handlers ─────────────────────────────────────────────────────────
   const handleSelectChat = useCallback((chatId: string) => {
     setSelectedChatId(chatId);
@@ -162,6 +305,35 @@ export default function MessengerPage() {
     if (tab) setSettingsTab(tab);
     setShowSettings(true);
   }, []);
+
+  const handleOpenFriends = useCallback(() => setShowFriends(true), []);
+  const handleOpenNewChat = useCallback(() => setShowNewChat(true), []);
+  const handleOpenNewChannel = useCallback(() => setShowNewChannel(true), []);
+  const handleChatCreated = useCallback((chatId: string) => {
+    setSelectedChatId(chatId);
+    setMobileView('chat');
+    fetchChats();
+  }, [fetchChats]);
+  const handleChannelCreated = useCallback(() => {
+    fetchChats();
+  }, [fetchChats]);
+
+  const handleFriendsChat = useCallback((userId: string) => {
+    setShowFriends(false);
+    // Try to find existing personal chat
+    const existing = chats.find(c => c.type === 'personal' && c.otherMember?.id === userId);
+    if (existing) {
+      setSelectedChatId(existing.id);
+      setMobileView('chat');
+    } else {
+      // Create new chat
+      api.createPersonalChat(userId).then(chat => {
+        setSelectedChatId(chat.id);
+        setMobileView('chat');
+        fetchChats();
+      }).catch(console.error);
+    }
+  }, [chats, fetchChats]);
 
   // ─── Filter chats by search ──────────────────────────────────────────
   const allChats = [savedMessagesChat, ...chats];
@@ -181,6 +353,7 @@ export default function MessengerPage() {
       style={{ fontFamily: FONT }}
     >
       <MessengerBackground />
+      <Confetti trigger={confettiTrigger} />
 
       {/* Main layout */}
       <div className="relative z-10 flex-1 flex gap-3 p-3 h-full overflow-hidden">
@@ -193,18 +366,28 @@ export default function MessengerPage() {
             liquid-glass-strong
           `}
         >
-          <ChatList
-            chats={filteredChats}
-            selectedChatId={selectedChatId}
-            onSelectChat={handleSelectChat}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            loading={loading}
-            user={user}
-            onLogout={logout}
-            onOpenProfile={handleOpenProfile}
-            onOpenSettings={() => handleOpenSettings('general')}
-          />
+          {showFriends ? (
+            <FriendsPanel
+              onClose={() => setShowFriends(false)}
+              onStartChat={handleFriendsChat}
+            />
+          ) : (
+            <ChatList
+              chats={filteredChats}
+              selectedChatId={selectedChatId}
+              onSelectChat={handleSelectChat}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              loading={loading}
+              user={user}
+              onLogout={logout}
+              onOpenProfile={handleOpenProfile}
+              onOpenSettings={() => handleOpenSettings('general')}
+              onOpenFriends={handleOpenFriends}
+              onNewChat={handleOpenNewChat}
+              onNewChannel={handleOpenNewChannel}
+            />
+          )}
         </div>
 
         {/* ─── Message Area ────────────────────────────────────────── */}
@@ -216,15 +399,40 @@ export default function MessengerPage() {
             liquid-glass
           `}
         >
-          {isSavedMessages ? (
-            <SavedMessagesView onBack={handleBackToList} />
-          ) : selectedChat ? (
-            <MessageArea
-              chat={selectedChat}
-              onBack={handleBackToList}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {isSavedMessages ? (
+              <motion.div
+                key="_saved_"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                className="flex-1 flex flex-col overflow-hidden"
+              >
+                <SavedMessagesView onBack={handleBackToList} />
+              </motion.div>
+            ) : selectedChat ? (
+              <motion.div
+                key={selectedChat.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                className="flex-1 flex flex-col overflow-hidden"
+              >
+                <MessageArea
+                  chat={selectedChat}
+                  onBack={handleBackToList}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="_empty_"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 flex items-center justify-center"
+              >
               <div className="text-center">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -244,8 +452,9 @@ export default function MessengerPage() {
                   </p>
                 </motion.div>
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -267,6 +476,24 @@ export default function MessengerPage() {
             user={user}
             initialTab={settingsTab}
             onClose={() => setShowSettings(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showNewChat && (
+          <NewChatModal
+            onClose={() => setShowNewChat(false)}
+            onChatCreated={handleChatCreated}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showNewChannel && (
+          <CreateChannelModal
+            onClose={() => setShowNewChannel(false)}
+            onCreated={handleChannelCreated}
           />
         )}
       </AnimatePresence>

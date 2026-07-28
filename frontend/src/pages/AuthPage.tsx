@@ -714,7 +714,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <div style={{ position: 'relative', marginBottom: 12 }}>
+                <div style={{ position: 'relative', marginBottom: 12, paddingBottom: emailSuggestions.length > 0 ? 160 : 0 }}>
                   <input
                     ref={emailInputRef}
                     type="email"
@@ -757,9 +757,10 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                           background: 'rgba(18,18,24,0.95)',
                           border: `1px solid ${D.border}`,
                           borderRadius: 12,
-                          overflow: 'hidden',
                           zIndex: 20,
                           backdropFilter: 'blur(20px)',
+                          maxHeight: 140,
+                          overflowY: 'auto',
                         }}
                       >
                         {emailSuggestions.map(s => (
@@ -1240,7 +1241,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
             </div>
             {regEmailLabel.phase === 'done' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <div style={{ position: 'relative', marginBottom: 12 }}>
+                <div style={{ position: 'relative', marginBottom: 12, paddingBottom: regEmailSuggestions.length > 0 ? 160 : 0 }}>
                   <input
                     ref={regEmailInputRef}
                     type="email"
@@ -1276,7 +1277,8 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                         style={{
                           position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
                           background: 'rgba(18,18,24,0.95)', border: `1px solid ${D.border}`,
-                          borderRadius: 12, overflow: 'hidden', zIndex: 20, backdropFilter: 'blur(20px)',
+                          borderRadius: 12, zIndex: 20, backdropFilter: 'blur(20px)',
+                          maxHeight: 140, overflowY: 'auto',
                         }}
                       >
                         {regEmailSuggestions.map(s => (
