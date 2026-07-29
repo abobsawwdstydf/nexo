@@ -78,6 +78,8 @@ func main() {
 	allowedDomains := map[string]bool{
 		"nexo.hakerone.ru":        true,
 		"nexo.darkheavens.ru":     true,
+		"xn--e1akhgo.hakerone.ru":     true,
+		"xn--e1akhgo.darkheavens.ru":  true,
 		"msg.hakerone.ru":         true,
 		"msg.darkheavens.ru":      true,
 		"neexoobeec.hakerone.ru":  true,
