@@ -22,16 +22,10 @@ func init() {
 
 // ─── Premium check ─────────────────────────────────────────────────────
 
-const betaTrialDays = 14
-
 func isPremium(userID string) bool {
 	var user models.User
 	if result := db.GetDB().First(&user, "id = ?", userID); result.Error != nil {
 		return false
-	}
-	// 14-day free beta trial for all users
-	if time.Since(user.CreatedAt).Hours() < float64(betaTrialDays*24) {
-		return true
 	}
 	if !user.IsPremium {
 		return false

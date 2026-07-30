@@ -221,32 +221,18 @@ func GetPremiumStatus(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	// Check paid premium
-	hasPaidPremium := user.IsPremium
+	hasPremium := user.IsPremium
 	if user.PremiumUntil != nil && user.PremiumUntil.Before(time.Now()) {
-		hasPaidPremium = false
+		hasPremium = false
 		db.GetDB().Model(&user).Updates(map[string]interface{}{
 			"is_premium": false,
 		})
 	}
 
-	// Calculate beta trial status
-	betaEnd := user.CreatedAt.Add(betaTrialDays * 24 * time.Hour)
-	isBetaActive := time.Now().Before(betaEnd)
-	betaDaysLeft := int(betaEnd.Sub(time.Now()).Hours() / 24)
-	if betaDaysLeft < 0 {
-		betaDaysLeft = 0
-	}
-
-	isPremium := hasPaidPremium || isBetaActive
-
 	return c.JSON(fiber.Map{
-		"isPremium":     isPremium,
-		"premiumUntil":  user.PremiumUntil,
-		"plan":          "НуЧе",
-		"betaActive":    isBetaActive,
-		"betaDaysLeft":  betaDaysLeft,
-		"betaTotalDays": betaTrialDays,
+		"isPremium":    hasPremium,
+		"premiumUntil": user.PremiumUntil,
+		"plan":         "НуЧе",
 	})
 }
 

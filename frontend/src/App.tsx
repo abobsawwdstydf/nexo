@@ -1,11 +1,14 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './stores/authStore';
+import { useBetaStore } from './stores/betaStore';
 import CookieConsent from './components/CookieConsent';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AudioClickWrapper } from './lib/useClickSound';
 import { ToastContainer } from './components/ToastContainer';
 import { CallProvider } from './lib/callContext';
+import { BetaBanner } from './components/BetaBanner';
+import { BetaEnded } from './components/BetaEnded';
 
 // Lazy load heavy pages for better initial load
 const AuthPage = lazy(() => import('./pages/AuthPage'));
@@ -14,13 +17,15 @@ const LegalPages = lazy(() => import('./pages/LegalPages'));
 
 export default function App() {
   const { user, checkAuth } = useAuthStore();
+  const { status: beta, fetch: fetchBeta } = useBetaStore();
   const [showLegal, setShowLegal] = useState(false);
   const [legalTab, setLegalTab] = useState<'privacy' | 'terms' | 'cookies'>('privacy');
 
-  // Auth check on mount
+  // Auth + beta check on mount
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    fetchBeta();
+  }, [checkAuth, fetchBeta]);
 
   const openLegal = (tab: 'privacy' | 'terms' | 'cookies') => {
     setLegalTab(tab);
@@ -34,10 +39,33 @@ export default function App() {
     </div>
   );
 
+  // Beta ended — block everything
+  if (beta?.ended) {
+    return (
+      <ErrorBoundary>
+        <AudioClickWrapper>
+          <div className="h-full w-full flex flex-col relative">
+            <BetaEnded />
+          </div>
+        </AudioClickWrapper>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
     <AudioClickWrapper>
     <div className="h-full w-full flex flex-col relative">
+      {/* Beta banner */}
+      {beta?.active && (
+        <BetaBanner
+          daysLeft={beta.daysLeft}
+          contactTg={beta.contactTg}
+          contactTt={beta.contactTt}
+          message={beta.message}
+        />
+      )}
+
       {/* ═══ Main page: messenger or auth ═══ */}
       <AnimatePresence mode="wait">
         {user ? (

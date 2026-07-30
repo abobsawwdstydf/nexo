@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 
 	"nexo/ai"
+	"nexo/beta"
 	"nexo/db"
 	"nexo/handlers"
 	"nexo/middleware"
@@ -44,6 +45,9 @@ func main() {
 	db.InitLocalKV()
 	
 	middleware.InitJWT()
+
+	// Initialize beta config
+	beta.Init()
 
 	// Initialize AI agent (LLM + Browser)
 	ai.InitConfig()
@@ -155,8 +159,14 @@ func main() {
 	// Bot health status (public)
 	app.Get("/api/bot/status", handlers.CheckBotStatus)
 
+	// Beta status (public)
+	app.Get("/api/beta/status", handlers.GetBetaStatus)
+
 	// API routes
 	api := app.Group("/api")
+
+	// Beta guard — блокирует все API после окончания беты
+	api.Use(beta.BetaGuard())
 
 	// CAPTCHA (public)
 	api.Get("/captcha/generate", handlers.GenerateCaptcha)
