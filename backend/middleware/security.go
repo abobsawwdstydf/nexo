@@ -268,7 +268,7 @@ func InitRequestSigning() {
 }
 
 func SignRequest(method, path, body string, timestamp int64) string {
-	message := strings.Join([]string{method, path, body, string(timestamp)}, "\n")
+	message := strings.Join([]string{method, path, body, strconv.FormatInt(timestamp, 10)}, "\n")
 	mac := hmac.New(sha256.New, RequestSigningSecret)
 	mac.Write([]byte(message))
 	return hex.EncodeToString(mac.Sum(nil))

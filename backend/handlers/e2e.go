@@ -84,8 +84,18 @@ func UploadKeyBundle(c *fiber.Ctx) error {
 
 // FetchKeyBundle — получить публичный ключевой набор другого пользователя
 func FetchKeyBundle(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
 	database := db.GetDB()
 	targetUserID := c.Params("userId")
+
+	// Verify requester and target share at least one chat
+	var sharedChatCount int64
+	database.Model(&models.ChatMember{}).
+		Where("user_id = ? AND chat_id IN (SELECT chat_id FROM chat_members WHERE user_id = ?)", userID, targetUserID).
+		Count(&sharedChatCount)
+	if sharedChatCount == 0 {
+		return c.Status(403).JSON(fiber.Map{"error": "No shared chat with target user"})
+	}
 
 	var bundles []models.E2EKeyBundle
 	if err := database.Where("user_id = ?", targetUserID).Find(&bundles).Error; err != nil {
@@ -100,7 +110,7 @@ func FetchKeyBundle(c *fiber.Ctx) error {
 	for _, b := range bundles {
 		var keys []string
 		if err := json.Unmarshal([]byte(b.OneTimePreKeys), &keys); err != nil {
-			keys = []string{} // malformed key data — return empty list
+			keys = []string{}
 		}
 		result = append(result, E2EFetchKeyBundleResponse{
 			IdentityKey:   b.IdentityKey,

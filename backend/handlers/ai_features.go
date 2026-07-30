@@ -170,7 +170,6 @@ func SetAutoReplyConfig(c *fiber.Ctx) error {
 			"updated_at":   time.Now(),
 		})
 		existing = req
-		existing.ID = existing.ID
 	}
 
 	return c.JSON(existing)

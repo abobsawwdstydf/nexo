@@ -32,7 +32,7 @@ export function registerServiceWorker() {
         logger.log('[PWA] Service Worker registered:', registration);
       },
       onRegisterError(error: any) {
-        console.error('[PWA] Service Worker registration failed:', error);
+        logger.error('[PWA] Service Worker registration failed:', error);
       }
     });
   }

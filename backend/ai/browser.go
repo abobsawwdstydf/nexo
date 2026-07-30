@@ -163,7 +163,7 @@ func (b *BrowserAgent) ExtractContent(targetURL string) (string, error) {
 		return "", err
 	}
 	if page.Error != "" {
-		return "", fmt.Errorf(page.Error)
+		return "", fmt.Errorf("%s", page.Error)
 	}
 	return page.Content, nil
 }
