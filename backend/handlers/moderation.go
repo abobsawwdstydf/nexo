@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -70,9 +68,11 @@ func BanUser(c *fiber.Ctx) error {
 	}
 	db.GetDB().Create(&modLog)
 
-	// Notify chat
-	reasonJSON, _ := json.Marshal(req.Reason)
-	ws.HubInstance.SendToChat(chatID, []byte(`{"type":"moderation:ban","targetId":"`+req.TargetID+`","actorId":"`+userID+`","reason":`+string(reasonJSON)+`}`), "")
+	ws.HubInstance.SendToChat(chatID, mustWSMsg("moderation:ban",
+		"targetId", req.TargetID,
+		"actorId", userID,
+		"reason", req.Reason,
+	), "")
 
 	return c.JSON(fiber.Map{"ok": true, "action": "ban"})
 }
@@ -129,11 +129,17 @@ func MuteUser(c *fiber.Ctx) error {
 			db.GetDB().Model(&models.ChatMember{}).
 				Where("chat_id = ? AND user_id = ?", chatID, req.TargetID).
 				Update("is_muted", false)
-			ws.HubInstance.SendToChat(chatID, []byte(`{"type":"moderation:unmute","targetId":"`+req.TargetID+`"}`), "")
+			ws.HubInstance.SendToChat(chatID, mustWSMap("moderation:unmute", map[string]string{
+				"targetId": req.TargetID,
+			}), "")
 		}()
 	}
 
-	ws.HubInstance.SendToChat(chatID, []byte(`{"type":"moderation:mute","targetId":"`+req.TargetID+`","actorId":"`+userID+`","duration":`+strconv.Itoa(req.Duration)+`}`), "")
+	ws.HubInstance.SendToChat(chatID, mustWSMsg("moderation:mute",
+		"targetId", req.TargetID,
+		"actorId", userID,
+		"duration", req.Duration,
+	), "")
 
 	return c.JSON(fiber.Map{"ok": true, "action": "mute"})
 }
@@ -175,8 +181,13 @@ func KickUser(c *fiber.Ctx) error {
 	}
 	db.GetDB().Create(&modLog)
 
-	ws.HubInstance.SendToChat(chatID, []byte(`{"type":"moderation:kick","targetId":"`+req.TargetID+`","actorId":"`+userID+`"}`), "")
-	ws.HubInstance.SendToUser(req.TargetID, []byte(`{"type":"chat:kicked","chatId":"`+chatID+`"}`))
+	ws.HubInstance.SendToChat(chatID, mustWSMap("moderation:kick", map[string]string{
+		"targetId": req.TargetID,
+		"actorId":  userID,
+	}), "")
+	ws.HubInstance.SendToUser(req.TargetID, mustWSMap("chat:kicked", map[string]string{
+		"chatId": chatID,
+	}))
 
 	return c.JSON(fiber.Map{"ok": true, "action": "kick"})
 }
@@ -201,7 +212,10 @@ func SetSlowMode(c *fiber.Ctx) error {
 
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("slow_mode_interval", req.Interval)
 
-	ws.HubInstance.SendToChat(chatID, []byte(`{"type":"moderation:slow_mode","interval":`+strconv.Itoa(req.Interval)+`,"actorId":"`+userID+`"}`), "")
+	ws.HubInstance.SendToChat(chatID, mustWSMsg("moderation:slow_mode",
+		"interval", req.Interval,
+		"actorId", userID,
+	), "")
 
 	return c.JSON(fiber.Map{"ok": true, "interval": req.Interval})
 }

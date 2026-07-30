@@ -226,9 +226,15 @@ func updateBotHealth(provider string, healthy bool, errMsg string) {
 func StartHealthChecker() {
 	ticker := time.NewTicker(12 * time.Hour)
 	go func() {
-		for range ticker.C {
-			checkTelegramHealth()
-			checkMaxHealth()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				checkTelegramHealth()
+				checkMaxHealth()
+			case <-StopCh:
+				return
+			}
 		}
 	}()
 

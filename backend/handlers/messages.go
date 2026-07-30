@@ -129,7 +129,7 @@ func SendMessage(c *fiber.Ctx) error {
 
 	msgJSON := messageToJSON(msg)
 
-	ws.HubInstance.SendToChat(chatID, []byte(`{"type":"message:new","message":`+msgJSON+`}`), "")
+	ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 
 	return c.Status(201).JSON(msg)
 }
@@ -211,7 +211,7 @@ func EditMessage(c *fiber.Ctx) error {
 	db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msgID)
 
 	msgJSON := messageToJSON(msg)
-	ws.HubInstance.SendToChat(msg.ChatID, []byte(`{"type":"message:edited","message":`+msgJSON+`}`), "")
+	ws.HubInstance.SendToChat(msg.ChatID, mustWSMsg("message:edited", "message", json.RawMessage(msgJSON)), "")
 
 	return c.JSON(msg)
 }
@@ -242,7 +242,10 @@ func DeleteMessage(c *fiber.Ctx) error {
 		"updated_at": time.Now(),
 	})
 
-	ws.HubInstance.SendToChat(msg.ChatID, []byte(`{"type":"message:deleted","messageId":"`+msgID+`","chatId":"`+msg.ChatID+`"}`), "")
+	ws.HubInstance.SendToChat(msg.ChatID, mustWSMap("message:deleted", map[string]string{
+		"messageId": msgID,
+		"chatId":    msg.ChatID,
+	}), "")
 
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -271,7 +274,11 @@ func AddReaction(c *fiber.Ctx) error {
 	var existing models.Reaction
 	if result := db.GetDB().Where("message_id = ? AND user_id = ? AND emoji = ?", msgID, userID, req.Emoji).First(&existing); result.Error == nil {
 		db.GetDB().Delete(&existing)
-		ws.HubInstance.SendToChat(msg.ChatID, []byte(`{"type":"message:reaction_removed","messageId":"`+msgID+`","userId":"`+userID+`","emoji":"`+req.Emoji+`"}`), "")
+		ws.HubInstance.SendToChat(msg.ChatID, mustWSMap("message:reaction_removed", map[string]string{
+			"messageId": msgID,
+			"userId":    userID,
+			"emoji":     req.Emoji,
+		}), "")
 		return c.JSON(fiber.Map{"ok": true, "action": "removed"})
 	}
 
@@ -285,7 +292,11 @@ func AddReaction(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to add reaction"})
 	}
 
-	ws.HubInstance.SendToChat(msg.ChatID, []byte(`{"type":"message:reaction_added","messageId":"`+msgID+`","userId":"`+userID+`","emoji":"`+req.Emoji+`"}`), "")
+	ws.HubInstance.SendToChat(msg.ChatID, mustWSMap("message:reaction_added", map[string]string{
+		"messageId": msgID,
+		"userId":    userID,
+		"emoji":     req.Emoji,
+	}), "")
 
 	return c.JSON(fiber.Map{"ok": true, "action": "added"})
 }
@@ -308,7 +319,10 @@ func ReadMessages(c *fiber.Ctx) error {
 	}
 	db.GetDB().Create(&receipt)
 
-	ws.HubInstance.SendToChat(chatID, []byte(`{"type":"message:read","messageId":"`+req.MessageID+`","userId":"`+userID+`"}`), "")
+	ws.HubInstance.SendToChat(chatID, mustWSMap("message:read", map[string]string{
+		"messageId": req.MessageID,
+		"userId":    userID,
+	}), "")
 
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -327,7 +341,10 @@ func Typing(c *fiber.Ctx) error {
 	}
 	db.GetDB().Create(&indicator)
 
-	ws.HubInstance.SendToChat(chatID, []byte(`{"type":"typing","chatId":"`+chatID+`","userId":"`+userID+`"}`), userID)
+	ws.HubInstance.SendToChat(chatID, mustWSMap("typing", map[string]string{
+		"chatId": chatID,
+		"userId": userID,
+	}), userID)
 
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -438,4 +455,26 @@ func GetSearchSuggestions(c *fiber.Ctx) error {
 		Find(&suggestions)
 
 	return c.JSON(suggestions)
+}
+
+// mustWSMap builds a safe JSON WebSocket message with a type and string fields
+func mustWSMap(typeStr string, fields map[string]string) []byte {
+	msg := map[string]string{"type": typeStr}
+	for k, v := range fields {
+		msg[k] = v
+	}
+	data, _ := json.Marshal(msg)
+	return data
+}
+
+// mustWSMsg builds a safe JSON WebSocket message with a type and mixed fields
+func mustWSMsg(typeStr string, kv ...interface{}) []byte {
+	msg := map[string]interface{}{"type": typeStr}
+	for i := 0; i+1 < len(kv); i += 2 {
+		if key, ok := kv[i].(string); ok {
+			msg[key] = kv[i+1]
+		}
+	}
+	data, _ := json.Marshal(msg)
+	return data
 }

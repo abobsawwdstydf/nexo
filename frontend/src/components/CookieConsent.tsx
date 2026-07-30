@@ -51,7 +51,7 @@ export default function CookieConsent() {
 
             <Cookie size={22} className="text-white/40 mb-3" />
 
-            <p className="text-xs text-white/70 leading-relaxed mb-4" style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+            <p className="text-xs text-white/70 leading-relaxed mb-4" style={{ fontFamily: "'Onest', system-ui, -apple-system, sans-serif" }}>
               Мы используем cookie и аналогичные технологии для обеспечения работы сервиса.
               Продолжая использовать «Нексо», вы соглашаетесь с обработкой данных.
             </p>
@@ -62,7 +62,7 @@ export default function CookieConsent() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/14 border border-white/[0.08] text-white/80 text-xs font-medium transition-colors"
-                style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
+                style={{ fontFamily: "'Onest', system-ui, -apple-system, sans-serif" }}
               >
                 Принять
               </motion.button>
@@ -71,7 +71,7 @@ export default function CookieConsent() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="px-4 py-2.5 rounded-xl text-white/30 hover:text-white/50 text-xs transition-colors"
-                style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
+                style={{ fontFamily: "'Onest', system-ui, -apple-system, sans-serif" }}
               >
                 Отклонить
               </motion.button>

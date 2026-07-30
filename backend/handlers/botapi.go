@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -393,7 +393,7 @@ func BotSendMessage(c *fiber.Ctx) error {
 		},
 		"createdAt": msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
-	ws.HubInstance.SendToChat(req.ChatID, []byte(`{"type":"message:new","message":`+string(msgJSON)+`}`), "")
+	ws.HubInstance.SendToChat(req.ChatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 
 	return c.Status(201).JSON(msg)
 }
@@ -465,7 +465,7 @@ func DeleteBotWebhook(c *fiber.Ctx) error {
 func GenerateTURNHMAC(secret, username string, ttl int) (string, string) {
 	deadline := time.Now().Unix() + int64(ttl)
 	user := fmt.Sprintf("%d:%s", deadline, username)
-	mac := hmac.New(sha1.New, []byte(secret))
+	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(user))
 	credential := hex.EncodeToString(mac.Sum(nil))
 	return strconv.FormatInt(deadline, 10), credential

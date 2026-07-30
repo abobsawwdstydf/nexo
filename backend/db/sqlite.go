@@ -172,14 +172,16 @@ func addIndexes(db *gorm.DB) {
 	indexes := []string{
 		// Messages - most queried table
 		"CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id)",
-		"CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)",
 		"CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_messages_chat_created ON messages(chat_id, created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_messages_sender_created ON messages(sender_id, created_at)",
 
 		// Chat members
 		"CREATE INDEX IF NOT EXISTS idx_chat_members_chat_id ON chat_members(chat_id)",
 		"CREATE INDEX IF NOT EXISTS idx_chat_members_user_id ON chat_members(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_chat_members_chat_user ON chat_members(chat_id, user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_chat_members_chat_user_role ON chat_members(chat_id, user_id, role)",
 
 		// Read receipts
 		"CREATE INDEX IF NOT EXISTS idx_read_receipts_message_id ON read_receipts(message_id)",
@@ -187,10 +189,12 @@ func addIndexes(db *gorm.DB) {
 
 		// Reactions
 		"CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions(message_id)",
+		"CREATE INDEX IF NOT EXISTS idx_reactions_msg_user_emoji ON reactions(message_id, user_id, emoji)",
 
 		// Stories
 		"CREATE INDEX IF NOT EXISTS idx_stories_user_id ON stories(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_stories_created_at ON stories(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_stories_expires_created ON stories(expires_at, created_at)",
 
 		// Friendships
 		"CREATE INDEX IF NOT EXISTS idx_friendships_user_id ON friendships(user_id)",
@@ -223,10 +227,30 @@ func addIndexes(db *gorm.DB) {
 
 		// Bookmarks
 		"CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_bookmarks_user_created ON bookmarks(user_id, created_at)",
 
 		// Scheduled messages
 		"CREATE INDEX IF NOT EXISTS idx_scheduled_messages_user_id ON scheduled_messages(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_scheduled_messages_send_at ON scheduled_messages(send_at)",
+
+		// Email verifications
+		"CREATE INDEX IF NOT EXISTS idx_email_verifications_email_status_created ON email_verifications(email, status, created_at)",
+
+		// Typing indicators
+		"CREATE INDEX IF NOT EXISTS idx_typing_indicators_chat_user ON typing_indicators(chat_id, user_id)",
+
+		// Chat snoozes
+		"CREATE INDEX IF NOT EXISTS idx_chat_snoozes_user_chat ON chat_snoozes(user_id, chat_id)",
+
+		// Chat reminders
+		"CREATE INDEX IF NOT EXISTS idx_chat_reminders_sent_remind ON chat_reminders(is_sent, remind_at)",
+		"CREATE INDEX IF NOT EXISTS idx_chat_reminders_user_sent_remind ON chat_reminders(user_id, is_sent, remind_at)",
+
+		// Self-destruct reads
+		"CREATE INDEX IF NOT EXISTS idx_self_destruct_reads_msg_user ON self_destruct_reads(message_id, user_id)",
+
+		// Incognito members
+		"CREATE INDEX IF NOT EXISTS idx_incognito_members_chat_user ON incognito_members(chat_id, user_id)",
 	}
 	for _, idx := range indexes {
 		db.Exec(idx)

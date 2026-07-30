@@ -61,18 +61,10 @@ func GenerateCSRFToken(sessionID string) string {
 
 	csrfTokensMu.Lock()
 	if len(csrfTokens) >= maxCSRFTokens {
-		// Remove the oldest token to make room
-		var oldestToken string
-		var oldestTime time.Time
-		first := true
-		for t, expiry := range csrfTokens {
-			if first || expiry.Before(oldestTime) {
-				oldestToken = t
-				oldestTime = expiry
-				first = false
-			}
+		for t := range csrfTokens {
+			delete(csrfTokens, t)
+			break
 		}
-		delete(csrfTokens, oldestToken)
 	}
 	csrfTokens[tokenHex] = time.Now().Add(1 * time.Hour)
 	csrfTokensMu.Unlock()

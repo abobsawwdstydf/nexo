@@ -239,47 +239,77 @@ export function hasUrl(text: string): boolean {
   return URL_REGEX.test(text);
 }
 
+const STICKER_REGEX = /\[sticker:([^\]]+?):([^\]]+?)\]/g;
+
 export function renderTextWithLinks(text: string, isOwn: boolean): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  const regex = /(https?:\/\/[^\s<]+[^\s<.,:;!?'")}\]>])/gi;
+  const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,:;!?'")}\]>])/gi;
 
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
+  let urlMatches: { index: number; url: string }[] = [];
+  while ((match = urlRegex.exec(text)) !== null) {
+    urlMatches.push({ index: match.index, url: match[0] });
+  }
+
+  let stickerMatches: { index: number; pack: string; filename: string }[] = [];
+  STICKER_REGEX.lastIndex = 0;
+  while ((match = STICKER_REGEX.exec(text)) !== null) {
+    stickerMatches.push({ index: match.index, pack: match[1], filename: match[2] });
+  }
+
+  const allTokens = [
+    ...urlMatches.map(m => ({ ...m, type: 'url' as const })),
+    ...stickerMatches.map(m => ({ ...m, type: 'sticker' as const })),
+  ].sort((a, b) => a.index - b.index);
+
+  for (const token of allTokens) {
+    if (token.index > lastIndex) {
       parts.push(
-        <span key={`t${lastIndex}`}>{text.slice(lastIndex, match.index)}</span>
+        <span key={`t${lastIndex}`}>{text.slice(lastIndex, token.index)}</span>
       );
     }
 
-    const url = match[0];
-    const domain = extractDomain(url);
-
-    parts.push(
-      <a
-        key={`l${match.index}`}
-        href={url}
-        onClick={e => {
-          e.preventDefault();
-          const el = e.currentTarget.closest('[data-link-preview]');
-          if (el) return;
-          const event = new CustomEvent('open-link-confirm', { detail: { url, isOwn } });
-          window.dispatchEvent(event);
-        }}
-        className={`inline-flex items-center gap-0.5 font-medium underline underline-offset-2 decoration-1 ${
-          isOwn ? 'text-blue-300 decoration-blue-300/40 hover:decoration-blue-300' : 'text-blue-400 decoration-blue-400/40 hover:decoration-blue-400'
-        } transition-all`}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-link-preview
-      >
-        {domain}
-        <ExternalLink size={10} className="opacity-60" />
-      </a>
-    );
-
-    lastIndex = match.index + url.length;
+    if (token.type === 'url') {
+      const url = token.url.startsWith('http://') || token.url.startsWith('https://') ? token.url : 'about:blank';
+      const domain = extractDomain(url);
+      parts.push(
+        <a
+          key={`l${token.index}`}
+          href={url}
+          onClick={e => {
+            e.preventDefault();
+            const el = e.currentTarget.closest('[data-link-preview]');
+            if (el) return;
+            const event = new CustomEvent('open-link-confirm', { detail: { url, isOwn } });
+            window.dispatchEvent(event);
+          }}
+          className={`inline-flex items-center gap-0.5 font-medium underline underline-offset-2 decoration-1 ${
+            isOwn ? 'text-blue-300 decoration-blue-300/40 hover:decoration-blue-300' : 'text-blue-400 decoration-blue-400/40 hover:decoration-blue-400'
+          } transition-all`}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-link-preview
+        >
+          {domain}
+          <ExternalLink size={10} className="opacity-60" />
+        </a>
+      );
+      lastIndex = token.index + url.length;
+    } else if (token.type === 'sticker') {
+      const t = token as typeof stickerMatches[0];
+      parts.push(
+        <img
+          key={`s${token.index}`}
+          src={`/stickers/proxy/${t.filename}`}
+          alt={t.filename}
+          className="max-w-[128px] max-h-[128px] rounded-lg my-1"
+          loading="lazy"
+        />
+      );
+      lastIndex = token.index + `[sticker:${t.pack}:${t.filename}]`.length;
+    }
   }
 
   if (lastIndex < text.length) {

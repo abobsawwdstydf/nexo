@@ -319,8 +319,13 @@ func StartReminderLoop() {
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			CheckReminders()
+		for {
+			select {
+			case <-ticker.C:
+				CheckReminders()
+			case <-StopCh:
+				return
+			}
 		}
 	}()
 }

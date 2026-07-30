@@ -27,16 +27,22 @@ const maxCaptchaEntries = 100000
 
 func init() {
 	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
 		for {
-			time.Sleep(5 * time.Minute)
-			captchaMu.Lock()
-			now := time.Now()
-			for id, entry := range captchaStore {
-				if now.After(entry.ExpiresAt) {
-					delete(captchaStore, id)
+			select {
+			case <-ticker.C:
+				captchaMu.Lock()
+				now := time.Now()
+				for id, entry := range captchaStore {
+					if now.After(entry.ExpiresAt) {
+						delete(captchaStore, id)
+					}
 				}
+				captchaMu.Unlock()
+			case <-StopCh:
+				return
 			}
-			captchaMu.Unlock()
 		}
 	}()
 }

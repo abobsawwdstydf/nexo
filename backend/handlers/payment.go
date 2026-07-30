@@ -10,9 +10,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/netip"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +22,12 @@ import (
 	"nexo/models"
 	"nexo/ws"
 )
+
+// webhookEntry stores a payment ID with its processing timestamp
+type webhookEntry struct {
+	PaymentID string
+	CreatedAt time.Time
+}
 
 // ─── YooKassa API helpers ───────────────────────────────────────────────────
 
@@ -97,25 +103,36 @@ type YooKassaGetPaymentResponse struct {
 // ─── Idempotency lock (запобігання подвійній обробці webhook) ──────────────
 
 var (
-	webhookProcessing sync.Map // map[string]bool — вже оброблені payment ID
+	webhookProcessing sync.Map // map[string]*webhookEntry — вже оброблені payment ID
 	webhookMu         sync.Mutex
 )
 
 func isWebhookProcessed(paymentID string) bool {
-	_, loaded := webhookProcessing.LoadOrStore(paymentID, true)
+	now := time.Now()
+	_, loaded := webhookProcessing.LoadOrStore(paymentID, &webhookEntry{
+		PaymentID: paymentID,
+		CreatedAt: now,
+	})
 	return loaded
 }
 
 func cleanupWebhookLocks() {
-	// Чистимо старі записи кожні 10 хвилин
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
 	for {
-		time.Sleep(10 * time.Minute)
-		now := time.Now().Unix()
-		webhookProcessing.Range(func(key, value interface{}) bool {
-			// Видаляємо записи старіші за 1 годину (якщо є timestamp)
-			_ = now // для простоти чистимо все старіше 1 год
-			return true
-		})
+		select {
+		case <-ticker.C:
+			cutoff := time.Now().Add(-1 * time.Hour)
+			webhookProcessing.Range(func(key, value interface{}) bool {
+				entry, ok := value.(*webhookEntry)
+				if ok && entry.CreatedAt.Before(cutoff) {
+					webhookProcessing.Delete(key)
+				}
+				return true
+			})
+		case <-StopCh:
+			return
+		}
 	}
 }
 
@@ -141,8 +158,16 @@ var yooKassaIPs = []string{
 }
 
 func isYooKassaIP(ip string) bool {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return false
+	}
 	for _, cidr := range yooKassaIPs {
-		if strings.HasPrefix(ip, cidr[:strings.LastIndex(cidr, "/")]) {
+		prefix, err := netip.ParsePrefix(cidr)
+		if err != nil {
+			continue
+		}
+		if prefix.Contains(addr) {
 			return true
 		}
 	}

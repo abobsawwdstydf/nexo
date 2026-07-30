@@ -1480,7 +1480,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 0.6 }}
         className="fixed bottom-6 left-0 right-0 flex items-center justify-center gap-4 px-4 z-50"
-        style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif", pointerEvents: 'auto' }}
+        style={{ fontFamily: "'Onest', system-ui, -apple-system, sans-serif", pointerEvents: 'auto' }}
       >
         <button
           onClick={() => onLegalClick?.('privacy')}

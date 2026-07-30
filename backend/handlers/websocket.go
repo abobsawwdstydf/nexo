@@ -146,7 +146,10 @@ func handleTyping(client *ws.Client, env *wsEnvelope) error {
 	db.GetDB().Create(&indicator)
 
 	// Broadcast typing event to chat members
-	ws.HubInstance.SendToChat(payload.ChatID, []byte(`{"type":"typing","chatId":"`+payload.ChatID+`","userId":"`+userID+`"}`), userID)
+	ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("typing", map[string]string{
+		"chatId": payload.ChatID,
+		"userId": userID,
+	}), userID)
 	return nil
 }
 
@@ -185,7 +188,10 @@ func handleReadReceipt(client *ws.Client, env *wsEnvelope) error {
 	}
 	db.GetDB().Create(&receipt)
 
-	ws.HubInstance.SendToChat(payload.ChatID, []byte(`{"type":"message:read","messageId":"`+payload.MessageID+`","userId":"`+userID+`"}`), "")
+	ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("message:read", map[string]string{
+		"messageId": payload.MessageID,
+		"userId":    userID,
+	}), "")
 	return nil
 }
 
@@ -231,7 +237,11 @@ func handleReaction(client *ws.Client, env *wsEnvelope) error {
 	var existing models.Reaction
 	if result := db.GetDB().Where("message_id = ? AND user_id = ? AND emoji = ?", payload.MessageID, userID, payload.Emoji).First(&existing); result.Error == nil {
 		db.GetDB().Delete(&existing)
-		ws.HubInstance.SendToChat(payload.ChatID, []byte(`{"type":"message:reaction_removed","messageId":"`+payload.MessageID+`","userId":"`+userID+`","emoji":"`+payload.Emoji+`"}`), "")
+		ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("message:reaction_removed", map[string]string{
+			"messageId": payload.MessageID,
+			"userId":    userID,
+			"emoji":     payload.Emoji,
+		}), "")
 		return nil
 	}
 
@@ -245,7 +255,11 @@ func handleReaction(client *ws.Client, env *wsEnvelope) error {
 		return errWSServerError
 	}
 
-	ws.HubInstance.SendToChat(payload.ChatID, []byte(`{"type":"message:reaction_added","messageId":"`+payload.MessageID+`","userId":"`+userID+`","emoji":"`+payload.Emoji+`"}`), "")
+	ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("message:reaction_added", map[string]string{
+		"messageId": payload.MessageID,
+		"userId":    userID,
+		"emoji":     payload.Emoji,
+	}), "")
 	return nil
 }
 
@@ -295,7 +309,9 @@ func handleUserStatus(client *ws.Client, env *wsEnvelope) error {
 				"mood_expires_at": nil,
 			})
 		// Broadcast to friends
-		ws.HubInstance.SendToChat("__friends:"+userID, []byte(`{"type":"user:status_cleared","userId":"`+userID+`"}`), "")
+		ws.HubInstance.SendToChat("__friends:"+userID, mustWSMap("user:status_cleared", map[string]string{
+			"userId": userID,
+		}), "")
 		return nil
 	}
 
@@ -303,7 +319,11 @@ func handleUserStatus(client *ws.Client, env *wsEnvelope) error {
 		Update("mood_status", payload.Text)
 
 	// Notify online users about status change
-	ws.HubInstance.SendToChat("__friends:"+userID, []byte(`{"type":"user:status_changed","userId":"`+userID+`","status":"`+payload.Text+`","emoji":"`+payload.Emoji+`"}`), "")
+	ws.HubInstance.SendToChat("__friends:"+userID, mustWSMap("user:status_changed", map[string]string{
+		"userId": userID,
+		"status": payload.Text,
+		"emoji":  payload.Emoji,
+	}), "")
 	return nil
 }
 
@@ -456,7 +476,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	db.GetDB().Preload("Sender").Preload("Media").Preload("Reactions").First(&msg, "id = ?", msg.ID)
 
 	msgJSON := messageToJSON(msg)
-	ws.HubInstance.SendToChat(payload.ChatID, []byte(`{"type":"message:new","message":`+msgJSON+`}`), "")
+	ws.HubInstance.SendToChat(payload.ChatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 
 	return &wsDataResponse{Data: map[string]interface{}{"messageId": msg.ID, "createdAt": msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00")}}
 }

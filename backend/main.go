@@ -112,7 +112,7 @@ func main() {
 		AllowCredentials: true,
 		AllowOriginsFunc: func(origin string) bool {
 			if origin == "" {
-				return true
+				return false
 			}
 			trimmed := strings.TrimPrefix(origin, "https://")
 			trimmed = strings.TrimPrefix(trimmed, "http://")
@@ -546,6 +546,7 @@ func main() {
 	go func() {
 		<-quit
 		log.Println("Shutting down server...")
+		close(handlers.StopCh)
 		ws.HubInstance.Stop()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()

@@ -360,7 +360,7 @@ export default function LegalPages({ initialTab = 'privacy', onBack }: LegalPage
   const [activeTab, setActiveTab] = useState<LegalTab>(initialTab);
 
   return (
-    <div className="h-full w-full flex flex-col relative" style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+    <div className="h-full w-full flex flex-col relative" style={{ fontFamily: "'Onest', system-ui, -apple-system, sans-serif" }}>
       <LegalBackground />
 
       <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-3 p-3 overflow-hidden">

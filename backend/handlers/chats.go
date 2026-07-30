@@ -317,7 +317,9 @@ func AddChatMember(c *fiber.Ctx) error {
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).
 		Update("subscribers_count", chat.SubscribersCount+1)
 
-	ws.HubInstance.SendToUser(req.UserID, []byte(`{"type":"chat:member_added","chatId":"`+chatID+`"}`))
+	ws.HubInstance.SendToUser(req.UserID, mustWSMap("chat:member_added", map[string]string{
+		"chatId": chatID,
+	}))
 
 	return c.JSON(member)
 }

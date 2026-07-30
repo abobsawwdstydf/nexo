@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
@@ -79,12 +79,16 @@ const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Символы', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚧️', '🚻', '🚹', '🚺', '♿', '🚭', '📵', '🔞', '☢️', '☣️', '⚠️', '🚸', '⛔', '🚫'] },
 ];
 
-const STICKER_PACKS = [
-  { name: 'Нексо', icon: '⚡', stickers: ['😎', '🤩', '😤', '🥳', '🫡', '🤙', '💀', '👻', '🤖', '👾', '🎮', '🎯'] },
-  { name: 'Эмодзи', icon: '😀', stickers: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇'] },
-  { name: 'Животные', icon: '🐶', stickers: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮'] },
-  { name: 'Еда', icon: '🍕', stickers: ['🍕', '🍔', '🍟', '🌭', '🍿', '🧁', '🍰', '🎂', '🍩', '🍪', '🍫', '🍬'] },
-];
+interface StickerPackManifest {
+  name: string;
+  stickers: { filename: string; fileUrl: string; emoji: string }[];
+}
+
+interface StickerPack {
+  name: string;
+  icon: string;
+  stickers: { filename: string; fileUrl: string }[];
+}
 
 const ATTACHMENT_OPTIONS = [
   { icon: Image, label: 'Галерея', color: 'text-blue-400' },
@@ -281,7 +285,7 @@ function ImageGallery({ media, isOwn }: { media: Array<{ url: string; thumbnail?
   );
 }
 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   isChannel,
@@ -438,7 +442,7 @@ function MessageBubble({
       </div>
     </motion.div>
   );
-}
+});
 
 function DateSeparator({ dateStr }: { dateStr: string }) {
   return (
@@ -680,6 +684,7 @@ function MessageInput({
   const [showAttach, setShowAttach] = useState(false);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const [emojiTab, setEmojiTab] = useState<'emoji' | 'stickers' | 'gif'>('emoji');
+  const [stickerPacks, setStickerPacks] = useState<StickerPack[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingType, setRecordingType] = useState<'voice' | 'video'>('voice');
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -702,6 +707,23 @@ function MessageInput({
       if (draft) setText(draft);
     } catch {}
   }, [chatId]);
+
+  // Load sticker packs from manifest
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    fetch('/stickers/manifest.json', { signal: controller.signal })
+      .then(r => r.json())
+      .then((data: StickerPackManifest[]) => {
+        setStickerPacks(data.map(pack => ({
+          name: pack.name,
+          icon: pack.stickers[0]?.emoji?.replace(/:/g, '')?.slice(0, 2) || '📦',
+          stickers: pack.stickers.map(s => ({ filename: s.filename, fileUrl: s.fileUrl }))
+        })));
+      })
+      .catch(() => {})
+      .finally(() => clearTimeout(timeout));
+  }, []);
 
   // Draft: save on change
   useEffect(() => {
@@ -1305,22 +1327,30 @@ function MessageInput({
 
               {emojiTab === 'stickers' && (
                 <div className="space-y-3">
-                  {STICKER_PACKS.map((pack, i) => (
-                    <div key={i}>
+                  {stickerPacks.length === 0 && (
+                    <p className="text-xs text-white/30 text-center py-4">Загрузка стикеров...</p>
+                  )}
+                  {stickerPacks.map((pack) => (
+                    <div key={pack.name}>
                       <p className="text-[10px] text-white/30 mb-1.5 flex items-center gap-1">
                         <span>{pack.icon}</span> {pack.name}
                       </p>
-                      <div className="grid grid-cols-6 gap-1">
-                        {pack.stickers.map((sticker, j) => (
+                      <div className="grid grid-cols-4 gap-1">
+                        {pack.stickers.map((sticker) => (
                           <button
-                            key={j}
+                            key={sticker.filename}
                             onClick={() => {
-                              setText(prev => prev + sticker);
+                              setText(prev => prev + `[sticker:${pack.name}:${sticker.filename}]`);
                               inputRef.current?.focus();
                             }}
-                            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/[0.08] transition-colors text-2xl"
+                            className="aspect-square rounded-lg hover:bg-white/[0.08] transition-colors overflow-hidden"
                           >
-                            {sticker}
+                            <img
+                              src={sticker.fileUrl}
+                              alt={sticker.filename}
+                              className="w-full h-full object-contain p-0.5"
+                              loading="lazy"
+                            />
                           </button>
                         ))}
                       </div>
@@ -1749,35 +1779,41 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   useEffect(() => {
     if (chat.id === NOTES_CHAT_ID) return;
     let cancelled = false;
+    const listeners: { event: string; handler: (...args: any[]) => void }[] = [];
+
+    function addListener(event: string, handler: (...args: any[]) => void) {
+      listeners.push({ event, handler });
+    }
+
     async function initTyping() {
       try {
         const { getSocket } = await import('../lib/socket');
         const socket = getSocket();
         if (!socket?.connected) return;
 
-        socket.on('typing', (data: { chatId: string; userId: string; username: string }) => {
+        const typingHandler = (data: { chatId: string; userId: string; username: string }) => {
           if (cancelled || data.chatId !== chat.id || data.userId === user?.id) return;
           setTypingUsers(prev => prev.includes(data.username) ? prev : [...prev, data.username]);
-          // Auto-clear after 3 seconds
           setTimeout(() => {
             setTypingUsers(prev => prev.filter(u => u !== data.username));
           }, 3000);
-        });
+        };
+        socket.on('typing', typingHandler);
+        addListener('typing', typingHandler);
 
-        socket.on('stop_typing', (data: { chatId: string; userId: string }) => {
+        const stopTypingHandler = (data: { chatId: string; userId: string }) => {
           if (cancelled || data.chatId !== chat.id) return;
           setTypingUsers([]);
-        });
+        };
+        socket.on('stop_typing', stopTypingHandler);
+        addListener('stop_typing', stopTypingHandler);
 
-        // Listen for new messages in this chat
-        socket.on('message:new', (data: { message?: Message }) => {
+        const newMessageHandler = (data: { message?: Message }) => {
           if (cancelled) return;
           const msg = data.message;
           if (!msg || msg.chatId !== chat.id) return;
           setMessages(prev => {
-            // Skip if message already exists (optimistic update or duplicate)
             if (prev.some(m => m.id === msg.id)) return prev;
-            // Skip optimistic duplicates: same sender + same content within 5s
             const now = Date.now();
             const isDuplicateOptimistic = prev.some(m =>
               m.id.startsWith('opt_') &&
@@ -1786,7 +1822,6 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
               now - new Date(m.createdAt).getTime() < 5000
             );
             if (isDuplicateOptimistic) {
-              // Replace optimistic with real message
               return prev.map(m =>
                 m.id.startsWith('opt_') &&
                 m.senderId === msg.senderId &&
@@ -1799,11 +1834,23 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
             return [...prev, msg];
           });
           setAutoScroll(true);
-        });
+        };
+        socket.on('message:new', newMessageHandler);
+        addListener('message:new', newMessageHandler);
       } catch {}
     }
     initTyping();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      import('../lib/socket').then(({ getSocket }) => {
+        const socket = getSocket();
+        if (socket) {
+          for (const { event, handler } of listeners) {
+            socket.off(event, handler);
+          }
+        }
+      });
+    };
   }, [chat.id, user?.id]);
 
   // Search

@@ -115,7 +115,10 @@ func ViewStory(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to record story view"})
 	}
 
-	ws.HubInstance.SendToUser(story.UserID, []byte(`{"type":"story:viewed","storyId":"`+storyID+`","viewerId":"`+userID+`"}`))
+	ws.HubInstance.SendToUser(story.UserID, mustWSMap("story:viewed", map[string]string{
+		"storyId":  storyID,
+		"viewerId": userID,
+	}))
 
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -146,7 +149,11 @@ func AddStoryReaction(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to add reaction"})
 	}
 
-	ws.HubInstance.SendToUser(story.UserID, []byte(`{"type":"story:reaction","storyId":"`+storyID+`","userId":"`+userID+`","emoji":"`+req.Emoji+`"}`))
+	ws.HubInstance.SendToUser(story.UserID, mustWSMap("story:reaction", map[string]string{
+		"storyId": storyID,
+		"userId":  userID,
+		"emoji":   req.Emoji,
+	}))
 
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -212,7 +219,10 @@ func SendFriendRequest(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send friend request"})
 	}
 
-	ws.HubInstance.SendToUser(req.FriendID, []byte(`{"type":"friend:request","fromUserId":"`+userID+`","friendshipId":"`+friendship.ID+`"}`))
+	ws.HubInstance.SendToUser(req.FriendID, mustWSMap("friend:request", map[string]string{
+		"fromUserId":   userID,
+		"friendshipId": friendship.ID,
+	}))
 
 	return c.Status(201).JSON(friendship)
 }
@@ -232,7 +242,10 @@ func AcceptFriendRequest(c *fiber.Ctx) error {
 
 	db.GetDB().Model(&friendship).Update("status", "accepted")
 
-	ws.HubInstance.SendToUser(friendship.UserID, []byte(`{"type":"friend:accepted","byUserId":"`+userID+`","friendshipId":"`+friendshipID+`"}`))
+	ws.HubInstance.SendToUser(friendship.UserID, mustWSMap("friend:accepted", map[string]string{
+		"byUserId":     userID,
+		"friendshipId": friendshipID,
+	}))
 
 	return c.JSON(fiber.Map{"ok": true})
 }
