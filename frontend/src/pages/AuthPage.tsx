@@ -26,8 +26,28 @@ const AUTH_FONT_SIZE = 'clamp(30px, 5.5vw, 48px)';
 // WEB AUDIO — Apple-style sounds
 // ═══════════════════════════════════════════════════════════════════════════
 let audioCtx: AudioContext | null = null;
+let audioResumed = false;
+
+function resumeAudioCtx() {
+  if (audioResumed) return;
+  if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  audioResumed = true;
+}
+
+// Resume on first user interaction globally
+if (typeof window !== 'undefined') {
+  const handler = () => { resumeAudioCtx(); window.removeEventListener('pointerdown', handler, true); };
+  window.addEventListener('pointerdown', handler, true);
+}
+
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
   return audioCtx;
 }
 
@@ -139,7 +159,7 @@ function useTypingAnimation(
   text: string,
   opts: { typingSpeed?: number; eraseSpeed?: number; pauseAfter?: number; startDelay?: number; enabled?: boolean; muted?: boolean; noErase?: boolean; onType?: () => void; onErase?: () => void } = {}
 ) {
-  const { typingSpeed = 70, eraseSpeed = 35, pauseAfter = 1500, startDelay = 300, enabled = true, muted = false, noErase = false, onType, onErase } = opts;
+  const { typingSpeed = 50, eraseSpeed = 25, pauseAfter = 1500, startDelay = 150, enabled = true, muted = false, noErase = false, onType, onErase } = opts;
   const [display, setDisplay] = useState('');
   const [phase, setPhase] = useState<TypingPhase>('idle');
   const idxRef = useRef(0);
