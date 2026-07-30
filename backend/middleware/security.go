@@ -275,9 +275,14 @@ func SignRequest(method, path, body string, timestamp int64) string {
 }
 
 func VerifyRequestSignature(c *fiber.Ctx) error {
-	// Skip for non-signed endpoints
+	// Skip for non-signed endpoints and public API endpoints
 	path := c.Path()
-	if !strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/api/auth/") {
+	if !strings.HasPrefix(path, "/api/") || 
+		strings.HasPrefix(path, "/api/auth/") ||
+		strings.HasPrefix(path, "/api/beta/") ||
+		strings.HasPrefix(path, "/api/captcha/") ||
+		strings.HasPrefix(path, "/api/bot/") ||
+		path == "/api/csrf-token" {
 		return c.Next()
 	}
 

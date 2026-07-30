@@ -367,6 +367,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
   const nameInputRef = useRef<HTMLInputElement>(null);
   const usernameInputRef = useRef<HTMLInputElement>(null);
   const regEmailInputRef = useRef<HTMLInputElement>(null);
+  const sendingRef = useRef(false);
   const [nameFocused, setNameFocused] = useState(false);
   const [usernameFocused, setUsernameFocused] = useState(false);
 
@@ -463,7 +464,8 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
 
   // ─── Login handlers ─────────────────────────────────────────────────────
   const handleSendLoginCode = async (emailToUse: string) => {
-    if (!emailToUse || !emailToUse.includes('@')) return;
+    if (!emailToUse || !emailToUse.includes('@') || sendingRef.current) return;
+    sendingRef.current = true;
     setEmail(emailToUse);
     setSubmitting(true); setError('');
     try {
@@ -473,10 +475,12 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Ошибка');
-    } finally { setSubmitting(false); }
+    } finally { setSubmitting(false); sendingRef.current = false; }
   };
 
   const handleLoginConfirm = useCallback(async (codeStr: string) => {
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setSubmitting(true); setError('');
     try {
       await loginConfirm(email, codeStr);
@@ -488,7 +492,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
       setError(err instanceof Error ? err.message : 'Неверный код');
       setOtpError(true);
       setScreen('login-error');
-    } finally { setSubmitting(false); }
+    } finally { setSubmitting(false); sendingRef.current = false; }
   }, [email, loginConfirm, muted]);
 
   // ─── Register handlers ──────────────────────────────────────────────────
