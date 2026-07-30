@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -178,30 +179,32 @@ func UserRateLimit(maxRequests int, window time.Duration) fiber.Handler {
 		}
 
 		key := userID + ":" + c.Path()
+		now := time.Now()
 
 		userRateLimitsMu.Lock()
-		if _, exists := userRateLimits[key]; !exists {
-			userRateLimits[key] = make([]time.Time, 0)
+		entries, exists := userRateLimits[key]
+		if !exists {
+			entries = make([]time.Time, 0, maxRequests+1)
 		}
 
-		// Remove expired entries
-		now := time.Now()
-		valid := make([]time.Time, 0)
-		for _, t := range userRateLimits[key] {
+		cutoff := 0
+		for i, t := range entries {
 			if now.Sub(t) < window {
-				valid = append(valid, t)
+				cutoff = i
+				break
 			}
+			cutoff = i + 1
 		}
-		userRateLimits[key] = valid
+		entries = entries[cutoff:]
 
-		if len(userRateLimits[key]) >= maxRequests {
+		if len(entries) >= maxRequests {
 			userRateLimitsMu.Unlock()
 			BlockIP(c.IP(), 5*time.Minute)
 			LogAudit(c, "RATE_LIMIT_EXCEEDED", false, "")
 			return c.Status(429).JSON(fiber.Map{"error": "Rate limit exceeded", "retryAfter": window.Seconds()})
 		}
 
-		userRateLimits[key] = append(userRateLimits[key], now)
+		userRateLimits[key] = append(entries, now)
 		userRateLimitsMu.Unlock()
 
 		return c.Next()
@@ -237,10 +240,17 @@ func SanitizeInput(input string) string {
 
 func InputSanitization() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Sanitize query parameters
 		query := c.Queries()
 		for key, value := range query {
 			query[key] = SanitizeInput(value)
+		}
+
+		if c.Method() != "GET" && c.Method() != "HEAD" && c.Method() != "OPTIONS" {
+			body := c.Body()
+			if len(body) > 0 && len(body) < 1024*1024 {
+				sanitized := SanitizeInput(string(body))
+				c.Request().SetBody([]byte(sanitized))
+			}
 		}
 
 		return c.Next()
@@ -280,12 +290,11 @@ func VerifyRequestSignature(c *fiber.Ctx) error {
 	}
 
 	// Check timestamp (max 5 minutes old)
-	ts := time.Now().Unix()
-	var reqTime int64
-	for _, ch := range timestamp {
-		reqTime = reqTime*10 + int64(ch-'0')
+	reqTime, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil || reqTime <= 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid timestamp"})
 	}
-	if ts-reqTime > 300 {
+	if time.Now().Unix()-reqTime > 300 {
 		return c.Status(401).JSON(fiber.Map{"error": "Request timestamp expired"})
 	}
 
@@ -348,8 +357,8 @@ func GetAuditLog(limit int) []AuditEntry {
 
 func SecurityHeaders() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Content Security Policy (strict)
-		c.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: ws:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'")
+		// Content Security Policy
+		c.Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' wss: ws: https:; media-src 'self' data: blob: https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'")
 
 		// X-Content-Type-Options
 		c.Set("X-Content-Type-Options", "nosniff")
@@ -396,11 +405,9 @@ func RequestSizeLimit(maxSize int64) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		contentLength := c.Get("Content-Length")
 		if contentLength != "" {
-			var size int64
-			for _, ch := range contentLength {
-				if ch >= '0' && ch <= '9' {
-					size = size*10 + int64(ch-'0')
-				}
+			size, err := strconv.ParseInt(contentLength, 10, 64)
+			if err != nil {
+				return c.Status(400).JSON(fiber.Map{"error": "Invalid Content-Length header"})
 			}
 			if size > maxSize {
 				return c.Status(413).JSON(fiber.Map{"error": "Request entity too large"})

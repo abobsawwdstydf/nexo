@@ -183,10 +183,10 @@ export function connectSocket(token?: string): SocketInterface | null {
   }
 
   const baseUrl = getSocketUrl();
-  const wsUrl = baseUrl.replace(/^http/, 'ws') + `/ws/chat?token=${token}`;
+  const wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/chat';
   
   emitStatus('connecting');
-  ws = new WebSocket(wsUrl);
+  ws = new WebSocket(wsUrl, [token]);
   
   // Create compatibility interface
   socket = {

@@ -1,49 +1,51 @@
 export default {
   async fetch(request) {
+    var origin = request.headers.get('Origin') || '';
     var url = new URL(request.url);
     var path = url.pathname;
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request.headers.get('Origin')) });
-    if (request.method !== 'POST') return j({ error: 'POST only' }, 405);
+    var ch = function(h) { return Object.assign(h, corsHeaders(origin)); };
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: ch({}) });
+    if (request.method !== 'POST') return j2({ error: 'POST only' }, 405, ch);
     var secret = request.headers.get('X-Proxy-Secret');
-    if (secret !== SECRET) return j({ error: 'Unauthorized' }, 401);
+    if (secret !== SECRET) return j2({ error: 'Unauthorized' }, 401, ch);
     var body = await request.json();
-    if (!body.messages && path.indexOf('/chat') === 0) return j({ error: 'messages required' }, 400);
+    if (!body.messages && path.indexOf('/chat') === 0) return j2({ error: 'messages required' }, 400, ch);
     var msgs = [{ role: 'system', content: SYS }].concat(body.messages || []);
 
     if (path === '/chat/auto') {
       var err = '';
       for (var p = 0; p < ORDER.length; p++) {
-        try { var r = await call(ORDER[p], msgs, false); var d = await r.json(); return j({ text: d.choices[0].message.content || '', provider: ORDER[p] }); } catch(e) { err = e.message; }
+        try { var r = await call(ORDER[p], msgs, false); var d = await r.json(); return j2({ text: d.choices[0].message.content || '', provider: ORDER[p] }, 200, ch); } catch(e) { err = e.message; }
       }
-      return j({ error: err || 'All failed' }, 503);
+      return j2({ error: err || 'All failed' }, 503, ch);
     }
 
     if (path === '/chat/auto/stream') {
       var err = '';
       for (var p = 0; p < ORDER.length; p++) {
-        try { var r = await call(ORDER[p], msgs, true); return sse(r, ORDER[p]); } catch(e) { err = e.message; }
+        try { var r = await call(ORDER[p], msgs, true); return sse2(r, ORDER[p], ch); } catch(e) { err = e.message; }
       }
-      return j({ error: err || 'All failed' }, 503);
+      return j2({ error: err || 'All failed' }, 503, ch);
     }
 
     if (path.indexOf('/chat/prov/') === 0) {
       var pn = path.substring(11);
       var st = url.searchParams.get('stream') === '1';
-      if (!PROV[pn]) return j({ error: 'Unknown: ' + pn }, 400);
-      try { var r = await call(pn, msgs, st); if (st) return sse(r, pn); var d = await r.json(); return j({ text: d.choices[0].message.content || '', provider: pn }); } catch(e) { return j({ error: e.message }, 502); }
+      if (!PROV[pn]) return j2({ error: 'Unknown: ' + pn }, 400, ch);
+      try { var r = await call(pn, msgs, st); if (st) return sse2(r, pn, ch); var d = await r.json(); return j2({ text: d.choices[0].message.content || '', provider: pn }, 200, ch); } catch(e) { return j2({ error: e.message }, 502, ch); }
     }
 
-    if (path === '/chat/prov') return j({ providers: Object.keys(PROV), order: ORDER });
+    if (path === '/chat/prov') return j2({ providers: Object.keys(PROV), order: ORDER }, 200, ch);
 
     if (path === '/generate-image') {
       var prompt = (body.prompt || '').trim().slice(0, 500);
-      if (!prompt) return j({ error: 'prompt required' }, 400);
+      if (!prompt) return j2({ error: 'prompt required' }, 400, ch);
       var img = await genImg(prompt);
-      if (img) return j(img);
+      if (img) return j2(img, 200, ch);
       var seed = Math.floor(Math.random() * 1000000);
-      return j({ url: 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=1024&height=1024&seed=' + seed + '&nologo=true&enhance=true', provider: 'Pollinations.ai' });
+      return j2({ url: 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=1024&height=1024&seed=' + seed + '&nologo=true&enhance=true', provider: 'Pollinations.ai' }, 200, ch);
     }
-    return j({ error: 'Not found' }, 404);
+    return j2({ error: 'Not found' }, 404, ch);
   }
 };
 
@@ -104,7 +106,7 @@ var ORDER = ['cerebras', 'groq', 'sambanova', 'mistral', 'openrouter'];
 var ki = {};
 
 function getKey(n) { var k = KEYS[n] || []; if (!k.length || !k[0]) return null; var valid = k.filter(x => x); if (!valid.length) return null; var i = (ki[n] || 0) % valid.length; ki[n] = i + 1; return valid[i]; }
-function j(d, s, origin) { return new Response(JSON.stringify(d), { status: s || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, corsHeaders(origin)) }); }
+function j2(d, s, ch) { return new Response(JSON.stringify(d), { status: s || 200, headers: ch({ 'Content-Type': 'application/json' }) }); }
 
 async function call(name, msgs, stream) {
   var c = PROV[name]; if (!c) throw new Error('No provider: ' + name);
@@ -120,14 +122,14 @@ async function call(name, msgs, stream) {
   return r;
 }
 
-function sse(r, name) {
+function sse2(r, name, ch) {
   var ts = new TransformStream(); var w = ts.writable.getWriter(); var d = new TextDecoder(); var rd = r.body.getReader();
   (async function() {
     try { while (true) { var res = await rd.read(); if (res.done) break; var lines = d.decode(res.value, { stream: true }).split('\n'); for (var k = 0; k < lines.length; k++) { if (lines[k].indexOf('data: ') === 0 && lines[k] !== 'data: [DONE]') { try { var o = JSON.parse(lines[k].substring(6)); if (o.choices && o.choices[0] && o.choices[0].delta && o.choices[0].delta.content) { await w.write(new TextEncoder().encode('data:' + JSON.stringify({ token: o.choices[0].delta.content }) + '\n\n')); } } catch(e) {} } } } await w.write(new TextEncoder().encode('data:' + JSON.stringify({ done: true, provider: name }) + '\n\n'));
     } catch(e) { await w.write(new TextEncoder().encode('data:' + JSON.stringify({ error: 'Stream error' }) + '\n\n')); }
     await w.close();
   })();
-  return new Response(ts.readable, { headers: Object.assign({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' }, CORS) });
+  return new Response(ts.readable, { headers: ch({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' }) });
 }
 
 async function genImg(prompt) {
@@ -135,7 +137,7 @@ async function genImg(prompt) {
     var key = getKey('fal'); if (!key) break;
     try {
       var ctrl = new AbortController(); var tid = setTimeout(function() { ctrl.abort(); }, 60000);
-      var r = await fetch('https://fal.run/fal-ai/flux/schnell', { method: 'POST', headers: { 'Authorization': 'Key ' + key, 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt, image_size: 'landscape_16_9', num_inference_steps: 4, num_images: 1, enable_safety_checker: false }), signal: ctrl.signal });
+      var r = await fetch('https://fal.run/fal-ai/flux/schnell', { method: 'POST', headers: { 'Authorization': 'Key ' + key, 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt, image_size: 'landscape_16_9', num_inference_steps: 4, num_images: 1, enable_safety_checker: true }), signal: ctrl.signal });
       clearTimeout(tid);
       if (r.ok) { var d = await r.json(); var imgs = d.images || d.data || []; if (imgs.length > 0) { var u = imgs[0].url || imgs[0]; if (u) return { url: u, provider: 'Fal.ai (Flux Schnell)' }; } }
     } catch(e) {}

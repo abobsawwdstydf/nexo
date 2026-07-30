@@ -11,7 +11,7 @@ const VAPID_PUBLIC_KEY = 'BPVXBg4HHqwRgo2rX4fnScnnL1bD0AgeSyAiufQluXGctTM0WsSD8V
  */
 export async function registerNotificationServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.warn('[Push] Service Worker or Push not supported');
+    logger.warn('[Push] Service Worker or Push not supported');
     return null;
   }
 
@@ -67,7 +67,7 @@ export async function registerNotificationServiceWorker(): Promise<ServiceWorker
  */
 export async function subscribeToNotifications(): Promise<PushSubscription | null> {
   if (!('Notification' in window)) {
-    console.warn('[Push] Notifications not supported in this browser');
+    logger.warn('[Push] Notifications not supported in this browser');
     return null;
   }
 
@@ -91,13 +91,13 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
     // Register service worker
     const registration = await registerNotificationServiceWorker();
     if (!registration) {
-      console.warn('[Push] Service worker not available');
+      logger.warn('[Push] Service worker not available');
       return null;
     }
 
     // Ensure service worker is active before subscribing
     if (!registration.active) {
-      console.warn('[Push] Service worker not active yet, waiting...');
+      logger.warn('[Push] Service worker not active yet, waiting...');
       // Wait for service worker to become active
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -143,7 +143,7 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
     // Send subscription to server
     const saved = await sendSubscriptionToServer(subscription);
     if (!saved) {
-      console.warn('[Push] Subscription created but not saved to server');
+      logger.warn('[Push] Subscription created but not saved to server');
     }
 
     return subscription;
