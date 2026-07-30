@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Smooth page transitions and micro-interactions
  * Using Framer Motion for fluid animations
  */
@@ -278,3 +278,229 @@ export function AnimatedListItem({ children }: { children: ReactNode }) {
     </motion.div>
   );
 }
+
+/* ─── Stagger Container with Fade + Slide Up ──────────────────────── */
+
+export const staggerContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+};
+
+export const staggerItemFadeUp = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+};
+
+/* ─── Modal Backdrop Blur Entrance ────────────────────────────────── */
+
+export const modalBackdropVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.2 },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.15 },
+  },
+};
+
+export const modalContentVariants = {
+  hidden: { opacity: 0, scale: 0.92, y: 20, filter: 'blur(4px)' },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: {
+      type: 'spring',
+      stiffness: 350,
+      damping: 28,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    y: 10,
+    filter: 'blur(4px)',
+    transition: {
+      duration: 0.2,
+      ease: [0.4, 0, 1, 1],
+    },
+  },
+};
+
+/* ─── Message Bubble Entrance ─────────────────────────────────────── */
+
+export const messageBubbleVariants = {
+  initial: { opacity: 0, y: 16, scale: 0.92 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.92,
+    transition: { duration: 0.15 },
+  },
+};
+
+/* ─── Toast / Notification Slide ──────────────────────────────────── */
+
+export const toastVariants = {
+  initial: { opacity: 0, x: 80, scale: 0.9, filter: 'blur(4px)' },
+  animate: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 30,
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: 80,
+    scale: 0.9,
+    filter: 'blur(4px)',
+    transition: {
+      duration: 0.25,
+      ease: [0.4, 0, 1, 1],
+    },
+  },
+};
+
+/* ─── Bounce / Pulse for Notifications ────────────────────────────── */
+
+export const bounceVariants = {
+  initial: { scale: 0 },
+  animate: {
+    scale: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 500,
+      damping: 15,
+    },
+  },
+};
+
+export const pulseVariants = {
+  initial: { scale: 1 },
+  pulse: {
+    scale: [1, 1.08, 1],
+    transition: {
+      duration: 0.6,
+      ease: 'easeInOut',
+      repeat: Infinity,
+      repeatType: 'loop' as const,
+    },
+  },
+};
+
+/* ─── Shake for Errors ────────────────────────────────────────────── */
+
+export const shakeVariants = {
+  shake: {
+    x: [0, -8, 8, -6, 6, -3, 3, 0],
+    transition: {
+      duration: 0.5,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+};
+
+/* ─── Scale on Click (Micro-interaction) ──────────────────────────── */
+
+export const tapScaleVariants = {
+  hover: { scale: 1.03 },
+  tap: { scale: 0.97 },
+};
+
+/* ─── Button Ripple / Pulse ───────────────────────────────────────── */
+
+export const buttonPulseVariants = {
+  idle: { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0)' },
+  pulse: {
+    boxShadow: '0 0 0 8px rgba(99, 102, 241, 0)',
+    transition: { duration: 0.8, repeat: Infinity },
+  },
+};
+
+/* ─── Height Reveal (for expanding sections) ──────────────────────── */
+
+export const expandVariants = {
+  collapsed: { height: 0, opacity: 0 },
+  expanded: {
+    height: 'auto',
+    opacity: 1,
+    transition: {
+      height: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+      opacity: { duration: 0.2, delay: 0.1 },
+    },
+  },
+};
+
+/* ─── Chat List Item ──────────────────────────────────────────────── */
+
+export const chatListItemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.03,
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  }),
+};
+
+/* ─── Floating Element ────────────────────────────────────────────── */
+
+export const floatVariants = {
+  animate: {
+    y: [0, -10, 0],
+    transition: {
+      duration: 4,
+      ease: 'easeInOut',
+      repeat: Infinity,
+      repeatType: 'reverse' as const,
+    },
+  },
+};
+
+/* ─── Online Indicator ────────────────────────────────────────────── */
+
+export const onlineIndicatorVariants = {
+  animate: {
+    scale: [1, 1.1, 1],
+    opacity: [0.8, 1, 0.8],
+    transition: {
+      duration: 2,
+      ease: 'easeInOut',
+      repeat: Infinity,
+    },
+  },
+};

@@ -49,25 +49,17 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const screenStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-
-  // ICE config with STUN/TURN
-  const iceConfig: RTCConfiguration = {
+  const iceConfigRef = useRef<RTCConfiguration>({
+    // Audio calls use direct WebRTC only. No TURN relay or credentials are
+    // requested, so restrictive networks may be unable to establish a call.
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      {
-        urls: 'turn:relay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      },
+      { urls: 'stun:stun.cloudflare.com:3478' },
     ],
     iceCandidatePoolSize: 2,
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require',
-  };
+  });
 
   const initLocalStream = useCallback(async () => {
     try {
@@ -107,7 +99,7 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   }, [videoOn]);
 
   const createPeerConnection = useCallback((stream: MediaStream) => {
-    const pc = new RTCPeerConnection(iceConfig);
+    const pc = new RTCPeerConnection(iceConfigRef.current);
     peerRef.current = pc;
 
     // Add local tracks

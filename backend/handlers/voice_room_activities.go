@@ -1,6 +1,7 @@
 ﻿package handlers
 
 import (
+	"net/url"
 	"time"
 
 	"nexo/db"
@@ -21,6 +22,13 @@ func StartVoiceRoomActivity(c *fiber.Ctx) error {
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	if req.URL != "" {
+		parsedURL, err := url.Parse(req.URL)
+		if err != nil || parsedURL.Scheme != "https" {
+			return c.Status(400).JSON(fiber.Map{"error": "URL must use HTTPS"})
+		}
 	}
 
 	// Stop existing activity

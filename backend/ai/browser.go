@@ -58,7 +58,6 @@ func NewBrowserAgent() *BrowserAgent {
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
-		chromedp.Flag("disable-web-security", true),
 		chromedp.Flag("window-size", "1920,1080"),
 	)
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+﻿import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -48,8 +48,8 @@ function ActionButton({
   return (
     <motion.button
       onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors text-xs text-white/50 hover:text-white/70"
-      whileHover={{ scale: 1.03 }}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all duration-200 text-xs text-white/50 hover:text-white/70 hover:border-white/[0.1]"
+      whileHover={{ scale: 1.03, y: -1 }}
       whileTap={{ scale: 0.97 }}
     >
       {Icon ? <Icon size={14} /> : null}
@@ -59,7 +59,6 @@ function ActionButton({
 }
 
 function ChatAvatar({ chat }: { chat: Chat }) {
-  // Saved Messages
   if (chat.id === '_saved_messages_') {
     return (
       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
@@ -136,8 +135,8 @@ function ChatListItem({
       className={`
         relative w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200
         ${isSelected
-          ? 'bg-white/[0.08] border border-white/[0.1]'
-          : 'hover:bg-white/[0.03] border border-transparent'
+          ? 'bg-white/[0.08] border border-white/[0.1] liquid-glass-subtle'
+          : 'hover:bg-white/[0.03] border border-transparent hover:border-white/[0.04]'
         }
         rounded-xl
       `}
@@ -196,7 +195,6 @@ export function ChatList({
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Load recent searches from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('nexo_recent_searches');
@@ -204,7 +202,6 @@ export function ChatList({
     } catch {}
   }, []);
 
-  // Save recent searches
   const saveRecentSearch = (query: string) => {
     if (!query.trim()) return;
     const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
@@ -212,13 +209,11 @@ export function ChatList({
     localStorage.setItem('nexo_recent_searches', JSON.stringify(updated));
   };
 
-  // Clear recent searches
   const clearRecentSearches = () => {
     setRecentSearches([]);
     localStorage.removeItem('nexo_recent_searches');
   };
 
-  // Close menu on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -231,7 +226,6 @@ export function ChatList({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showUserMenu]);
 
-  // Handle search submit
   const handleSearchSubmit = (query: string) => {
     if (query.trim()) {
       saveRecentSearch(query);
@@ -241,7 +235,6 @@ export function ChatList({
 
   return (
     <>
-      {/* ─── Logo header with menu ──────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
@@ -260,7 +253,7 @@ export function ChatList({
         <div className="relative flex-shrink-0" ref={menuRef}>
           <motion.button
             onClick={() => setShowUserMenu(v => !v)}
-            className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+            className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] transition-all duration-200"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -318,7 +311,6 @@ export function ChatList({
         </div>
       </div>
 
-      {/* ─── Search with recent searches ────────────────────────────── */}
       <div className="flex-shrink-0 px-3 pt-3 pb-2">
         <div className="relative" ref={searchRef}>
           <Search
@@ -333,7 +325,7 @@ export function ChatList({
             onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
             onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(searchQuery); }}
             placeholder="Поиск чатов, сообщений..."
-            className="w-full h-10 pl-10 pr-10 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06] focus:ring-2 focus:ring-white/5"
+            className="w-full h-10 pl-10 pr-10 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06] focus:ring-2 focus:ring-white/5 focus:translate-y-[-1px]"
           />
           {searchQuery && (
             <motion.button
@@ -384,14 +376,12 @@ export function ChatList({
         </div>
       </div>
 
-      {/* ─── Quick Actions ─────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center gap-1.5 px-3 pb-2">
         <ActionButton icon={Users} label="Друзья" onClick={onOpenFriends} />
         <ActionButton icon={UserPlus} label="Новый чат" onClick={onNewChat} />
         <ActionButton icon={Plus} label="Канал" onClick={onNewChannel} />
       </div>
 
-      {/* ─── Chat list ─────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         {loading ? (
           <div className="flex flex-col gap-2 px-2 pt-2">
@@ -406,7 +396,7 @@ export function ChatList({
             ))}
           </div>
         ) : chats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-12 px-4 text-center">
+          <div className="flex flex-col items-center justify-center pt-12 px-4 text-center animate-fade-in">
             <MessageCircle size={28} className="text-white/15 mb-3" />
             <p className="text-sm text-white/30">
               {searchQuery ? 'Ничего не найдено' : 'Нет чатов'}
@@ -421,9 +411,10 @@ export function ChatList({
               {chats.map((chat, index) => (
                 <motion.div
                   key={chat.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.2 }}
+                  initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -12, scale: 0.97 }}
+                  transition={{ delay: index * 0.025, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                 >
                   <ChatListItem
                     chat={chat}
@@ -437,7 +428,6 @@ export function ChatList({
         )}
       </div>
 
-      {/* ─── User profile at bottom ────────────────────────────────── */}
       <div className="flex-shrink-0 px-3 py-2 border-t border-white/[0.06]">
         <motion.button
           onClick={onOpenProfile}

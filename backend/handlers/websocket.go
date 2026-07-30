@@ -1,10 +1,11 @@
-package handlers
+﻿package handlers
 
 import (
 	"encoding/json"
 	"log"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -865,6 +866,16 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 func HandleWebSocket(c *websocket.Conn) {
 	token := c.Query("token")
 	if token == "" {
+		protocols := strings.Split(c.Headers("Sec-WebSocket-Protocol"), ",")
+		for _, p := range protocols {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				token = p
+				break
+			}
+		}
+	}
+	if token == "" {
 		c.Close()
 		return
 	}
@@ -954,3 +965,4 @@ func HandleWebSocket(c *websocket.Conn) {
 		handleWSMessage(client, msg)
 	}
 }
+

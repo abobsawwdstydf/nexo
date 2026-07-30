@@ -19,10 +19,10 @@ func CreateIncognitoChat(c *fiber.Ctx) error {
 		ExpiresIn   int  `json:"expiresIn"` // minutes
 	}
 	if err := c.BodyParser(&req); err != nil {
-		req.MaxMembers = 10
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	if req.MaxMembers <= 0 {
+	if req.MaxMembers <= 0 || req.MaxMembers > 100 {
 		req.MaxMembers = 10
 	}
 

@@ -18,8 +18,17 @@ func CreateCalendarEvent(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	startTime, _ := time.Parse(time.RFC3339, req.StartTime)
-	endTime, _ := time.Parse(time.RFC3339, req.EndTime)
+	startTime, err := time.Parse(time.RFC3339, req.StartTime)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid startTime, use RFC3339 format"})
+	}
+	endTime, err := time.Parse(time.RFC3339, req.EndTime)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid endTime, use RFC3339 format"})
+	}
+	if !endTime.IsZero() && endTime.Before(startTime) {
+		return c.Status(400).JSON(fiber.Map{"error": "endTime must be after startTime"})
+	}
 
 	event := models.CalendarEvent{
 		ID:          generateID(),

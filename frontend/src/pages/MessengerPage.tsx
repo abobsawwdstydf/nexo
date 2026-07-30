@@ -19,7 +19,7 @@ import { CallOverlay } from '../components/CallOverlay';
 import { useCallContext } from '../lib/callContext';
 import { getNotesMessages, NOTES_CHAT_ID } from '../lib/api/noteChat';
 
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+const FONT = "'JF Dot Shinonome Gothic 14', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
 function MessengerBackground() {
   return (
@@ -192,7 +192,7 @@ export default function MessengerPage() {
   // ─── Render ───────────────────────────────────────────────────────────
   return (
     <div
-      className="h-full w-full flex flex-col relative"
+      className="h-full w-full flex flex-col relative font-pixel"
       style={{ fontFamily: FONT }}
     >
       <MessengerBackground />

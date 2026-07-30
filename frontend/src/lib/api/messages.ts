@@ -38,7 +38,7 @@ export function installMessages(api: ApiClient): void {
 
   api.uploadFile = async (file: File) => {
     const formData = new FormData();
-    formData.append('files', file);
+    formData.append('file', file, file.name);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 300_000);
@@ -48,6 +48,7 @@ export function installMessages(api: ApiClient): void {
       credentials: 'include',
       headers: {
         ...(storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {}),
+        ...(api.csrfToken ? { 'X-CSRF-Token': api.csrfToken } : {}),
       },
       body: formData,
       signal: controller.signal,

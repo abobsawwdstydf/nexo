@@ -1,9 +1,8 @@
-package handlers
+﻿package handlers
 
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,10 +22,16 @@ func init() {
 
 // ─── Premium check ─────────────────────────────────────────────────────
 
+const betaTrialDays = 14
+
 func isPremium(userID string) bool {
 	var user models.User
 	if result := db.GetDB().First(&user, "id = ?", userID); result.Error != nil {
 		return false
+	}
+	// 14-day free beta trial for all users
+	if time.Since(user.CreatedAt).Hours() < float64(betaTrialDays*24) {
+		return true
 	}
 	if !user.IsPremium {
 		return false
@@ -68,7 +73,7 @@ func CloudUpload(c *fiber.Ctx) error {
 	if err != nil && n == 0 {
 		return c.Status(500).JSON(fiber.Map{"error": "Не удалось прочитать файл"})
 	}
-	contentType := detectContentType(buf[:n], file.Filename)
+	contentType := detectContentType(buf[:n], file.Filename, file.Header.Get("Content-Type"))
 
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext == "" {
@@ -77,8 +82,7 @@ func CloudUpload(c *fiber.Ctx) error {
 
 	// Cross-check extension vs detected content type
 	if ext != "" {
-		expectedMime := extToMime(ext)
-		if expectedMime != "" && expectedMime != contentType {
+		if !isExtensionCompatible(ext, contentType) {
 			return c.Status(400).JSON(fiber.Map{"error": "Расширение файла не соответствует содержимому"})
 		}
 	}
@@ -106,7 +110,7 @@ func CloudUpload(c *fiber.Ctx) error {
 	cloudFile := models.CloudFile{
 		ID:        generateID(),
 		UserID:    userID,
-		Filename:  url.PathEscape(file.Filename),
+		Filename:  filepath.Base(file.Filename),
 		URL:       "/uploads/cloud/" + filename,
 		Size:      file.Size,
 		Type:      mediaType,
@@ -142,8 +146,8 @@ func CloudList(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"files":    files,
-		"total":    len(files),
+		"files":     files,
+		"total":     len(files),
 		"totalSize": totalSize,
 	})
 }
@@ -183,9 +187,9 @@ func CloudStats(c *fiber.Ctx) error {
 	db.GetDB().Model(&models.CloudFile{}).Where("user_id = ?", userID).Select("COALESCE(SUM(size), 0)").Scan(&totalSize)
 
 	return c.JSON(fiber.Map{
-		"totalSize":  totalSize,
-		"fileCount":  fileCount,
-		"maxSize":    -1, // unlimited for premium
-		"formatted":  fmt.Sprintf("%.1f МБ", float64(totalSize)/(1024*1024)),
+		"totalSize": totalSize,
+		"fileCount": fileCount,
+		"maxSize":   -1, // unlimited for premium
+		"formatted": fmt.Sprintf("%.1f МБ", float64(totalSize)/(1024*1024)),
 	})
 }

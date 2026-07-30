@@ -66,7 +66,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
         {/* ─── Close ──────────────────────────────────────────────── */}
         <motion.button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-xl bg-black/40 border border-white/[0.06] hover:bg-white/[0.1] transition-colors"
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-xl bg-black/40 border border-white/[0.06] hover:bg-white/[0.1] transition-all duration-200"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -112,7 +112,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
 
           <button
             onClick={handleCopyUsername}
-            className="inline-flex items-center gap-1.5 mt-1 text-xs text-white/40 hover:text-white/60 transition-colors"
+            className="inline-flex items-center gap-1.5 mt-1 text-xs text-white/40 hover:text-white/60 transition-all duration-200"
           >
             <AtSign size={11} />
             @{user.username}
@@ -196,7 +196,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
         <div className="px-3 pb-3">
           <motion.button
             onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.06] transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.06] transition-all duration-200"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -221,14 +221,14 @@ function ProfileAction({
   return (
     <motion.button
       onClick={onClick}
-      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group"
+      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-all duration-200 group"
       whileTap={{ scale: 0.98 }}
     >
       <div className="flex items-center gap-3">
-        <Icon size={15} className="text-white/30 group-hover:text-white/50 transition-colors" />
-        <span className="text-xs text-white/60 group-hover:text-white/80 transition-colors">{label}</span>
+        <Icon size={15} className="text-white/30 group-hover:text-white/50 transition-all duration-200" />
+        <span className="text-xs text-white/60 group-hover:text-white/80 transition-all duration-200">{label}</span>
       </div>
-      <ChevronRight size={14} className="text-white/15 group-hover:text-white/30 transition-colors" />
+      <ChevronRight size={14} className="text-white/15 group-hover:text-white/30 transition-all duration-200" />
     </motion.button>
   );
 }

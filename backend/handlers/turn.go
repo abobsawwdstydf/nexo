@@ -18,9 +18,9 @@ func GetTurnCredentials(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "TURN server not configured"})
 	}
 
-	// Generate temporary credentials (HMAC-SHA1, valid 24 hours)
-	_, credential := GenerateTURNHMAC(turnSecret, userID, 86400)
-	ttlStr, _ := GenerateTURNHMAC(turnSecret, userID, 86400)
+	// Generate one short-lived credential pair. The username passed to coturn
+	// must be exactly the value used to calculate its HMAC.
+	username, credential := GenerateTURNHMAC(turnSecret, userID, 3600)
 
 	// Build ICE servers list
 	iceServers := []fiber.Map{}
@@ -41,13 +41,13 @@ func GetTurnCredentials(c *fiber.Ctx) error {
 	if turnURL != "" {
 		iceServers = append(iceServers, fiber.Map{
 			"urls":       turnURL,
-			"username":   ttlStr + ":" + userID,
+			"username":   username + ":" + userID,
 			"credential": credential,
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"iceServers": iceServers,
-		"ttl":        86400,
+		"ttl":        3600,
 	})
 }

@@ -47,9 +47,25 @@
         font-style: normal;
         font-display: swap;
       }
+      @font-face {
+        font-family: 'JF Dot Shinonome Gothic 14';
+        src: url('/fonts/JF-Dot-Shinonome14.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'JF Dot Shinonome Gothic 14';
+        src: url('/fonts/JF-Dot-Shinonome14B.ttf') format('truetype');
+        font-weight: bold;
+        font-style: normal;
+        font-display: swap;
+      }
     </style>
 
     <!-- Preload critical fonts -->
+    <link rel="preload" as="font" href="/fonts/JF-Dot-Shinonome14.ttf" crossorigin fetchpriority="high" />
+    <link rel="preload" as="font" href="/fonts/JF-Dot-Shinonome14B.ttf" crossorigin />
     <link rel="preload" as="font" href="/fonts/Koganejidainogemu.ttf" crossorigin fetchpriority="high" />
     <link rel="preload" as="font" href="/fonts/PreschoolPlayhouse.ttf" crossorigin />
 

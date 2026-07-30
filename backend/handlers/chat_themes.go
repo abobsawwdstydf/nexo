@@ -1,10 +1,19 @@
 ﻿package handlers
 
 import (
+	"regexp"
+	"strings"
+
 	"nexo/db"
 	"nexo/models"
 
 	"github.com/gofiber/fiber/v2"
+)
+
+var (
+	safeColorRe   = regexp.MustCompile(`^#[0-9a-fA-F]{3,8}$`)
+	safeURLRe     = regexp.MustCompile(`^https?://[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/[^\s"<>]*)?$`)
+	allowedCSSRe  = regexp.MustCompile(`^[a-zA-Z\s#(),.%0-9-]+$`)
 )
 
 // GET /chats/:id/theme
@@ -36,6 +45,13 @@ func SetChatTheme(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
+	// Sanitize and validate theme values
+	bgImage := sanitizeThemeURL(req.BackgroundImage)
+	bgColor := sanitizeThemeColor(req.BackgroundColor)
+	bubbleColor := sanitizeThemeColor(req.BubbleColor)
+	bubbleTextColor := sanitizeThemeColor(req.BubbleTextColor)
+	accentColor := sanitizeThemeColor(req.AccentColor)
+
 	var theme models.ChatTheme
 	result := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&theme)
 	if result.Error != nil {
@@ -43,20 +59,20 @@ func SetChatTheme(c *fiber.Ctx) error {
 			ID:              generateID(),
 			ChatID:          chatID,
 			UserID:          userID,
-			BackgroundImage: req.BackgroundImage,
-			BackgroundColor: req.BackgroundColor,
-			BubbleColor:     req.BubbleColor,
-			BubbleTextColor: req.BubbleTextColor,
-			AccentColor:     req.AccentColor,
+			BackgroundImage: bgImage,
+			BackgroundColor: bgColor,
+			BubbleColor:     bubbleColor,
+			BubbleTextColor: bubbleTextColor,
+			AccentColor:     accentColor,
 		}
 		db.GetDB().Create(&theme)
 	} else {
 		db.GetDB().Model(&theme).Updates(map[string]interface{}{
-			"background_image": req.BackgroundImage,
-			"background_color": req.BackgroundColor,
-			"bubble_color":     req.BubbleColor,
-			"bubble_text_color": req.BubbleTextColor,
-			"accent_color":     req.AccentColor,
+			"background_image":  bgImage,
+			"background_color":  bgColor,
+			"bubble_color":      bubbleColor,
+			"bubble_text_color": bubbleTextColor,
+			"accent_color":      accentColor,
 		})
 	}
 
@@ -71,4 +87,26 @@ func DeleteChatTheme(c *fiber.Ctx) error {
 	db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).Delete(&models.ChatTheme{})
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+func sanitizeThemeURL(val string) string {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return val
+	}
+	if safeURLRe.MatchString(val) {
+		return val
+	}
+	return ""
+}
+
+func sanitizeThemeColor(val string) string {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return val
+	}
+	if safeColorRe.MatchString(val) || allowedCSSRe.MatchString(val) {
+		return val
+	}
+	return ""
 }

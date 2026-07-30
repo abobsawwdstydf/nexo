@@ -1,7 +1,7 @@
-/**
- * Дизайн-система Нексо
- * Централизованные токены: цвета, отступы, радиусы, тени, анимации, z-index.
- * Импортируется в компонентах через `import { colors, radius, spacing } from '@/lib/design-system'`
+﻿/**
+ * Р”РёР·Р°Р№РЅ-СЃРёСЃС‚РµРјР° РќРµРєСЃРѕ
+ * Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹Рµ С‚РѕРєРµРЅС‹: С†РІРµС‚Р°, РѕС‚СЃС‚СѓРїС‹, СЂР°РґРёСѓСЃС‹, С‚РµРЅРё, Р°РЅРёРјР°С†РёРё, z-index.
+ * РРјРїРѕСЂС‚РёСЂСѓРµС‚СЃСЏ РІ РєРѕРјРїРѕРЅРµРЅС‚Р°С… С‡РµСЂРµР· `import { colors, radius, spacing } from '@/lib/design-system'`
  */
 
 export const colors = {
@@ -144,4 +144,62 @@ export const componentSize = {
   md: { padding: '0.625rem 1rem', fontSize: '0.875rem', height: '2.5rem' },
   lg: { padding: '0.75rem 1.25rem', fontSize: '1rem', height: '3rem' },
   xl: { padding: '1rem 1.5rem', fontSize: '1.125rem', height: '3.5rem' },
+} as const;
+
+/* ─── Liquid Glass Tokens ──────────────────────────────────────────── */
+
+export const glass = {
+  blur: {
+    subtle: '16px',
+    base: '24px',
+    strong: '36px',
+    ultra: '56px',
+    mega: '80px',
+  },
+  opacity: {
+    subtle: '0.045',
+    base: '0.07',
+    strong: '0.14',
+  },
+  saturation: {
+    base: '180%',
+    strong: '220%',
+    mega: '260%',
+  },
+  border: {
+    subtle: 'rgba(255, 255, 255, 0.06)',
+    default: 'rgba(255, 255, 255, 0.08)',
+    hover: 'rgba(255, 255, 255, 0.12)',
+    active: 'rgba(255, 255, 255, 0.18)',
+  },
+  bg: {
+    base: 'rgba(0, 0, 0, 0.72)',
+    strong: 'rgba(0, 0, 0, 0.85)',
+    subtle: 'rgba(0, 0, 0, 0.55)',
+    ultra: 'rgba(0, 0, 0, 0.92)',
+    inset: 'rgba(0, 0, 0, 0.45)',
+  },
+} as const;
+
+export const glow = {
+  xs: '0 0 10px rgba(99, 102, 241, 0.2)',
+  sm: '0 0 20px rgba(99, 102, 241, 0.3)',
+  md: '0 0 40px rgba(99, 102, 241, 0.4)',
+  lg: '0 0 60px rgba(99, 102, 241, 0.5)',
+  xl: '0 0 80px rgba(99, 102, 241, 0.6)',
+} as const;
+
+export const motion = {
+  stagger: {
+    fast: 0.03,
+    normal: 0.05,
+    slow: 0.08,
+  },
+  duration: {
+    instant: 0.1,
+    fast: 0.2,
+    normal: 0.3,
+    slow: 0.4,
+    slower: 0.6,
+  },
 } as const;

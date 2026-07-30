@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -94,7 +94,7 @@
 }
 
 /* ======================== */
-/*   Базовые стили          */
+/*   Р‘Р°Р·РѕРІС‹Рµ СЃС‚РёР»Рё          */
 /* ======================== */
 
 html, body, #root {
@@ -115,12 +115,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Pixel font rendering (JF Dot Shinonome) */
+.font-pixel {
+  font-smooth: never;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  text-rendering: optimizeSpeed;
+  -ms-interpolation-mode: nearest-neighbor;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
 /* Global heading letter-spacing */
 h1, h2 {
   letter-spacing: 0.02em;
 }
 
-/* Фон основного экрана — полупрозрачный с blur */
+/* Р¤РѕРЅ РѕСЃРЅРѕРІРЅРѕРіРѕ СЌРєСЂР°РЅР° вЂ” РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅС‹Р№ СЃ blur */
 .chat-bg {
   background-color: var(--glass-bg-strong);
   backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation));
@@ -131,7 +142,7 @@ h1, h2 {
     radial-gradient(ellipse at 60% 80%, rgba(163, 163, 163, 0.03) 0%, transparent 50%);
 }
 
-/* Скроллбары - тонкие и незаметные */
+/* РЎРєСЂРѕР»Р»Р±Р°СЂС‹ - С‚РѕРЅРєРёРµ Рё РЅРµР·Р°РјРµС‚РЅС‹Рµ */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
@@ -154,7 +165,7 @@ h1, h2 {
   background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Скрытый скроллбар для горизонтальных списков */
+/* РЎРєСЂС‹С‚С‹Р№ СЃРєСЂРѕР»Р»Р±Р°СЂ РґР»СЏ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹С… СЃРїРёСЃРєРѕРІ */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -544,6 +555,7 @@ textarea:focus-visible {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .glass-input:focus {
+  transform: translateY(-1px);
   background: var(--glass-bg);
   border-color: rgba(163, 163, 163, 0.5);
   box-shadow: 0 0 0 3px rgba(163, 163, 163, 0.12), var(--glass-shadow-inset);
@@ -551,6 +563,7 @@ textarea:focus-visible {
 
 /* ---- Specialized glass: cards ---- */
 .glass-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--glass-bg-strong);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
@@ -573,6 +586,7 @@ textarea:focus-visible {
 
 /* ---- Aliases for backward compatibility ---- */
 .glass-sidebar {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--glass-bg-ultra);
   backdrop-filter: blur(var(--glass-blur-ultra)) saturate(var(--glass-saturation-strong));
   -webkit-backdrop-filter: blur(var(--glass-blur-ultra)) saturate(var(--glass-saturation-strong));
@@ -580,6 +594,7 @@ textarea:focus-visible {
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 8px 32px rgba(0, 0, 0, 0.4), var(--glass-shadow-inset);
 }
 .glass-toast {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--glass-bg-strong);
   backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation-strong));
   -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturation-strong));
@@ -587,6 +602,7 @@ textarea:focus-visible {
   box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
 }
 .glass-floating {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--glass-bg-ultra);
   backdrop-filter: blur(var(--glass-blur-ultra)) saturate(var(--glass-saturation-strong));
   -webkit-backdrop-filter: blur(var(--glass-blur-ultra)) saturate(var(--glass-saturation-strong));
@@ -668,6 +684,7 @@ textarea:focus-visible {
 
 /* Floating glass panel (for side panels) */
 .glass-floating {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: linear-gradient(
     160deg,
     rgba(16, 16, 22, 0.96) 0%,
@@ -707,7 +724,7 @@ textarea:focus-visible {
   pointer-events: none;
 }
 
-/* Элементы списка */
+/* Р­Р»РµРјРµРЅС‚С‹ СЃРїРёСЃРєР° */
 .glass-list-item {
   background: transparent;
   border: 1px solid transparent;
@@ -732,14 +749,14 @@ textarea:focus-visible {
 }
 
 /* ======================== */
-/*   Утилиты и анимации     */
+/*   РЈС‚РёР»РёС‚С‹ Рё Р°РЅРёРјР°С†РёРё     */
 /* ======================== */
 
 .gradient-text {
   color: var(--color-accent);
 }
 
-/* Микроанимации для кнопок */
+/* РњРёРєСЂРѕР°РЅРёРјР°С†РёРё РґР»СЏ РєРЅРѕРїРѕРє */
 .btn-hover-lift {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -754,7 +771,7 @@ textarea:focus-visible {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Анимация иконок при hover */
+/* РђРЅРёРјР°С†РёСЏ РёРєРѕРЅРѕРє РїСЂРё hover */
 .icon-hover-rotate {
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -776,7 +793,7 @@ textarea:focus-visible {
   50% { transform: translateY(-4px); }
 }
 
-/* Ripple эффект */
+/* Ripple СЌС„С„РµРєС‚ */
 .ripple {
   position: relative;
   overflow: hidden;
@@ -800,7 +817,7 @@ textarea:focus-visible {
   height: 300px;
 }
 
-/* Glow эффект при hover */
+/* Glow СЌС„С„РµРєС‚ РїСЂРё hover */
 .glow-on-hover {
   position: relative;
   transition: all 0.3s ease;
@@ -822,7 +839,7 @@ textarea:focus-visible {
   opacity: 0.6;
 }
 
-/* Shake анимация для ошибок */
+/* Shake Р°РЅРёРјР°С†РёСЏ РґР»СЏ РѕС€РёР±РѕРє */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
@@ -833,7 +850,7 @@ textarea:focus-visible {
   animation: shake 0.5s ease-in-out;
 }
 
-/* Heartbeat для лайков */
+/* Heartbeat РґР»СЏ Р»Р°Р№РєРѕРІ */
 @keyframes heartbeat {
   0%, 100% { transform: scale(1); }
   10%, 30% { transform: scale(1.1); }
@@ -844,7 +861,7 @@ textarea:focus-visible {
   animation: heartbeat 0.8s ease-in-out;
 }
 
-/* Spin для загрузки */
+/* Spin РґР»СЏ Р·Р°РіСЂСѓР·РєРё */
 @keyframes spin-slow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -854,7 +871,7 @@ textarea:focus-visible {
   animation: spin-slow 3s linear infinite;
 }
 
-/* Плавное появление элементов */
+/* РџР»Р°РІРЅРѕРµ РїРѕСЏРІР»РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ */
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -882,7 +899,7 @@ textarea:focus-visible {
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Плавающие элементы фона */
+/* РџР»Р°РІР°СЋС‰РёРµ СЌР»РµРјРµРЅС‚С‹ С„РѕРЅР° */
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   50% { transform: translateY(-20px) rotate(2deg); }
@@ -896,7 +913,7 @@ textarea:focus-visible {
   animation: float 8s ease-in-out 4s infinite;
 }
 
-/* Пульсация для онлайн-индикаторов */
+/* РџСѓР»СЊСЃР°С†РёСЏ РґР»СЏ РѕРЅР»Р°Р№РЅ-РёРЅРґРёРєР°С‚РѕСЂРѕРІ */
 @keyframes pulse-ring {
   0% { transform: scale(1); opacity: 0.6; }
   100% { transform: scale(1.5); opacity: 0; }
@@ -906,7 +923,7 @@ textarea:focus-visible {
   animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Волны для звонков */
+/* Р’РѕР»РЅС‹ РґР»СЏ Р·РІРѕРЅРєРѕРІ */
 @keyframes call-wave {
   0% { transform: scale(1); opacity: 0.6; }
   100% { transform: scale(2.5); opacity: 0; }
@@ -920,7 +937,7 @@ textarea:focus-visible {
   animation: call-wave 2s ease-out 1s infinite;
 }
 
-/* Мягкая пульсация */
+/* РњСЏРіРєР°СЏ РїСѓР»СЊСЃР°С†РёСЏ */
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -931,10 +948,10 @@ textarea:focus-visible {
 }
 
 /* ======================== */
-/*   Анимации эмодзи         */
+/*   РђРЅРёРјР°С†РёРё СЌРјРѕРґР·Рё         */
 /* ======================== */
 
-/* Пружинный bounce для эмодзи при отправке */
+/* РџСЂСѓР¶РёРЅРЅС‹Р№ bounce РґР»СЏ СЌРјРѕРґР·Рё РїСЂРё РѕС‚РїСЂР°РІРєРµ */
 @keyframes emoji-pop {
   0% { transform: scale(0) rotate(-15deg); opacity: 0; }
   50% { transform: scale(1.3) rotate(5deg); opacity: 1; }
@@ -946,7 +963,7 @@ textarea:focus-visible {
   animation: emoji-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Плавный подскок для реакций */
+/* РџР»Р°РІРЅС‹Р№ РїРѕРґСЃРєРѕРє РґР»СЏ СЂРµР°РєС†РёР№ */
 @keyframes emoji-bounce {
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-6px) scale(1.1); }
@@ -957,7 +974,7 @@ textarea:focus-visible {
   animation: emoji-bounce 0.5s ease-out;
 }
 
-/* Пульсация для крупных эмодзи */
+/* РџСѓР»СЊСЃР°С†РёСЏ РґР»СЏ РєСЂСѓРїРЅС‹С… СЌРјРѕРґР·Рё */
 @keyframes emoji-pulse {
   0%, 100% { transform: scale(1); filter: brightness(1); }
   50% { transform: scale(1.08); filter: brightness(1.2); }
@@ -967,7 +984,7 @@ textarea:focus-visible {
   animation: emoji-pulse 2s ease-in-out infinite;
 }
 
-/* Вращение для特定 эмодзи (⚙️, 🎡, и т.д.) */
+/* Р’СЂР°С‰РµРЅРёРµ РґР»СЏз‰№е®љ СЌРјРѕРґР·Рё (вљ™пёЏ, рџЋЎ, Рё С‚.Рґ.) */
 @keyframes emoji-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -977,7 +994,7 @@ textarea:focus-visible {
   animation: emoji-spin 3s linear infinite;
 }
 
-/* Покачивание для特定 эмодзи (🎄, 🌲, и т.д.) */
+/* РџРѕРєР°С‡РёРІР°РЅРёРµ РґР»СЏз‰№е®љ СЌРјРѕРґР·Рё (рџЋ„, рџЊІ, Рё С‚.Рґ.) */
 @keyframes emoji-sway {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(3deg); }
@@ -988,7 +1005,7 @@ textarea:focus-visible {
   animation: emoji-sway 2s ease-in-out infinite;
 }
 
-/* Плавное свечение для特定 эмодзи (✨, ⭐, 💫) */
+/* РџР»Р°РІРЅРѕРµ СЃРІРµС‡РµРЅРёРµ РґР»СЏз‰№е®љ СЌРјРѕРґР·Рё (вњЁ, в­ђ, рџ’«) */
 @keyframes emoji-glow {
   0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
   50% { filter: drop-shadow(0 0 8px currentColor) brightness(1.3); }
@@ -998,7 +1015,7 @@ textarea:focus-visible {
   animation: emoji-glow 1.5s ease-in-out infinite;
 }
 
-/* Падение для特定 эмодзи (❄️, 🍂, 🌸) */
+/* РџР°РґРµРЅРёРµ РґР»СЏз‰№е®љ СЌРјРѕРґР·Рё (вќ„пёЏ, рџЌ‚, рџЊё) */
 @keyframes emoji-fall {
   0% { transform: translateY(-4px) rotate(0deg); opacity: 0.8; }
   50% { transform: translateY(2px) rotate(10deg); opacity: 1; }
@@ -1009,7 +1026,7 @@ textarea:focus-visible {
   animation: emoji-fall 3s ease-in-out infinite;
 }
 
-/* Пульс сердца для ❤️ и т.д. */
+/* РџСѓР»СЊСЃ СЃРµСЂРґС†Р° РґР»СЏ вќ¤пёЏ Рё С‚.Рґ. */
 @keyframes emoji-heartbeat {
   0%, 100% { transform: scale(1); }
   15% { transform: scale(1.15); }
@@ -1021,7 +1038,7 @@ textarea:focus-visible {
   animation: emoji-heartbeat 1.2s ease-in-out infinite;
 }
 
-/* Подпрыгивание для特定 эмодзи (🏀, ⚽, и т.д.) */
+/* РџРѕРґРїСЂС‹РіРёРІР°РЅРёРµ РґР»СЏз‰№е®љ СЌРјРѕРґР·Рё (рџЏЂ, вљЅ, Рё С‚.Рґ.) */
 @keyframes emoji-jump {
   0%, 100% { transform: translateY(0) scaleY(1); }
   30% { transform: translateY(-8px) scaleY(1.05); }
@@ -1033,7 +1050,7 @@ textarea:focus-visible {
   animation: emoji-jump 0.8s ease-out;
 }
 
-/* Мерцание для特定 эмодзи (💡, 🔮, и т.д.) */
+/* РњРµСЂС†Р°РЅРёРµ РґР»СЏз‰№е®љ СЌРјРѕРґР·Рё (рџ’Ў, рџ”®, Рё С‚.Рґ.) */
 @keyframes emoji-flicker {
   0%, 100% { opacity: 1; filter: brightness(1); }
   33% { opacity: 0.85; filter: brightness(1.1); }
@@ -1442,7 +1459,7 @@ textarea:focus-visible {
   animation: shimmerWave 2s infinite;
 }
 
-/* Shimmer эффект для скелетонов */
+/* Shimmer СЌС„С„РµРєС‚ РґР»СЏ СЃРєРµР»РµС‚РѕРЅРѕРІ */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
@@ -1485,10 +1502,10 @@ textarea:focus-visible {
 }
 
 /* ======================== */
-/*   Темы чатов            */
+/*   РўРµРјС‹ С‡Р°С‚РѕРІ            */
 /* ======================== */
 
-/* Темы чатов — все используют только черный/белый/серый */
+/* РўРµРјС‹ С‡Р°С‚РѕРІ вЂ” РІСЃРµ РёСЃРїРѕР»СЊР·СѓСЋС‚ С‚РѕР»СЊРєРѕ С‡РµСЂРЅС‹Р№/Р±РµР»С‹Р№/СЃРµСЂС‹Р№ */
 .chat-theme-midnight { background-color: #0f0f13; }
 .chat-theme-ocean { background-color: #0f0f13; }
 .chat-theme-forest { background-color: #0f0f13; }
@@ -1500,10 +1517,10 @@ textarea:focus-visible {
 .chat-theme-glass { background-color: #0d1117; }
 .chat-theme-void { background-color: #000; }
 
-/* Фон основного экрана уже определён выше */
+/* Р¤РѕРЅ РѕСЃРЅРѕРІРЅРѕРіРѕ СЌРєСЂР°РЅР° СѓР¶Рµ РѕРїСЂРµРґРµР»С‘РЅ РІС‹С€Рµ */
 
 /* ======================== */
-/*   Состояния выделения    */
+/*   РЎРѕСЃС‚РѕСЏРЅРёСЏ РІС‹РґРµР»РµРЅРёСЏ    */
 /* ======================== */
 
 ::selection {
@@ -1588,7 +1605,7 @@ textarea:focus-visible {
 }
 
 /* ======================== */
-/*   Доступность            */
+/*   Р”РѕСЃС‚СѓРїРЅРѕСЃС‚СЊ            */
 /* ======================== */
 
 input:focus, textarea:focus {
@@ -1624,7 +1641,7 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   Типографика            */
+/*   РўРёРїРѕРіСЂР°С„РёРєР°            */
 /* ======================== */
 
 .word-break {
@@ -1635,7 +1652,7 @@ em-emoji-picker .Search {
 
 
 /* ======================== */
-/*   СВЕТЛАЯ ТЕМА           */
+/*   РЎР’Р•РўР›РђРЇ РўР•РњРђ           */
 /* ======================== */
 
 [data-theme="light"] {
@@ -1719,12 +1736,14 @@ em-emoji-picker .Search {
 
 [data-theme="light"] .glass-sidebar,
 [data-theme="light"] .glass-floating {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--glass-bg-ultra);
   border: 1px solid var(--glass-border);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.1), var(--glass-shadow-inset);
 }
 
 [data-theme="light"] .glass-toast {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
@@ -1744,11 +1763,13 @@ em-emoji-picker .Search {
   border: 1px solid var(--glass-border);
 }
 [data-theme="light"] .glass-input:focus {
+  transform: translateY(-1px);
   background: var(--glass-bg);
   border-color: rgba(163, 163, 163, 0.5);
 }
 
 [data-theme="light"] .glass-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
 }
@@ -1762,7 +1783,7 @@ em-emoji-picker .Search {
   border: 1px solid color-mix(in srgb, var(--bubble-received) 60%, transparent);
 }
 
-/* Цветовые схемы — все схемы используют только черный/белый/серый */
+/* Р¦РІРµС‚РѕРІС‹Рµ СЃС…РµРјС‹ вЂ” РІСЃРµ СЃС…РµРјС‹ РёСЃРїРѕР»СЊР·СѓСЋС‚ С‚РѕР»СЊРєРѕ С‡РµСЂРЅС‹Р№/Р±РµР»С‹Р№/СЃРµСЂС‹Р№ */
 [data-color-scheme="blue"],
 [data-color-scheme="purple"],
 [data-color-scheme="green"],
@@ -1778,7 +1799,7 @@ em-emoji-picker .Search {
 [data-color-scheme="teal"],
 [data-color-scheme="yellow"],
 [data-color-scheme="custom"] {
-  /* Все схемы используют только оттенки серого */
+  /* Р’СЃРµ СЃС…РµРјС‹ РёСЃРїРѕР»СЊР·СѓСЋС‚ С‚РѕР»СЊРєРѕ РѕС‚С‚РµРЅРєРё СЃРµСЂРѕРіРѕ */
   --color-accent: #a3a3a3;
   --color-accent-hover: #d4d4d4;
   --color-nexo-400: #a3a3a3;
@@ -1786,7 +1807,7 @@ em-emoji-picker .Search {
   --color-nexo-600: #525252;
 }
 
-/* AMOLED тема — полностью чёрный фон */
+/* AMOLED С‚РµРјР° вЂ” РїРѕР»РЅРѕСЃС‚СЊСЋ С‡С‘СЂРЅС‹Р№ С„РѕРЅ */
 [data-theme="amoled"] {
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
@@ -1799,7 +1820,7 @@ em-emoji-picker .Search {
   --border-subtle: #1a1a1a;
 }
 
-/* Midnight тема — тёмно-синий фон */
+/* Midnight С‚РµРјР° вЂ” С‚С‘РјРЅРѕ-СЃРёРЅРёР№ С„РѕРЅ */
 [data-theme="midnight"] {
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
@@ -1812,7 +1833,7 @@ em-emoji-picker .Search {
   --border-subtle: #1e293b;
 }
 
-/* Плотность интерфейса */
+/* РџР»РѕС‚РЅРѕСЃС‚СЊ РёРЅС‚РµСЂС„РµР№СЃР° */
 :root {
   --density: 1;
 }
@@ -1826,17 +1847,17 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   Адаптивность           */
+/*   РђРґР°РїС‚РёРІРЅРѕСЃС‚СЊ           */
 /* ======================== */
 
-/* Мобильные устройства (до 640px) */
+/* РњРѕР±РёР»СЊРЅС‹Рµ СѓСЃС‚СЂРѕР№СЃС‚РІР° (РґРѕ 640px) */
 @media (max-width: 640px) {
-  /* Увеличенные touch targets */
+  /* РЈРІРµР»РёС‡РµРЅРЅС‹Рµ touch targets */
   button, a, input, textarea {
     min-height: 44px;
   }
 
-  /* Полноэкранные модалки */
+  /* РџРѕР»РЅРѕСЌРєСЂР°РЅРЅС‹Рµ РјРѕРґР°Р»РєРё */
   .modal-mobile-fullscreen {
     position: fixed !important;
     inset: 0 !important;
@@ -1845,123 +1866,123 @@ em-emoji-picker .Search {
     max-height: 100% !important;
   }
 
-  /* Компактные отступы */
+  /* РљРѕРјРїР°РєС‚РЅС‹Рµ РѕС‚СЃС‚СѓРїС‹ */
   .mobile-compact {
     padding: 0.75rem !important;
   }
 
-  /* Скрытие на мобилках */
+  /* РЎРєСЂС‹С‚РёРµ РЅР° РјРѕР±РёР»РєР°С… */
   .hide-mobile {
     display: none !important;
   }
 
-  /* Полная ширина на мобилках */
+  /* РџРѕР»РЅР°СЏ С€РёСЂРёРЅР° РЅР° РјРѕР±РёР»РєР°С… */
   .mobile-full-width {
     width: 100% !important;
   }
 
-  /* Стек на мобилках */
+  /* РЎС‚РµРє РЅР° РјРѕР±РёР»РєР°С… */
   .mobile-stack {
     flex-direction: column !important;
   }
 
-  /* Уменьшенный текст */
+  /* РЈРјРµРЅСЊС€РµРЅРЅС‹Р№ С‚РµРєСЃС‚ */
   .mobile-text-sm {
     font-size: 0.875rem !important;
   }
 }
 
-/* Планшеты (640px - 1024px) */
+/* РџР»Р°РЅС€РµС‚С‹ (640px - 1024px) */
 @media (min-width: 640px) and (max-width: 1024px) {
-  /* Двухколоночная сетка */
+  /* Р”РІСѓС…РєРѕР»РѕРЅРѕС‡РЅР°СЏ СЃРµС‚РєР° */
   .tablet-grid-2 {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 
-  /* Скрытие на планшетах */
+  /* РЎРєСЂС‹С‚РёРµ РЅР° РїР»Р°РЅС€РµС‚Р°С… */
   .hide-tablet {
     display: none !important;
   }
 
-  /* Средние отступы */
+  /* РЎСЂРµРґРЅРёРµ РѕС‚СЃС‚СѓРїС‹ */
   .tablet-spacing {
     padding: 1rem !important;
   }
 }
 
-/* Landscape режим на мобилках */
+/* Landscape СЂРµР¶РёРј РЅР° РјРѕР±РёР»РєР°С… */
 @media (max-width: 896px) and (orientation: landscape) {
-  /* Компактный header */
+  /* РљРѕРјРїР°РєС‚РЅС‹Р№ header */
   .landscape-compact-header {
     height: 48px !important;
     padding: 0.5rem !important;
   }
 
-  /* Горизонтальная навигация */
+  /* Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅР°СЏ РЅР°РІРёРіР°С†РёСЏ */
   .landscape-horizontal-nav {
     flex-direction: row !important;
     width: 100% !important;
     height: auto !important;
   }
 
-  /* Скрытие в landscape */
+  /* РЎРєСЂС‹С‚РёРµ РІ landscape */
   .hide-landscape {
     display: none !important;
   }
 
-  /* Уменьшенные отступы */
+  /* РЈРјРµРЅСЊС€РµРЅРЅС‹Рµ РѕС‚СЃС‚СѓРїС‹ */
   .landscape-compact {
     padding: 0.5rem !important;
   }
 }
 
-/* Складные экраны (Galaxy Fold, Surface Duo) */
+/* РЎРєР»Р°РґРЅС‹Рµ СЌРєСЂР°РЅС‹ (Galaxy Fold, Surface Duo) */
 @media (max-width: 280px) {
-  /* Минимальные отступы */
+  /* РњРёРЅРёРјР°Р»СЊРЅС‹Рµ РѕС‚СЃС‚СѓРїС‹ */
   .fold-minimal {
     padding: 0.25rem !important;
   }
 
-  /* Очень маленький текст */
+  /* РћС‡РµРЅСЊ РјР°Р»РµРЅСЊРєРёР№ С‚РµРєСЃС‚ */
   .fold-text-xs {
     font-size: 0.75rem !important;
   }
 
-  /* Скрытие на складных */
+  /* РЎРєСЂС‹С‚РёРµ РЅР° СЃРєР»Р°РґРЅС‹С… */
   .hide-fold {
     display: none !important;
   }
 }
 
-/* Большие экраны (1920px+) */
+/* Р‘РѕР»СЊС€РёРµ СЌРєСЂР°РЅС‹ (1920px+) */
 @media (min-width: 1920px) {
-  /* Увеличенные контейнеры */
+  /* РЈРІРµР»РёС‡РµРЅРЅС‹Рµ РєРѕРЅС‚РµР№РЅРµСЂС‹ */
   .desktop-max-w {
     max-width: 1600px !important;
     margin: 0 auto !important;
   }
 
-  /* Трехколоночная сетка */
+  /* РўСЂРµС…РєРѕР»РѕРЅРѕС‡РЅР°СЏ СЃРµС‚РєР° */
   .desktop-grid-3 {
     grid-template-columns: repeat(3, 1fr) !important;
   }
 }
 
-/* Темная тема для системных предпочтений */
+/* РўРµРјРЅР°СЏ С‚РµРјР° РґР»СЏ СЃРёСЃС‚РµРјРЅС‹С… РїСЂРµРґРїРѕС‡С‚РµРЅРёР№ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
   }
 }
 
-/* Светлая тема для системных предпочтений */
+/* РЎРІРµС‚Р»Р°СЏ С‚РµРјР° РґР»СЏ СЃРёСЃС‚РµРјРЅС‹С… РїСЂРµРґРїРѕС‡С‚РµРЅРёР№ */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
     color-scheme: light;
   }
 }
 
-/* Уменьшенная анимация для пользователей с motion sensitivity */
+/* РЈРјРµРЅСЊС€РµРЅРЅР°СЏ Р°РЅРёРјР°С†РёСЏ РґР»СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ СЃ motion sensitivity */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1972,7 +1993,7 @@ em-emoji-picker .Search {
   }
 }
 
-/* Высокая контрастность */
+/* Р’С‹СЃРѕРєР°СЏ РєРѕРЅС‚СЂР°СЃС‚РЅРѕСЃС‚СЊ */
 @media (prefers-contrast: high) {
   .glass,
   .glass-strong,
@@ -1982,7 +2003,7 @@ em-emoji-picker .Search {
   }
 }
 
-/* Safe area для устройств с вырезами (iPhone X+) */
+/* Safe area РґР»СЏ СѓСЃС‚СЂРѕР№СЃС‚РІ СЃ РІС‹СЂРµР·Р°РјРё (iPhone X+) */
 @supports (padding: max(0px)) {
   .safe-area-inset-top {
     padding-top: max(env(safe-area-inset-top), 1rem);
@@ -2002,10 +2023,10 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   РАСШИРЕННЫЕ АНИМАЦИИ   */
+/*   Р РђРЎРЁРР Р•РќРќР«Р• РђРќРРњРђР¦РР   */
 /* ======================== */
 
-/* Плавное появление модалок */
+/* РџР»Р°РІРЅРѕРµ РїРѕСЏРІР»РµРЅРёРµ РјРѕРґР°Р»РѕРє */
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -2036,7 +2057,7 @@ em-emoji-picker .Search {
   animation: modalFadeOut 0.2s ease-out;
 }
 
-/* Backdrop анимация */
+/* Backdrop Р°РЅРёРјР°С†РёСЏ */
 @keyframes backdropFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -2055,7 +2076,7 @@ em-emoji-picker .Search {
   animation: backdropFadeOut 0.2s ease-out;
 }
 
-/* Slide анимации для боковых панелей */
+/* Slide Р°РЅРёРјР°С†РёРё РґР»СЏ Р±РѕРєРѕРІС‹С… РїР°РЅРµР»РµР№ */
 @keyframes slideInFromLeft {
   from {
     transform: translateX(-100%);
@@ -2116,7 +2137,7 @@ em-emoji-picker .Search {
   animation: slideOutToRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Slide вверх/вниз для мобильных модалок */
+/* Slide РІРІРµСЂС…/РІРЅРёР· РґР»СЏ РјРѕР±РёР»СЊРЅС‹С… РјРѕРґР°Р»РѕРє */
 @keyframes slideUpFromBottom {
   from {
     transform: translateY(100%);
@@ -2147,7 +2168,7 @@ em-emoji-picker .Search {
   animation: slideDownToBottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Staggered анимация для списков */
+/* Staggered Р°РЅРёРјР°С†РёСЏ РґР»СЏ СЃРїРёСЃРєРѕРІ */
 @keyframes listItemFadeIn {
   from {
     opacity: 0;
@@ -2174,7 +2195,7 @@ em-emoji-picker .Search {
 .list-item-stagger:nth-child(9) { animation-delay: 400ms; }
 .list-item-stagger:nth-child(10) { animation-delay: 450ms; }
 
-/* Flip анимация для карточек */
+/* Flip Р°РЅРёРјР°С†РёСЏ РґР»СЏ РєР°СЂС‚РѕС‡РµРє */
 @keyframes flipIn {
   from {
     transform: perspective(400px) rotateY(90deg);
@@ -2190,7 +2211,7 @@ em-emoji-picker .Search {
   animation: flipIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Zoom анимация */
+/* Zoom Р°РЅРёРјР°С†РёСЏ */
 @keyframes zoomIn {
   from {
     transform: scale(0);
@@ -2221,7 +2242,7 @@ em-emoji-picker .Search {
   animation: zoomOut 0.2s ease-out;
 }
 
-/* Bounce вход */
+/* Bounce РІС…РѕРґ */
 @keyframes bounceIn {
   0% {
     transform: scale(0.3);
@@ -2243,7 +2264,7 @@ em-emoji-picker .Search {
   animation: bounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Rotate вход */
+/* Rotate РІС…РѕРґ */
 @keyframes rotateIn {
   from {
     transform: rotate(-180deg) scale(0);
@@ -2259,7 +2280,7 @@ em-emoji-picker .Search {
   animation: rotateIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Typing индикатор */
+/* Typing РёРЅРґРёРєР°С‚РѕСЂ */
 @keyframes typingDot {
   0%, 60%, 100% {
     transform: translateY(0);
@@ -2279,7 +2300,7 @@ em-emoji-picker .Search {
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
-/* Progress bar анимация */
+/* Progress bar Р°РЅРёРјР°С†РёСЏ */
 @keyframes progressBar {
   from { width: 0%; }
   to { width: 100%; }
@@ -2326,7 +2347,7 @@ em-emoji-picker .Search {
   animation: skeletonLoading 1.5s ease-in-out infinite;
 }
 
-/* Confetti эффект */
+/* Confetti СЌС„С„РµРєС‚ */
 @keyframes confetti-fall {
   0% {
     transform: translateY(-100vh) rotate(0deg);
@@ -2595,7 +2616,7 @@ em-emoji-picker .Search {
   transition: all 0.5s ease-in-out;
 }
 
-/* Hover эффекты */
+/* Hover СЌС„С„РµРєС‚С‹ */
 .hover-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2642,7 +2663,7 @@ em-emoji-picker .Search {
   filter: brightness(1.2);
 }
 
-/* Focus эффекты */
+/* Focus СЌС„С„РµРєС‚С‹ */
 .focus-ring {
   transition: box-shadow 0.2s ease;
 }
@@ -2661,7 +2682,7 @@ em-emoji-picker .Search {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
-/* Active эффекты */
+/* Active СЌС„С„РµРєС‚С‹ */
 .active-scale {
   transition: transform 0.1s ease;
 }
@@ -2679,7 +2700,7 @@ em-emoji-picker .Search {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Disabled состояние */
+/* Disabled СЃРѕСЃС‚РѕСЏРЅРёРµ */
 .disabled-fade {
   transition: opacity 0.2s ease;
 }
@@ -2689,7 +2710,7 @@ em-emoji-picker .Search {
   cursor: not-allowed;
 }
 
-/* Loading состояние */
+/* Loading СЃРѕСЃС‚РѕСЏРЅРёРµ */
 .loading-pulse {
   animation: pulse-soft 1.5s ease-in-out infinite;
 }
@@ -2702,7 +2723,7 @@ em-emoji-picker .Search {
 /*   PERFORMANCE HINTS      */
 /* ======================== */
 
-/* GPU acceleration для анимаций */
+/* GPU acceleration РґР»СЏ Р°РЅРёРјР°С†РёР№ */
 .gpu-accelerated {
   transform: translateZ(0);
   will-change: transform;
@@ -2713,27 +2734,27 @@ em-emoji-picker .Search {
   will-change: opacity;
 }
 
-/* Оптимизация для скролла */
+/* РћРїС‚РёРјРёР·Р°С†РёСЏ РґР»СЏ СЃРєСЂРѕР»Р»Р° */
 .scroll-smooth {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Оптимизация рендеринга */
+/* РћРїС‚РёРјРёР·Р°С†РёСЏ СЂРµРЅРґРµСЂРёРЅРіР° */
 .optimize-rendering {
   contain: layout style paint;
 }
 
-/* Изоляция слоя */
+/* РР·РѕР»СЏС†РёСЏ СЃР»РѕСЏ */
 .isolate-layer {
   isolation: isolate;
 }
 
 /* ======================== */
-/*   ТЕКСТОВЫЕ АНИМАЦИИ     */
+/*   РўР•РљРЎРўРћР’Р«Р• РђРќРРњРђР¦РР     */
 /* ======================== */
 
-/* Wave анимация для текста */
+/* Wave Р°РЅРёРјР°С†РёСЏ РґР»СЏ С‚РµРєСЃС‚Р° */
 @keyframes wave {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -2743,7 +2764,7 @@ em-emoji-picker .Search {
   animation: wave 1s ease-in-out infinite;
 }
 
-/* Gradient анимация */
+/* Gradient Р°РЅРёРјР°С†РёСЏ */
 @keyframes gradient {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -2754,7 +2775,7 @@ em-emoji-picker .Search {
   animation: gradient 3s ease infinite;
 }
 
-/* Glitch эффект */
+/* Glitch СЌС„С„РµРєС‚ */
 @keyframes glitch-1 {
   0%, 100% { transform: translate(0); }
   20% { transform: translate(-2px, 2px); }
@@ -2849,7 +2870,7 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   УЛУЧШЕННЫЕ КНОПКИ      */
+/*   РЈР›РЈР§РЁР•РќРќР«Р• РљРќРћРџРљР      */
 /* ======================== */
 
 /* Magnetic button effect */
@@ -3007,7 +3028,7 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   УЛУЧШЕННЫЕ МОДАЛКИ     */
+/*   РЈР›РЈР§РЁР•РќРќР«Р• РњРћР”РђР›РљР     */
 /* ======================== */
 
 /* Backdrop blur animation */
@@ -3113,7 +3134,7 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   КАРТОЧКИ И СПИСКИ      */
+/*   РљРђР РўРћР§РљР Р РЎРџРРЎРљР      */
 /* ======================== */
 
 /* Card hover lift with shadow */
@@ -3153,7 +3174,7 @@ em-emoji-picker .Search {
 .list-stagger > *:nth-child(10) { animation-delay: 0.5s; }
 
 /* ======================== */
-/*   ИНДИКАТОРЫ ЗАГРУЗКИ    */
+/*   РРќР”РРљРђРўРћР Р« Р—РђР“Р РЈР—РљР    */
 /* ======================== */
 
 /* Spinner */
@@ -3226,7 +3247,7 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   ЭФФЕКТЫ НАВЕДЕНИЯ      */
+/*   Р­Р¤Р¤Р•РљРўР« РќРђР’Р•Р”Р•РќРРЇ      */
 /* ======================== */
 
 /* Underline from center */
@@ -3333,7 +3354,7 @@ em-emoji-picker .Search {
 }
 
 /* ======================== */
-/*   СИНХРОНИЗАЦИЯ          */
+/*   РЎРРќРҐР РћРќРР—РђР¦РРЇ          */
 /* ======================== */
 
 /* Sync spinner */
@@ -3662,7 +3683,7 @@ em-emoji-picker .Search {
 /*   Liquid Glass Chat UI   */
 /* ======================== */
 
-/* Кнопки в шапке чата */
+/* РљРЅРѕРїРєРё РІ С€Р°РїРєРµ С‡Р°С‚Р° */
 .chat-header-btn {
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(16px);
@@ -3677,7 +3698,7 @@ em-emoji-picker .Search {
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 }
 
-/* Поле ввода сообщения */
+/* РџРѕР»Рµ РІРІРѕРґР° СЃРѕРѕР±С‰РµРЅРёСЏ */
 .message-input-container {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(24px) saturate(1.5);
@@ -3686,7 +3707,7 @@ em-emoji-picker .Search {
   box-shadow: 0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
-/* Контекстное меню */
+/* РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ */
 .context-menu-glass {
   background: rgba(18, 18, 22, 0.85);
   backdrop-filter: blur(32px) saturate(1.8);
@@ -3862,7 +3883,7 @@ em-emoji-picker .Search {
 /*   Liquid Glass Animations */
 /* ======================== */
 
-/* Shimmer sweep — light travels across surface */
+/* Shimmer sweep вЂ” light travels across surface */
 @keyframes liquid-shimmer {
   0% { transform: translateX(-100%) rotate(25deg); }
   100% { transform: translateX(200%) rotate(25deg); }
@@ -3891,7 +3912,7 @@ em-emoji-picker .Search {
   animation: liquid-shimmer 3s ease-in-out infinite;
 }
 
-/* Glow pulse — subtle accent-colored glow breathe */
+/* Glow pulse вЂ” subtle accent-colored glow breathe */
 @keyframes liquid-glow {
   0%, 100% { box-shadow: 0 0 20px rgba(123, 97, 255, 0.05); }
   50% { box-shadow: 0 0 40px rgba(123, 97, 255, 0.15), 0 0 60px rgba(123, 97, 255, 0.05); }
@@ -3901,7 +3922,7 @@ em-emoji-picker .Search {
   animation: liquid-glow 4s ease-in-out infinite;
 }
 
-/* Float gentle — subtle vertical float for decorative elements */
+/* Float gentle вЂ” subtle vertical float for decorative elements */
 @keyframes liquid-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
@@ -3911,7 +3932,7 @@ em-emoji-picker .Search {
   animation: liquid-float 5s ease-in-out infinite;
 }
 
-/* Border glow rotate — accent border color cycles */
+/* Border glow rotate вЂ” accent border color cycles */
 @keyframes liquid-border-glow {
   0%, 100% { border-color: rgba(123, 97, 255, 0.2); }
   33% { border-color: rgba(163, 163, 163, 0.35); }
@@ -3922,7 +3943,7 @@ em-emoji-picker .Search {
   animation: liquid-border-glow 3s ease-in-out infinite;
 }
 
-/* Entrance: glass fade-up — for modals, panels */
+/* Entrance: glass fade-up вЂ” for modals, panels */
 @keyframes glass-entrance {
   from {
     opacity: 0;
@@ -4082,3 +4103,291 @@ em-emoji-picker .Search {
   }
 }
 
+
+
+
+/* ================================================================
+   RICH KEYFRAME ANIMATIONS
+   ================================================================ */
+
+/* ── Slide Up ── */
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(24px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideUpShort {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Slide Down ── */
+@keyframes slideDown {
+  0% { opacity: 0; transform: translateY(-24px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideDownShort {
+  0% { opacity: 0; transform: translateY(-12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Slide In From Left ── */
+@keyframes slideInLeft {
+  0% { opacity: 0; transform: translateX(-24px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Slide In From Right ── */
+@keyframes slideInRight {
+  0% { opacity: 0; transform: translateX(24px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Scale In With Bounce ── */
+@keyframes scaleInBounce {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Scale In From Center ── */
+@keyframes scaleInCenter {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Pulse Glow ── */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(163, 163, 163, 0.15); }
+  50% { box-shadow: 0 0 24px rgba(163, 163, 163, 0.3); }
+}
+
+/* ── Float Gentle ── */
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ── Shimmer Lite ── */
+@keyframes shimmerLite {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Pop In ── */
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.5) translateY(10px); }
+  60% { transform: scale(1.08) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Fade In Up ── */
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Fade In Down ── */
+@keyframes fadeInDown {
+  0% { opacity: 0; transform: translateY(-16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Ripple Expand ── */
+@keyframes rippleExpand {
+  0% { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+/* ── Skeleton Pulse ── */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* Utility Classes */
+.animate-slide-up { animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-slide-down { animation: slideDown 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-slide-up-short { animation: slideUpShort 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-slide-down-short { animation: slideDownShort 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-slide-in-left { animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-scale-in-bounce { animation: scaleInBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-scale-in-center { animation: scaleInCenter 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+.animate-float-gentle { animation: floatGentle 3s ease-in-out infinite; }
+.animate-pop-in { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-fade-in-down { animation: fadeInDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-skeleton-pulse { animation: skeletonPulse 1.5s ease-in-out infinite; }
+
+
+/* ================================================================
+   MICRO-INTERACTIONS
+   ================================================================ */
+
+/* ── Interactive Lift ── */
+.interactive-lift {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease;
+}
+.interactive-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.interactive-lift:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Glass Card Lift ── */
+.glass-card-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 255, 255, 0.04),
+    var(--glass-shadow-inset);
+  border-color: var(--glass-border-hover);
+}
+
+/* ── Input Focus Glow ── */
+.input-glow {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.input-glow:focus {
+  border-color: rgba(163, 163, 163, 0.4);
+  box-shadow:
+    0 0 0 3px rgba(163, 163, 163, 0.1),
+    0 0 20px rgba(163, 163, 163, 0.05);
+  transform: translateY(-1px);
+}
+
+/* ── Button Pulse ── */
+.btn-pulse {
+  position: relative;
+  overflow: hidden;
+}
+.btn-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.15), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.btn-pulse:hover::after {
+  opacity: 1;
+}
+
+/* ── Icon Spin on Hover ── */
+.icon-spin-hover svg {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.icon-spin-hover:hover svg {
+  transform: rotate(180deg);
+}
+
+/* ── Scale Press ── */
+.scale-press {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.scale-press:active {
+  transform: scale(0.95);
+}
+
+/* ── Brightness Hover ── */
+.brightness-hover {
+  transition: filter 0.2s ease;
+}
+.brightness-hover:hover {
+  filter: brightness(1.15);
+}
+
+/* ── Border Glow on Focus ── */
+.border-glow-focus {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.border-glow-focus:focus-within {
+  border-color: rgba(163, 163, 163, 0.4);
+  box-shadow: 0 0 0 3px rgba(163, 163, 163, 0.1);
+}
+
+/* ── Slide Reveal ── */
+.slide-reveal {
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+}
+.slide-reveal.hidden {
+  max-height: 0;
+  opacity: 0;
+}
+.slide-reveal.visible {
+  max-height: 500px;
+  opacity: 1;
+}
+
+
+/* ================================================================
+   GLASS CARD HOVER ENHANCEMENTS
+   ================================================================ */
+
+/* Enhanced glass card with glow on hover */
+.glass-card-enhanced {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), var(--glass-shadow-inset);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.glass-card-enhanced::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 20%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.12) 80%, transparent 100%);
+  pointer-events: none;
+}
+.glass-card-enhanced:hover {
+  transform: translateY(-3px);
+  border-color: var(--glass-border-hover);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(255, 255, 255, 0.04),
+    var(--glass-shadow-inset),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.glass-card-enhanced:active {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), var(--glass-shadow-inset);
+}
+
+/* Glass with ambient light */
+.glass-ambient {
+  position: relative;
+  overflow: hidden;
+}
+.glass-ambient::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.06) 0%, transparent 60%);
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.glass-ambient:hover::before {
+  opacity: 1;
+  background: radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+}

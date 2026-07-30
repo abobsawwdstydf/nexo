@@ -26,7 +26,7 @@ var AppConfig *Config
 func InitConfig() {
 	AppConfig = &Config{
 		ProxyURL:    getEnv("AI_PROXY_URL", "https://nexo-ai-proxy.h40664555.workers.dev"),
-		ProxySecret: getEnv("AI_PROXY_SECRET", "anwenjawenjinaijowd78dhq239s7ds"),
+		ProxySecret: getEnv("AI_PROXY_SECRET", ""),
 
 		BrowserTimeout:   getEnvInt("BROWSER_TIMEOUT", 30),
 		MaxPagesPerQuery: getEnvInt("MAX_PAGES_PER_QUERY", 5),

@@ -1,4 +1,4 @@
-package middleware
+﻿package middleware
 
 import (
 	"crypto/hmac"
@@ -16,6 +16,8 @@ import (
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY MIDDLEWARE - Maximum Protection Level
 // ═══════════════════════════════════════════════════════════════════════════
+
+const maxCSRFTokens = 10000
 
 var (
 	// CSRF token store (per-session)
@@ -58,6 +60,20 @@ func GenerateCSRFToken(sessionID string) string {
 	tokenHex := hex.EncodeToString(token)
 
 	csrfTokensMu.Lock()
+	if len(csrfTokens) >= maxCSRFTokens {
+		// Remove the oldest token to make room
+		var oldestToken string
+		var oldestTime time.Time
+		first := true
+		for t, expiry := range csrfTokens {
+			if first || expiry.Before(oldestTime) {
+				oldestToken = t
+				oldestTime = expiry
+				first = false
+			}
+		}
+		delete(csrfTokens, oldestToken)
+	}
 	csrfTokens[tokenHex] = time.Now().Add(1 * time.Hour)
 	csrfTokensMu.Unlock()
 
@@ -500,6 +516,22 @@ func init() {
 			for token, expiry := range csrfTokens {
 				if now.After(expiry) {
 					delete(csrfTokens, token)
+				}
+			}
+			if len(csrfTokens) > maxCSRFTokens {
+				excess := len(csrfTokens) - maxCSRFTokens
+				for i := 0; i < excess; i++ {
+					var oldestToken string
+					var oldestTime time.Time
+					first := true
+					for t, expiry := range csrfTokens {
+						if first || expiry.Before(oldestTime) {
+							oldestToken = t
+							oldestTime = expiry
+							first = false
+						}
+					}
+					delete(csrfTokens, oldestToken)
 				}
 			}
 			csrfTokensMu.Unlock()

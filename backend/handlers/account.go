@@ -26,6 +26,18 @@ type ExportData struct {
 func ExportAccount(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
+	// Require password confirmation for sensitive data export
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := c.BodyParser(&req); err != nil || req.Password == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Password confirmation required"})
+	}
+	// Rate limit: max 1 export per 10 minutes
+	if !exportRateLimiter.Allow(userID) {
+		return c.Status(429).JSON(fiber.Map{"error": "Export rate limited. Try again later."})
+	}
+
 	var user models.User
 	if result := db.GetDB().First(&user, "id = ?", userID); result.Error != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
@@ -75,8 +87,45 @@ func ExportAccount(c *fiber.Ctx) error {
 	})
 }
 
+type RateLimiter struct {
+	mu       sync.Mutex
+	limit    int
+	window   time.Duration
+	attempts map[string][]time.Time
+}
+
+func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
+	return &RateLimiter{
+		limit:    limit,
+		window:   window,
+		attempts: make(map[string][]time.Time),
+	}
+}
+
+func (rl *RateLimiter) Allow(key string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	now := time.Now()
+	windowStart := now.Add(-rl.window)
+	entries := rl.attempts[key]
+	var valid []time.Time
+	for _, t := range entries {
+		if t.After(windowStart) {
+			valid = append(valid, t)
+		}
+	}
+	if len(valid) >= rl.limit {
+		rl.attempts[key] = valid
+		return false
+	}
+	valid = append(valid, now)
+	rl.attempts[key] = valid
+	return true
+}
+
 var (
-	deleteLock     sync.Mutex
+	deleteLock       sync.Mutex
+	exportRateLimiter = NewRateLimiter(1, 10*time.Minute)
 )
 
 func DeleteAccount(c *fiber.Ctx) error {

@@ -1,4 +1,4 @@
-package ai
+﻿package ai
 
 import (
 	"bytes"
@@ -49,6 +49,11 @@ func (c *LLMClient) chat(messages []proxyMessage) (string, string, error) {
 		return "", "", fmt.Errorf("AI_PROXY_URL not configured")
 	}
 
+	proxyURL := c.config.ProxyURL
+	if !strings.HasPrefix(proxyURL, "https://") {
+		return "", "", fmt.Errorf("AI_PROXY_URL must use HTTPS")
+	}
+
 	req := proxyRequest{
 		Messages: messages,
 	}
@@ -58,7 +63,7 @@ func (c *LLMClient) chat(messages []proxyMessage) (string, string, error) {
 		return "", "", fmt.Errorf("marshal request: %w", err)
 	}
 
-	url := strings.TrimRight(c.config.ProxyURL, "/") + "/chat/auto"
+	url := strings.TrimRight(proxyURL, "/") + "/chat/auto"
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
 		return "", "", fmt.Errorf("create request: %w", err)

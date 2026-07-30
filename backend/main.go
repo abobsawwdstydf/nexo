@@ -60,7 +60,10 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Nexo Messenger",
-		BodyLimit:    10 * 1024 * 1024, // 10MB
+		// Chat attachments are validated per file in handlers.UploadFile (50 MB).
+		// The transport limit must be slightly larger or voice/video uploads never
+		// reach that validation.
+		BodyLimit:    55 * 1024 * 1024,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -74,18 +77,19 @@ func main() {
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelDefault,
 	}))
-	// CORS — allow listed origins + localhost dev + CORS_ORIGINS env
+	// CORS — production domains only
 	allowedDomains := map[string]bool{
-		"nexo.hakerone.ru":        true,
-		"nexo.darkheavens.ru":     true,
-		"xn--e1akhgo.hakerone.ru":     true,
-		"xn--e1akhgo.darkheavens.ru":  true,
-		"msg.hakerone.ru":         true,
-		"msg.darkheavens.ru":      true,
-		"neexoobeec.hakerone.ru":  true,
-		"nneexion.darkheavens.ru": true,
-		"n.hakerone.ru":           true,
-		"n.darkheavens.ru":        true,
+		"nexo.hakerone.ru":           true,
+		"nexo.darkheavens.ru":        true,
+		"xn--e1akhgo.hakerone.ru":    true,
+		"xn--e1akhgo.darkheavens.ru": true,
+		"msg.hakerone.ru":            true,
+		"msg.darkheavens.ru":         true,
+		"neexoobeec.hakerone.ru":     true,
+		"nneexion.darkheavens.ru":    true,
+		"n.hakerone.ru":              true,
+		"n.darkheavens.ru":           true,
+		"neexxoo.hakerone.ru":        true,
 	}
 	// Also load from CORS_ORIGINS env (comma-separated)
 	if corsEnv := os.Getenv("CORS_ORIGINS"); corsEnv != "" {
@@ -104,13 +108,8 @@ func main() {
 		AllowCredentials: true,
 		AllowOriginsFunc: func(origin string) bool {
 			if origin == "" {
-				return true // Same-origin requests
-			}
-			// Allow any localhost for dev
-			if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") || strings.Contains(origin, "192.168.") {
 				return true
 			}
-			// Allow production domains (exact match on host after removing scheme)
 			trimmed := strings.TrimPrefix(origin, "https://")
 			trimmed = strings.TrimPrefix(trimmed, "http://")
 			for domain := range allowedDomains {
@@ -133,7 +132,7 @@ func main() {
 	app.Use(middleware.SQLInjectionProtection())
 	app.Use(middleware.XSSProtection())
 	app.Use(middleware.InputSanitization())
-	app.Use(middleware.RequestSizeLimit(10 * 1024 * 1024)) // 10MB max
+	app.Use(middleware.RequestSizeLimit(55 * 1024 * 1024))
 	app.Use(middleware.VerifyRequestSignature)
 
 	// Ensure uploads directory exists

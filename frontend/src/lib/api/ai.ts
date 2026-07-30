@@ -21,7 +21,7 @@ declare module './core' {
     searchGifs(query: string, limit?: number): Promise<any[]>;
     getTrendingGifs(limit?: number): Promise<any[]>;
     // Utilities
-    getIceServers(): Promise<{ iceServers: RTCIceServer[] }>;
+    getIceServers(): Promise<{ iceServers: RTCIceServer[]; ttl: number }>;
     generateCaptcha(): Promise<{ id: string; question: string; expiresAt: string }>;
     verifyCaptcha(id: string, answer: string): Promise<{ valid: boolean }>;
   }
@@ -129,7 +129,7 @@ export function installAI(api: ApiClient): void {
 
   // ─── Utilities ────────────────────────────────────────────────────
   api.getIceServers = async () => {
-    return api.request<{ iceServers: RTCIceServer[] }>('/utilities/ice-servers');
+    return api.request<{ iceServers: RTCIceServer[]; ttl: number }>('/turn/credentials');
   };
 
   api.generateCaptcha = async () => {

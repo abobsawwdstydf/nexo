@@ -70,6 +70,10 @@ func UpdatePhotoAlbum(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
+	if req.CoverURL != "" && !safeURLRe.MatchString(req.CoverURL) {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid cover URL"})
+	}
+
 	updates := map[string]interface{}{
 		"updated_at": time.Now(),
 	}

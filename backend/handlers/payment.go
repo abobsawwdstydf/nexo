@@ -146,10 +146,6 @@ func isYooKassaIP(ip string) bool {
 			return true
 		}
 	}
-	// Для локальної розробки — дозволяємо 127.0.0.1 та 0.0.0.0
-	if ip == "127.0.0.1" || ip == "::1" || ip == "0.0.0.0" {
-		return os.Getenv("GO_ENV") == "development"
-	}
 	return false
 }
 
@@ -225,17 +221,32 @@ func GetPremiumStatus(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	isPremium := user.IsPremium
+	// Check paid premium
+	hasPaidPremium := user.IsPremium
 	if user.PremiumUntil != nil && user.PremiumUntil.Before(time.Now()) {
-		isPremium = false
+		hasPaidPremium = false
 		db.GetDB().Model(&user).Updates(map[string]interface{}{
 			"is_premium": false,
 		})
 	}
 
+	// Calculate beta trial status
+	betaEnd := user.CreatedAt.Add(betaTrialDays * 24 * time.Hour)
+	isBetaActive := time.Now().Before(betaEnd)
+	betaDaysLeft := int(betaEnd.Sub(time.Now()).Hours() / 24)
+	if betaDaysLeft < 0 {
+		betaDaysLeft = 0
+	}
+
+	isPremium := hasPaidPremium || isBetaActive
+
 	return c.JSON(fiber.Map{
-		"isPremium":    isPremium,
-		"premiumUntil": user.PremiumUntil,
+		"isPremium":     isPremium,
+		"premiumUntil":  user.PremiumUntil,
+		"plan":          "НуЧе",
+		"betaActive":    isBetaActive,
+		"betaDaysLeft":  betaDaysLeft,
+		"betaTotalDays": betaTrialDays,
 	})
 }
 
@@ -563,6 +574,7 @@ func verifyPaymentWithYooKassa(paymentID string) (*YooKassaGetPaymentResponse, e
 // GetPremiumPrices — отримати ціни premium
 func GetPremiumPrices(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
+		"plan": "НуЧе",
 		"prices": map[int]int{
 			1:  99,
 			3:  249,

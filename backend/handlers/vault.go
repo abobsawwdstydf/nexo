@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"nexo/db"
@@ -22,29 +24,40 @@ func VaultUpload(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "File required"})
 	}
 
-	// Save file
-	filename := generateID() + "_" + file.Filename
-	filepath := "../uploads/vault/" + filename
+	// Save file — sanitize filename to prevent path traversal
+	safeFilename := filepath.Base(file.Filename)
+	filename := generateID() + "_" + safeFilename
+	savePath := filepath.Join("..", "uploads", "vault", filename)
 	os.MkdirAll("../uploads/vault", 0755)
-	if err := c.SaveFile(file, filepath); err != nil {
+	if err := c.SaveFile(file, savePath); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file"})
 	}
 
 	// Calculate checksum
-	f, _ := os.Open(filepath)
+	f, _ := os.Open(savePath)
 	defer f.Close()
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err == nil {
 		// checksum calculated
 	}
 
+	// Detect MIME type server-side
+	mimeType := "application/octet-stream"
+	if f, err := os.Open(savePath); err == nil {
+		buf := make([]byte, 512)
+		if n, _ := f.Read(buf); n > 0 {
+			mimeType = http.DetectContentType(buf[:n])
+		}
+		f.Close()
+	}
+
 	vaultFile := models.VaultFile{
 		ID:           generateID(),
 		UserID:       userID,
-		Filename:     file.Filename,
+		Filename:     safeFilename,
 		EncryptedURL: "/uploads/vault/" + filename,
 		Size:         file.Size,
-		MimeType:     file.Header.Get("Content-Type"),
+		MimeType:     mimeType,
 		Checksum:     fmt.Sprintf("%x", h.Sum(nil)),
 		CreatedAt:    time.Now(),
 	}

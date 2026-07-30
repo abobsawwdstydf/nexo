@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -43,22 +43,22 @@ interface SettingsModalProps {
 }
 
 const tabs: { id: SettingsTab; label: string; icon: typeof Bell }[] = [
-  { id: 'general', label: 'Основные', icon: User },
-  { id: 'notifications', label: 'Уведомления', icon: Bell },
-  { id: 'appearance', label: 'Внешний вид', icon: Palette },
-  { id: 'privacy', label: 'Конфиденциальность', icon: Shield },
-  { id: 'premium', label: 'Премиум', icon: Crown },
-  { id: 'profile', label: 'Профиль', icon: User },
+  { id: 'general', label: 'РћСЃРЅРѕРІРЅС‹Рµ', icon: User },
+  { id: 'notifications', label: 'РЈРІРµРґРѕРјР»РµРЅРёСЏ', icon: Bell },
+  { id: 'appearance', label: 'Р’РЅРµС€РЅРёР№ РІРёРґ', icon: Palette },
+  { id: 'privacy', label: 'РљРѕРЅС„РёРґРµРЅС†РёР°Р»СЊРЅРѕСЃС‚СЊ', icon: Shield },
+  { id: 'premium', label: 'РќСѓР§Рµ', icon: Crown },
+  { id: 'profile', label: 'РџСЂРѕС„РёР»СЊ', icon: User },
 ];
 
 function GeneralSettings() {
   return (
     <div className="space-y-1">
-      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Общие</h3>
-      <SettingRow icon={Globe} label="Язык" value="Русский" />
-      <SettingRow icon={Smartphone} label="Аппаратное ускорение" value="Вкл" toggle />
-      <SettingRow icon={Volume2} label="Звуки в приложении" value="Вкл" toggle />
-      <SettingRow icon={Vibrate} label="Вибрация" value="Вкл" toggle />
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">РћР±С‰РёРµ</h3>
+      <SettingRow icon={Globe} label="РЇР·С‹Рє" value="Р СѓСЃСЃРєРёР№" />
+      <SettingRow icon={Smartphone} label="РђРїРїР°СЂР°С‚РЅРѕРµ СѓСЃРєРѕСЂРµРЅРёРµ" value="Р’РєР»" toggle />
+      <SettingRow icon={Volume2} label="Р—РІСѓРєРё РІ РїСЂРёР»РѕР¶РµРЅРёРё" value="Р’РєР»" toggle />
+      <SettingRow icon={Vibrate} label="Р’РёР±СЂР°С†РёСЏ" value="Р’РєР»" toggle />
     </div>
   );
 }
@@ -90,13 +90,13 @@ function NotificationSettings() {
 
   return (
     <div className="space-y-1">
-      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Уведомления</h3>
-      <SettingRow icon={Bell} label="Личные сообщения" value="Вкл" toggle />
-      <SettingRow icon={Users} label="Группы" value="Вкл" toggle />
-      <SettingRow icon={MessageCircle} label="Каналы" value="Вкл" toggle />
-      <SettingRow icon={Phone} label="Звонки" value="Вкл" toggle />
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">РЈРІРµРґРѕРјР»РµРЅРёСЏ</h3>
+      <SettingRow icon={Bell} label="Р›РёС‡РЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ" value="Р’РєР»" toggle />
+      <SettingRow icon={Users} label="Р“СЂСѓРїРїС‹" value="Р’РєР»" toggle />
+      <SettingRow icon={MessageCircle} label="РљР°РЅР°Р»С‹" value="Р’РєР»" toggle />
+      <SettingRow icon={Phone} label="Р—РІРѕРЅРєРё" value="Р’РєР»" toggle />
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
-      <SettingRow icon={BellOff} label="Не беспокоить" value="Выкл" toggle />
+      <SettingRow icon={BellOff} label="РќРµ Р±РµСЃРїРѕРєРѕРёС‚СЊ" value="Р’С‹РєР»" toggle />
 
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
 
@@ -104,7 +104,7 @@ function NotificationSettings() {
       <div className="px-3 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Radio size={15} className="text-white/25" />
-          <span className="text-xs text-white/60">Push-уведомления</span>
+          <span className="text-xs text-white/60">Push-СѓРІРµРґРѕРјР»РµРЅРёСЏ</span>
         </div>
         <div className="flex items-center gap-2">
           {pushLoading ? (
@@ -133,7 +133,7 @@ function NotificationSettings() {
           onClick={handleTestNotification}
           className="ml-11 text-[11px] text-white/30 hover:text-white/50 transition-colors"
         >
-          Отправить тестовое уведомление
+          РћС‚РїСЂР°РІРёС‚СЊ С‚РµСЃС‚РѕРІРѕРµ СѓРІРµРґРѕРјР»РµРЅРёРµ
         </motion.button>
       )}
     </div>
@@ -141,27 +141,27 @@ function NotificationSettings() {
 }
 
 const THEMES = [
-  { id: 'dark', label: 'Тёмная', icon: Moon, desc: 'Классический тёмный режим' },
-  { id: 'light', label: 'Светлая', icon: Sun, desc: 'Светлая тема' },
-  { id: 'amoled', label: 'AMOLED', icon: Moon, desc: 'Глубокий чёрный' },
-  { id: 'midnight', label: 'Полуночная', icon: Monitor, desc: 'Тёмно-синий' },
+  { id: 'dark', label: 'РўС‘РјРЅР°СЏ', icon: Moon, desc: 'РљР»Р°СЃСЃРёС‡РµСЃРєРёР№ С‚С‘РјРЅС‹Р№ СЂРµР¶РёРј' },
+  { id: 'light', label: 'РЎРІРµС‚Р»Р°СЏ', icon: Sun, desc: 'РЎРІРµС‚Р»Р°СЏ С‚РµРјР°' },
+  { id: 'amoled', label: 'AMOLED', icon: Moon, desc: 'Р“Р»СѓР±РѕРєРёР№ С‡С‘СЂРЅС‹Р№' },
+  { id: 'midnight', label: 'РџРѕР»СѓРЅРѕС‡РЅР°СЏ', icon: Monitor, desc: 'РўС‘РјРЅРѕ-СЃРёРЅРёР№' },
 ] as const;
 
 const COLOR_SCHEMES = [
-  { id: 'blue', color: '#3b82f6', label: 'Синий' },
-  { id: 'purple', color: '#8b5cf6', label: 'Фиолетовый' },
-  { id: 'green', color: '#22c55e', label: 'Зелёный' },
-  { id: 'red', color: '#ef4444', label: 'Красный' },
-  { id: 'orange', color: '#f97316', label: 'Оранжевый' },
-  { id: 'indigo', color: '#6366f1', label: 'Индиго' },
-  { id: 'cyan', color: '#06b6d4', label: 'Голубой' },
-  { id: 'rose', color: '#f43f5e', label: 'Розовый' },
-  { id: 'emerald', color: '#10b981', label: 'Изумрудный' },
-  { id: 'amber', color: '#f59e0b', label: 'Янтарный' },
-  { id: 'slate', color: '#64748b', label: 'Серый' },
-  { id: 'pink', color: '#ec4899', label: 'Пинк' },
-  { id: 'teal', color: '#14b8a6', label: 'Бирюзовый' },
-  { id: 'yellow', color: '#eab308', label: 'Жёлтый' },
+  { id: 'blue', color: '#3b82f6', label: 'РЎРёРЅРёР№' },
+  { id: 'purple', color: '#8b5cf6', label: 'Р¤РёРѕР»РµС‚РѕРІС‹Р№' },
+  { id: 'green', color: '#22c55e', label: 'Р—РµР»С‘РЅС‹Р№' },
+  { id: 'red', color: '#ef4444', label: 'РљСЂР°СЃРЅС‹Р№' },
+  { id: 'orange', color: '#f97316', label: 'РћСЂР°РЅР¶РµРІС‹Р№' },
+  { id: 'indigo', color: '#6366f1', label: 'РРЅРґРёРіРѕ' },
+  { id: 'cyan', color: '#06b6d4', label: 'Р“РѕР»СѓР±РѕР№' },
+  { id: 'rose', color: '#f43f5e', label: 'Р РѕР·РѕРІС‹Р№' },
+  { id: 'emerald', color: '#10b981', label: 'РР·СѓРјСЂСѓРґРЅС‹Р№' },
+  { id: 'amber', color: '#f59e0b', label: 'РЇРЅС‚Р°СЂРЅС‹Р№' },
+  { id: 'slate', color: '#64748b', label: 'РЎРµСЂС‹Р№' },
+  { id: 'pink', color: '#ec4899', label: 'РџРёРЅРє' },
+  { id: 'teal', color: '#14b8a6', label: 'Р‘РёСЂСЋР·РѕРІС‹Р№' },
+  { id: 'yellow', color: '#eab308', label: 'Р–С‘Р»С‚С‹Р№' },
 ];
 
 function AppearanceSettings() {
@@ -184,7 +184,7 @@ function AppearanceSettings() {
     <div className="space-y-5">
       {/* Theme */}
       <div>
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-3">Тема оформления</h3>
+        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-3">РўРµРјР° РѕС„РѕСЂРјР»РµРЅРёСЏ</h3>
         <div className="grid grid-cols-2 gap-2">
           {THEMES.map(t => {
             const Icon = t.icon;
@@ -221,7 +221,7 @@ function AppearanceSettings() {
 
       {/* Color scheme */}
       <div>
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-3">Цвет акцента</h3>
+        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-3">Р¦РІРµС‚ Р°РєС†РµРЅС‚Р°</h3>
         <div className="grid grid-cols-7 gap-2 px-1">
           {COLOR_SCHEMES.map(c => {
             const isActive = colorScheme === c.id;
@@ -246,7 +246,7 @@ function AppearanceSettings() {
           })}
         </div>
         <p className="text-[10px] text-white/25 mt-2 px-1">
-          Цвет акцента используется для выделения элементов интерфейса
+          Р¦РІРµС‚ Р°РєС†РµРЅС‚Р° РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ РІС‹РґРµР»РµРЅРёСЏ СЌР»РµРјРµРЅС‚РѕРІ РёРЅС‚РµСЂС„РµР№СЃР°
         </p>
       </div>
     </div>
@@ -272,9 +272,9 @@ function PrivacySettings() {
       a.download = `nexo-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Данные экспортированы');
+      toast.success('Р”Р°РЅРЅС‹Рµ СЌРєСЃРїРѕСЂС‚РёСЂРѕРІР°РЅС‹');
     } catch (err) {
-      toast.error('Ошибка экспорта данных');
+      toast.error('РћС€РёР±РєР° СЌРєСЃРїРѕСЂС‚Р° РґР°РЅРЅС‹С…');
     } finally {
       setExporting(false);
     }
@@ -284,11 +284,11 @@ function PrivacySettings() {
     setDeleting(true);
     try {
       await api.request('/account/delete', { method: 'DELETE' });
-      toast.success('Аккаунт удалён');
+      toast.success('РђРєРєР°СѓРЅС‚ СѓРґР°Р»С‘РЅ');
       localStorage.clear();
       window.location.href = '/login';
     } catch (err) {
-      toast.error('Ошибка удаления аккаунта');
+      toast.error('РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ Р°РєРєР°СѓРЅС‚Р°');
     } finally {
       setDeleting(false);
     }
@@ -296,16 +296,16 @@ function PrivacySettings() {
 
   return (
     <div className="space-y-1">
-      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Приватность</h3>
-      <SettingRow icon={Eye} label="Кто видит номер" value="Никто" />
-      <SettingRow icon={EyeOff} label="Статус в сети" value="Все" />
-      <SettingRow icon={Check} label="Подтверждение прочтения" value="Вкл" toggle />
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">РџСЂРёРІР°С‚РЅРѕСЃС‚СЊ</h3>
+      <SettingRow icon={Eye} label="РљС‚Рѕ РІРёРґРёС‚ РЅРѕРјРµСЂ" value="РќРёРєС‚Рѕ" />
+      <SettingRow icon={EyeOff} label="РЎС‚Р°С‚СѓСЃ РІ СЃРµС‚Рё" value="Р’СЃРµ" />
+      <SettingRow icon={Check} label="РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ РїСЂРѕС‡С‚РµРЅРёСЏ" value="Р’РєР»" toggle />
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
-      <SettingRow icon={Shield} label="Безопасность" value="" />
+      <SettingRow icon={Shield} label="Р‘РµР·РѕРїР°СЃРЅРѕСЃС‚СЊ" value="" />
 
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
 
-      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2 pt-3">Данные</h3>
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2 pt-3">Р”Р°РЅРЅС‹Рµ</h3>
 
       {/* Export data */}
       <motion.button
@@ -315,7 +315,7 @@ function PrivacySettings() {
         whileTap={{ scale: 0.99 }}
       >
         <Download size={15} className="text-white/25" />
-        <span className="text-xs text-white/60 flex-1 text-left">Экспорт данных</span>
+        <span className="text-xs text-white/60 flex-1 text-left">Р­РєСЃРїРѕСЂС‚ РґР°РЅРЅС‹С…</span>
         {exporting ? (
           <Loader size={12} className="text-white/30 animate-spin" />
         ) : (
@@ -331,28 +331,28 @@ function PrivacySettings() {
           whileTap={{ scale: 0.99 }}
         >
           <Trash2 size={15} className="text-red-400/60" />
-          <span className="text-xs text-red-400/70 flex-1 text-left">Удалить аккаунт</span>
+          <span className="text-xs text-red-400/70 flex-1 text-left">РЈРґР°Р»РёС‚СЊ Р°РєРєР°СѓРЅС‚</span>
           <ChevronRight size={12} className="text-white/15" />
         </motion.button>
       ) : (
         <div className="px-3 py-3 space-y-2">
           <div className="flex items-center gap-2 text-xs text-red-400/70">
             <AlertTriangle size={14} />
-            <span>Вы уверены? Это действие необратимо.</span>
+            <span>Р’С‹ СѓРІРµСЂРµРЅС‹? Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµРѕР±СЂР°С‚РёРјРѕ.</span>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setConfirmDelete(false)}
               className="flex-1 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white/60 transition-colors"
             >
-              Отмена
+              РћС‚РјРµРЅР°
             </button>
             <button
               onClick={handleDeleteAccount}
               disabled={deleting}
               className="flex-1 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-xs text-white font-medium transition-colors disabled:opacity-50"
             >
-              {deleting ? 'Удаление...' : 'Удалить'}
+              {deleting ? 'РЈРґР°Р»РµРЅРёРµ...' : 'РЈРґР°Р»РёС‚СЊ'}
             </button>
           </div>
         </div>
@@ -371,7 +371,7 @@ function ProfileSettings({ user }: { user: UserType }) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Профиль</h3>
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">РџСЂРѕС„РёР»СЊ</h3>
 
       <div className="flex items-center gap-4 px-1">
         <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-700 to-zinc-800 flex-shrink-0">
@@ -386,15 +386,15 @@ function ProfileSettings({ user }: { user: UserType }) {
         <div>
           <p className="text-sm font-semibold text-white/90">{user.displayName || user.username}</p>
           <p className="text-xs text-white/40">@{user.username}</p>
-          <p className="text-xs text-white/30 mt-1">{user.bio || 'Нет описания'}</p>
+          <p className="text-xs text-white/30 mt-1">{user.bio || 'РќРµС‚ РѕРїРёСЃР°РЅРёСЏ'}</p>
         </div>
       </div>
 
       <div className="space-y-1 pt-2">
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Аккаунт</h3>
-        <SettingRow icon={User} label="Имя" value={user.displayName || '—'} />
+        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">РђРєРєР°СѓРЅС‚</h3>
+        <SettingRow icon={User} label="РРјСЏ" value={user.displayName || 'вЂ”'} />
         <SettingRow icon={Globe} label="Username" value={`@${user.username}`} />
-        <SettingRow icon={Smartphone} label="Дата регистрации" value={new Date(user.createdAt).toLocaleDateString('ru-RU')} />
+        <SettingRow icon={Smartphone} label="Р”Р°С‚Р° СЂРµРіРёСЃС‚СЂР°С†РёРё" value={new Date(user.createdAt).toLocaleDateString('ru-RU')} />
       </div>
     </div>
   );
@@ -426,18 +426,18 @@ function PremiumSettings() {
       const result = await api.createPayment({ type: 'premium', premiumMonths: selected });
       if (result.confirmationUrl) {
         window.open(result.confirmationUrl, '_blank', 'noopener,noreferrer');
-        toast.success('Страница оплаты открыта');
+        toast.success('РЎС‚СЂР°РЅРёС†Р° РѕРїР»Р°С‚С‹ РѕС‚РєСЂС‹С‚Р°');
       }
     } catch (err) {
       console.error('[Premium] Payment error:', err);
-      toast.error('Ошибка создания платежа');
+      toast.error('РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ РїР»Р°С‚РµР¶Р°');
     } finally {
       setPaying(false);
     }
   };
 
   const months = [1, 3, 6, 12];
-  const currencySymbol = currency === 'RUB' ? '₽' : currency === 'USD' ? '$' : currency;
+  const currencySymbol = currency === 'RUB' ? 'в‚Ѕ' : currency === 'USD' ? '$' : currency;
   const isPremium = premiumStatus?.isPremium ?? false;
 
   if (loading) {
@@ -455,28 +455,28 @@ function PremiumSettings() {
           <Crown size={18} className="text-amber-400" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white/90">Нексо Премиум</h3>
+          <h3 className="text-sm font-semibold text-white/90">РќСѓР§Рµ</h3>
           <p className="text-[10px] text-white/40">
             {isPremium
-              ? `Действует до ${new Date(premiumStatus!.premiumUntil!).toLocaleDateString('ru-RU')}`
-              : 'Разблокируйте все возможности'}
+              ? `Р”РµР№СЃС‚РІСѓРµС‚ РґРѕ ${new Date(premiumStatus!.premiumUntil!).toLocaleDateString('ru-RU')}`
+              : 'Р Р°Р·Р±Р»РѕРєРёСЂСѓР№С‚Рµ РІСЃРµ РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё'}
           </p>
         </div>
         {isPremium && (
           <div className="ml-auto px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-400/20 to-orange-400/20 border border-amber-400/20">
-            <span className="text-[10px] font-semibold text-amber-400">АКТИВЕН</span>
+            <span className="text-[10px] font-semibold text-amber-400">РђРљРўРР’Р•Рќ</span>
           </div>
         )}
       </div>
 
       <div className="flex flex-wrap gap-1.5 px-1">
         {[
-          { icon: '🎨', label: 'Уникальные темы' },
-          { icon: '📎', label: 'Файлы до 2 ГБ' },
-          { icon: '🏆', label: 'Особый значок' },
-          { icon: '🎮', label: 'Эксклюзивные стикеры' },
-          { icon: '☁️', label: 'Облако 100 ГБ' },
-          { icon: '👑', label: 'Приоритетная поддержка' },
+          { icon: 'рџЋЁ', label: 'РЈРЅРёРєР°Р»СЊРЅС‹Рµ С‚РµРјС‹' },
+          { icon: 'рџ“Ћ', label: 'Р¤Р°Р№Р»С‹ РґРѕ 2 Р“Р‘' },
+          { icon: 'рџЏ†', label: 'РћСЃРѕР±С‹Р№ Р·РЅР°С‡РѕРє' },
+          { icon: 'рџЋ®', label: 'Р­РєСЃРєР»СЋР·РёРІРЅС‹Рµ СЃС‚РёРєРµСЂС‹' },
+          { icon: 'вЃпёЏ', label: 'РћР±Р»Р°РєРѕ 100 Р“Р‘' },
+          { icon: 'рџ‘‘', label: 'РџСЂРёРѕСЂРёС‚РµС‚РЅР°СЏ РїРѕРґРґРµСЂР¶РєР°' },
         ].map((feat, i) => (
           <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
             <span className="text-sm">{feat.icon}</span>
@@ -503,13 +503,13 @@ function PremiumSettings() {
                       : 'border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]'
                   }`}
                 >
-                  <span className="text-sm font-medium text-white/80">{m} {m === 1 ? 'месяц' : m < 5 ? 'месяца' : 'месяцев'}</span>
+                  <span className="text-sm font-medium text-white/80">{m} {m === 1 ? 'РјРµСЃСЏС†' : m < 5 ? 'РјРµСЃСЏС†Р°' : 'РјРµСЃСЏС†РµРІ'}</span>
                   {price && (
                     <div className="mt-1">
                       <span className="text-lg font-bold text-white/90">{price} {currencySymbol}</span>
                       {monthlyPrice && (
                         <span className="text-[10px] text-white/30 ml-1">
-                          {monthlyPrice} {currencySymbol}/мес
+                          {monthlyPrice} {currencySymbol}/РјРµСЃ
                         </span>
                       )}
                     </div>
@@ -524,7 +524,7 @@ function PremiumSettings() {
             disabled={!selected || paying}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {paying ? 'Создание платежа...' : selected ? `Купить за ${prices[selected]} ${currencySymbol}` : 'Выберите тариф'}
+            {paying ? 'РЎРѕР·РґР°РЅРёРµ РїР»Р°С‚РµР¶Р°...' : selected ? `РљСѓРїРёС‚СЊ Р·Р° ${prices[selected]} ${currencySymbol}` : 'Р’С‹Р±РµСЂРёС‚Рµ С‚Р°СЂРёС„'}
           </button>
         </>
       )}
@@ -547,11 +547,11 @@ function SettingRow({
   radio?: boolean;
   selected?: boolean;
 }) {
-  const [checked, setChecked] = useState(toggle ? value === 'Вкл' : false);
+  const [checked, setChecked] = useState(toggle ? value === 'Р’РєР»' : false);
 
   return (
     <motion.div
-      className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors cursor-pointer"
+      className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.03] hover:border-white/[0.06] border border-transparent transition-all duration-200 cursor-pointer"
       whileTap={{ scale: 0.99 }}
       onClick={() => toggle && setChecked(v => !v)}
     >
@@ -607,14 +607,14 @@ export default function SettingsModal({ user, initialTab = 'general', onClose }:
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.92, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 20 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-        className="relative w-full max-w-[560px] h-[80vh] flex rounded-2xl liquid-glass-strong overflow-hidden"
+        initial={{ opacity: 0, scale: 0.92, y: 20, filter: "blur(4px)" }}
+        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.92, y: 20, filter: "blur(4px)" }}
+        transition={{ type: "spring", stiffness: 300, damping: 28 }}
+        className="relative w-full max-w-[560px] h-[80vh] flex rounded-2xl liquid-glass-strong overflow-hidden glass-ambient"
         onClick={e => e.stopPropagation()}
       >
-        {/* ─── Close ──────────────────────────────────────────────── */}
+        {/* в”Ђв”Ђв”Ђ Close в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
         <motion.button
           onClick={onClose}
           className="absolute top-3 right-3 z-10 p-1.5 rounded-xl bg-black/40 border border-white/[0.06] hover:bg-white/[0.1] transition-colors"
@@ -624,10 +624,10 @@ export default function SettingsModal({ user, initialTab = 'general', onClose }:
           <X size={16} className="text-white/50" />
         </motion.button>
 
-        {/* ─── Sidebar ────────────────────────────────────────────── */}
+        {/* в”Ђв”Ђв”Ђ Sidebar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
         <div className="w-48 flex-shrink-0 p-3 border-r border-white/[0.06] flex flex-col gap-1">
           <div className="text-xs font-semibold text-white/30 uppercase font-display tracking-wider px-3 pb-3 pt-2">
-            Настройки
+            РќР°СЃС‚СЂРѕР№РєРё
           </div>
           {tabs.map(tab => (
             <button
@@ -647,7 +647,7 @@ export default function SettingsModal({ user, initialTab = 'general', onClose }:
           ))}
         </div>
 
-        {/* ─── Content ────────────────────────────────────────────── */}
+        {/* в”Ђв”Ђв”Ђ Content в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-5">
           <AnimatePresence mode="wait">
             <motion.div
@@ -670,3 +670,4 @@ export default function SettingsModal({ user, initialTab = 'general', onClose }:
     </motion.div>
   );
 }
+

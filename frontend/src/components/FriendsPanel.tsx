@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -126,7 +126,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
         setAddResults(Array.isArray(results) ? results : []);
         setAddError('');
       } catch {
-        setAddError('Ошибка поиска');
+        setAddError('РћС€РёР±РєР° РїРѕРёСЃРєР°');
       } finally {
         setAddLoading(false);
       }
@@ -142,7 +142,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
       setShowAddFriend(false);
       fetchData();
     } catch {
-      setAddError('Не удалось отправить заявку');
+      setAddError('РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°СЏРІРєСѓ');
     }
   };
 
@@ -174,16 +174,16 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
   };
 
   const tabs: { key: Tab; label: string; icon: typeof Users }[] = [
-    { key: 'online', label: 'В сети', icon: Users },
-    { key: 'all', label: 'Все', icon: Users },
-    { key: 'pending', label: 'Заявки', icon: UserPlus },
-    { key: 'blocked', label: 'Заблок.', icon: Ban },
+    { key: 'online', label: 'Р’ СЃРµС‚Рё', icon: Users },
+    { key: 'all', label: 'Р’СЃРµ', icon: Users },
+    { key: 'pending', label: 'Р—Р°СЏРІРєРё', icon: UserPlus },
+    { key: 'blocked', label: 'Р—Р°Р±Р»РѕРє.', icon: Ban },
   ];
 
   const renderFriendList = (items: FriendWithId[], emptyText: string) => {
     if (items.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
           <Users size={28} className="text-white/15 mb-3" />
           <p className="text-sm text-white/30">{emptyText}</p>
         </div>
@@ -197,7 +197,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
             key={friend.id}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors"
+            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-all duration-200 hover:border-white/[0.06] border border-transparent"
           >
             <div className="relative flex-shrink-0">
               <FriendAvatar user={friend} size="md" />
@@ -209,7 +209,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
                   {friend.displayName}
                 </span>
                 {friend.isOnline && (
-                  <span className="text-[10px] text-green-400/60">в сети</span>
+                  <span className="text-[10px] text-green-400/60">РІ СЃРµС‚Рё</span>
                 )}
               </div>
               <p className="text-xs text-white/30 truncate">@{friend.username}</p>
@@ -218,14 +218,14 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
               <button
                 onClick={() => onStartChat(friend.id)}
                 className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
-                title="Написать"
+                title="РќР°РїРёСЃР°С‚СЊ"
               >
                 <MessageCircle size={14} className="text-white/40 hover:text-white/70" />
               </button>
               <button
                 onClick={() => handleRemove(friend.friendshipId)}
                 className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
-                title="Удалить из друзей"
+                title="РЈРґР°Р»РёС‚СЊ РёР· РґСЂСѓР·РµР№"
               >
                 <UserX size={14} className="text-red-400/50 hover:text-red-400" />
               </button>
@@ -240,9 +240,9 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
     const incoming = requests.filter(r => r.status === 'pending');
     if (incoming.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
           <Clock size={28} className="text-white/15 mb-3" />
-          <p className="text-sm text-white/30">Нет входящих заявок</p>
+          <p className="text-sm text-white/30">РќРµС‚ РІС…РѕРґСЏС‰РёС… Р·Р°СЏРІРѕРє</p>
         </div>
       );
     }
@@ -267,14 +267,14 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
               <button
                 onClick={() => handleAccept(req.id)}
                 className="p-1.5 rounded-lg bg-green-400/10 hover:bg-green-400/20 transition-colors"
-                title="Принять"
+                title="РџСЂРёРЅСЏС‚СЊ"
               >
                 <Check size={14} className="text-green-400/70" />
               </button>
               <button
                 onClick={() => handleDecline(req.id)}
                 className="p-1.5 rounded-lg bg-red-400/10 hover:bg-red-400/20 transition-colors"
-                title="Отклонить"
+                title="РћС‚РєР»РѕРЅРёС‚СЊ"
               >
                 <X size={14} className="text-red-400/70" />
               </button>
@@ -290,10 +290,10 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center glass-card-enhanced">
             <Users size={15} className="text-indigo-400/70" />
           </div>
-          <h2 className="text-sm font-semibold text-white/90 font-display">Друзья</h2>
+          <h2 className="text-sm font-semibold text-white/90 font-display">Р”СЂСѓР·СЊСЏ</h2>
         </div>
         <div className="flex items-center gap-1">
           <motion.button
@@ -301,7 +301,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
             className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            title="Добавить друга"
+            title="Р”РѕР±Р°РІРёС‚СЊ РґСЂСѓРіР°"
           >
             <UserPlus size={15} className="text-white/40" />
           </motion.button>
@@ -332,12 +332,12 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
                   type="text"
                   value={addQuery}
                   onChange={e => setAddQuery(e.target.value)}
-                  placeholder="Поиск пользователей..."
+                  placeholder="РџРѕРёСЃРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№..."
                   className="w-full h-9 pl-9 pr-3 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
                 />
               </div>
               {addLoading && (
-                <p className="text-xs text-white/30 text-center">Поиск...</p>
+                <p className="text-xs text-white/30 text-center">РџРѕРёСЃРє...</p>
               )}
               {addError && (
                 <p className="text-xs text-red-400/70">{addError}</p>
@@ -359,7 +359,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
                       <button
                         onClick={() => handleSendRequest(u.id)}
                         className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors flex-shrink-0"
-                        title="Добавить в друзья"
+                        title="Р”РѕР±Р°РІРёС‚СЊ РІ РґСЂСѓР·СЊСЏ"
                       >
                         <UserPlus size={12} className="text-indigo-400/70" />
                       </button>
@@ -398,7 +398,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Поиск среди друзей..."
+              placeholder="РџРѕРёСЃРє СЃСЂРµРґРё РґСЂСѓР·РµР№..."
               className="w-full h-8 pl-9 pr-3 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
             />
           </div>
@@ -420,18 +420,19 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
             ))}
           </div>
         ) : tab === 'online' ? (
-          renderFriendList(onlineFriends, 'Нет друзей в сети')
+          renderFriendList(onlineFriends, 'РќРµС‚ РґСЂСѓР·РµР№ РІ СЃРµС‚Рё')
         ) : tab === 'all' ? (
-          renderFriendList(filteredFriends, 'Нет друзей')
+          renderFriendList(filteredFriends, 'РќРµС‚ РґСЂСѓР·РµР№')
         ) : tab === 'pending' ? (
           renderPending()
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
             <Ban size={28} className="text-white/15 mb-3" />
-            <p className="text-sm text-white/30">Нет заблокированных</p>
+            <p className="text-sm text-white/30">РќРµС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРЅС‹С…</p>
           </div>
         )}
       </div>
     </div>
   );
 }
+

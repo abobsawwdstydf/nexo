@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"io"
@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -15,9 +16,10 @@ import (
 )
 
 const (
-	stickerCacheDir   = "./data/sticker_cache"
-	stickerRemoteBase = "https://stickers.darkheavens.ru"
-	stickerMaxAge     = 7 * 24 * time.Hour
+	stickerCacheDir     = "./data/sticker_cache"
+	stickerRemoteBase   = "https://stickers.darkheavens.ru"
+	stickerMaxAge       = 7 * 24 * time.Hour
+	stickerCacheMaxSize = 500 * 1024 * 1024 // 500 MB max cache size
 )
 
 var (
@@ -51,6 +53,46 @@ func sanitizeStickerName(name string) error {
 		return fiber.ErrBadRequest
 	}
 	return nil
+}
+
+func enforceStickerCacheSize() {
+	entries, err := os.ReadDir(stickerCacheDir)
+	if err != nil {
+		return
+	}
+
+	var totalSize int64
+	type fileInfo struct {
+		name string
+		mod  time.Time
+		size int64
+	}
+	var files []fileInfo
+
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		totalSize += info.Size()
+		files = append(files, fileInfo{name: entry.Name(), mod: info.ModTime(), size: info.Size()})
+	}
+
+	if totalSize <= stickerCacheMaxSize {
+		return
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].mod.Before(files[j].mod)
+	})
+
+	for _, f := range files {
+		os.Remove(filepath.Join(stickerCacheDir, f.name))
+		totalSize -= f.size
+		if totalSize <= stickerCacheMaxSize {
+			break
+		}
+	}
 }
 
 func StickerProxy(c *fiber.Ctx) error {
@@ -113,6 +155,8 @@ func StickerProxy(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).SendString("read error")
 	}
+
+	enforceStickerCacheSize()
 
 	os.WriteFile(cachePath, body, 0644)
 

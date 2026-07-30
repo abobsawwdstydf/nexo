@@ -5,9 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const backendUrl = env.VITE_API_URL || 'http://localhost:6767';
-  const backendWs = backendUrl.replace(/^http/, 'ws');
-  const port = Number(env.PORT) || 2273;
+  const backendUrl = env.VITE_API_URL || 'https://neexxoo.hakerone.ru';
 
   return {
   plugins: [
@@ -151,31 +149,6 @@ export default defineConfig(({ mode }) => {
       'react-dom',
       'zustand',
     ],
-  },
-  server: {
-    host: '0.0.0.0',
-    allowedHosts: true,
-    port,
-    hmr: {
-      protocol: 'ws',
-      host: 'localhost',
-      port,
-    },
-    https: false,
-    proxy: {
-      '/api': {
-        target: backendUrl,
-        changeOrigin: true,
-      },
-      '/uploads': {
-        target: backendUrl,
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: backendWs,
-        ws: true,
-      },
-    },
   },
   };
 });

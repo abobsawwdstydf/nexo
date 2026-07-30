@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,6 +53,21 @@ func UploadPremiumBadge(c *fiber.Ctx) error {
 	if user.PremiumBadgeUrl != "" {
 		oldFile := filepath.Join(badgeStorageDir, filepath.Base(user.PremiumBadgeUrl))
 		os.Remove(oldFile)
+	}
+
+	// Validate MIME type server-side (not just extension)
+	f, err := file.Open()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to open file"})
+	}
+	buf := make([]byte, 512)
+	n, _ := f.Read(buf)
+	f.Close()
+	if n > 0 {
+		mimeType := http.DetectContentType(buf[:n])
+		if !strings.HasPrefix(mimeType, "image/") {
+			return c.Status(400).JSON(fiber.Map{"error": "File is not a valid image"})
+		}
 	}
 
 	// Save new badge

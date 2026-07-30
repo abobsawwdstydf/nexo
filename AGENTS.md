@@ -1,5 +1,51 @@
 # AGENTS.md - Global Agent Instructions
 
+## ⚠️ НЕПРИКОСНОВЕННОСТЬ ДАННЫХ ПОЛЬЗОВАТЕЛЕЙ (ABSOLUTE RULE)
+
+**НИ ПРИ КАКИХ ОБСТОЯТЕЛЬСТВАХ НЕ ТРОГАТЬ:**
+- Базу данных SQLite (`nexo.db`, `nexo.db-*`)
+- Файлы пользователей (`uploads/`, `backend/uploads/`)
+- Таблицы пользователей, сообщений, чатов, историй
+- JWT-токены, сессии, ключи шифрования
+- Пароли, email-адреса, любые персональные данные
+
+**МОЖНО ИЗМЕНЯТЬ ТОЛЬКО:**
+- Код (`.go`, `.ts`, `.tsx`, `.css`, конфиги)
+- Публичные настройки (CORS, домены, API-эндпоинты)
+- Документацию, README, AGENTS.md, PLANS.md
+
+**Нарушение этого правила = необратимая потеря данных пользователей.**
+
+---
+
+## 🏢 О ПРОЕКТЕ
+
+- **Компания:** Dark Heavens Corporate
+- **Сайт:** https://www.darkheavens.ru
+- **Проект:** Нексо (Nexo) — Защищённый мессенджер
+- **Репозиторий:** GitHub Private
+- **Статус:** Production (бета 14 дней)
+
+### Деплой
+- **Frontend (Cloudflare Pages):** Автоматический деплой из GitHub
+- **Backend (сервер 192.168.0.64):** SSH + авто-деплой из GitHub
+- **AI Proxy:** https://nexo-ai-proxy.h40664555.workers.dev
+
+### Домены фронтенда
+- https://msg.darkheavens.ru
+- https://msg.hakerone.ru
+- https://n.darkheavens.ru
+- https://n.hakerone.ru
+- https://nexo.darkheavens.ru
+- https://nexo.hakerone.ru
+- https://xn--e1akhgo.hakerone.ru (нексо.hakerone.ru)
+- https://xn--e1akhgo.darkheavens.ru (нексо.darkheavens.ru)
+
+### Бэкенд
+- **Публичный API:** https://neexxoo.hakerone.ru
+
+---
+
 ## Core Thinking Protocol
 
 Before answering any question or solving any problem, follow this thinking sequence:

@@ -1,6 +1,8 @@
 ﻿package handlers
 
 import (
+	"encoding/json"
+
 	"nexo/ai"
 	"nexo/db"
 	"nexo/models"
@@ -54,7 +56,12 @@ func StartAIBrowse(c *fiber.Ctx) error {
 
 			// Send WebSocket notification
 			if ws.HubInstance != nil {
-				ws.HubInstance.SendToChat(req.ChatID, []byte(`{"type":"ai:browse:complete","taskId":"`+taskID+`","status":"`+string(t.Status)+`"}`), userID)
+				msg, _ := json.Marshal(map[string]string{
+					"type":   "ai:browse:complete",
+					"taskId": taskID,
+					"status": string(t.Status),
+				})
+				ws.HubInstance.SendToChat(req.ChatID, msg, userID)
 			}
 		}
 	}()

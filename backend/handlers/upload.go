@@ -11,7 +11,9 @@ import (
 	"nexo/models"
 )
 
-const uploadDir = "./uploads"
+// The server is run from backend/, while public uploads live at the project
+// root and are served by main.go at /uploads.
+const uploadDir = "../uploads"
 
 func UploadFile(c *fiber.Ctx) error {
 	_ = c.Locals("userId").(string) // auth check
@@ -26,11 +28,12 @@ func UploadFile(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "File too large (max 50MB)"})
 	}
 
-	// Validate MIME type
+	// Validate MIME type. Do not trust a browser supplied Content-Type alone:
+	// it is used only to disambiguate the WebM container (audio or video).
 	allowedTypes := map[string]bool{
 		"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true,
 		"video/mp4": true, "video/webm": true, "video/quicktime": true,
-		"audio/mpeg": true, "audio/ogg": true, "audio/wav": true,
+		"audio/mpeg": true, "audio/ogg": true, "audio/wav": true, "audio/webm": true,
 		"application/pdf": true,
 	}
 
@@ -46,7 +49,7 @@ func UploadFile(c *fiber.Ctx) error {
 	if err != nil && n == 0 {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to read file header"})
 	}
-	contentType := detectContentType(buf[:n], file.Filename)
+	contentType := detectContentType(buf[:n], file.Filename, file.Header.Get("Content-Type"))
 
 	if !allowedTypes[contentType] {
 		return c.Status(400).JSON(fiber.Map{"error": "File type not allowed: " + contentType})
@@ -55,8 +58,7 @@ func UploadFile(c *fiber.Ctx) error {
 	// SECURITY: Cross-check file extension vs detected content-type
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext != "" {
-		expectedMime := extToMime(ext)
-		if expectedMime != "" && expectedMime != contentType {
+		if !isExtensionCompatible(ext, contentType) {
 			return c.Status(400).JSON(fiber.Map{"error": "File extension does not match content"})
 		}
 	}
@@ -102,7 +104,7 @@ func UploadFile(c *fiber.Ctx) error {
 	return c.Status(201).JSON(media)
 }
 
-func detectContentType(data []byte, filename string) string {
+func detectContentType(data []byte, filename, claimedType string) string {
 	// Check magic bytes
 	if len(data) >= 8 {
 		// PNG
@@ -125,6 +127,15 @@ func detectContentType(data []byte, filename string) string {
 		if data[0] == '%' && data[1] == 'P' && data[2] == 'D' && data[3] == 'F' {
 			return "application/pdf"
 		}
+		// WebM is an EBML container. The container can hold either voice
+		// (audio) or a video note, so only accept that hint after the signature
+		// itself has been verified.
+		if data[0] == 0x1A && data[1] == 0x45 && data[2] == 0xDF && data[3] == 0xA3 {
+			if strings.EqualFold(strings.TrimSpace(strings.Split(claimedType, ";")[0]), "audio/webm") {
+				return "audio/webm"
+			}
+			return "video/webm"
+		}
 	}
 
 	// Fallback to extension
@@ -141,7 +152,7 @@ func detectContentType(data []byte, filename string) string {
 	case ".mp4":
 		return "video/mp4"
 	case ".webm":
-		return "video/webm"
+		return "" // A WebM upload must have a valid EBML header.
 	case ".mov":
 		return "video/quicktime"
 	case ".mp3":
@@ -155,6 +166,14 @@ func detectContentType(data []byte, filename string) string {
 	}
 
 	return "application/octet-stream"
+}
+
+func isExtensionCompatible(ext, contentType string) bool {
+	if ext == ".webm" {
+		return contentType == "video/webm" || contentType == "audio/webm"
+	}
+	expectedMime := extToMime(ext)
+	return expectedMime == "" || expectedMime == contentType
 }
 
 func extToMime(ext string) string {
@@ -198,6 +217,8 @@ func mimeToExt(mime string) string {
 	case "video/mp4":
 		return ".mp4"
 	case "video/webm":
+		return ".webm"
+	case "audio/webm":
 		return ".webm"
 	case "audio/mpeg":
 		return ".mp3"

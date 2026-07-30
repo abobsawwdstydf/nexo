@@ -93,9 +93,6 @@ function clearReconnectState() {
 const getSocketUrl = () => {
   const apiUrl = getApiUrl();
   if (typeof window === 'undefined') return apiUrl;
-  if (window.location.hostname === 'localhost') {
-    return window.location.origin;
-  }
   if (apiUrl.startsWith('http')) {
     return apiUrl.replace(/\/+$/, '');
   }
