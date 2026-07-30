@@ -1,4 +1,4 @@
-import type { Chat } from '../types';
+import type { Chat, UserBasic } from '../types';
 import { ApiClient, getApiBase } from './core';
 
 declare module './core' {
@@ -37,7 +37,7 @@ declare module './core' {
       type?: 'voice' | 'video' | 'group';
       status?: 'completed' | 'missed' | 'declined' | 'failed';
       duration?: number;
-    }): Promise<any>;
+    }): Promise<{ message: string }>;
   }
 }
 
@@ -157,13 +157,13 @@ export function installChats(api: ApiClient): void {
       status: 'completed' | 'missed' | 'declined' | 'failed';
       duration: number;
       createdAt: string;
-      caller: any;
-      callee: any | null;
+      caller: UserBasic;
+      callee: UserBasic | null;
     }>>(`/call-logs${limit ? `?limit=${limit}` : ''}`);
   };
 
   api.createCallLog = async (data) => {
-    return api.request<any>('/call-logs', {
+    return api.request<{ message: string }>('/call-logs', {
       method: 'POST',
       body: JSON.stringify(data),
     });

@@ -283,7 +283,10 @@ func R2PutObject(key string, data []byte, contentType string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("r2 upload error (status %d): failed to read response body: %w", resp.StatusCode, err)
+		}
 		return fmt.Errorf("r2 upload error (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
@@ -353,6 +356,14 @@ func R2DeleteObject(key string) error {
 		return fmt.Errorf("r2 delete failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("r2 delete error (status %d): failed to read response: %w", resp.StatusCode, err)
+		}
+		return fmt.Errorf("r2 delete error (status %d): %s", resp.StatusCode, string(respBody))
+	}
 
 	return nil
 }

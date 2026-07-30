@@ -2,7 +2,7 @@ export default {
   async fetch(request) {
     var url = new URL(request.url);
     var path = url.pathname;
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(request.headers.get('Origin')) });
     if (request.method !== 'POST') return j({ error: 'POST only' }, 405);
     var secret = request.headers.get('X-Proxy-Secret');
     if (secret !== SECRET) return j({ error: 'Unauthorized' }, 401);
@@ -47,10 +47,12 @@ export default {
   }
 };
 
-// Keys are stored in Cloudflare Worker environment variables (wrangler secret put)
-var SECRET = 'anwenjawenjinaijowd78dhq239s7ds';
+// SECRET is set via `npx wrangler secret put SECRET`
+var SECRET = globalThis.SECRET || '';
 var SYS = 'You are Nexo AI. Reply in Russian briefly. Use markdown.';
-var CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,X-Proxy-Secret' };
+var ALLOWED_ORIGINS = ['https://nexo.hakerone.ru', 'https://nexo.darkheavens.ru', 'https://msg.hakerone.ru', 'https://msg.darkheavens.ru', 'https://n.hakerone.ru', 'https://n.darkheavens.ru', 'https://neexoobeec.hakerone.ru', 'https://nneexion.darkheavens.ru', 'http://localhost:2273', 'http://localhost:3000', 'http://localhost:3001'];
+function corsOrigin(origin) { if (!origin) return false; for (var i = 0; i < ALLOWED_ORIGINS.length; i++) { if (origin.indexOf(ALLOWED_ORIGINS[i]) >= 0) return ALLOWED_ORIGINS[i]; } return false; }
+function corsHeaders(origin) { var allowed = corsOrigin(origin); return { 'Access-Control-Allow-Origin': allowed || 'null', 'Access-Control-Allow-Methods': 'POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,X-Proxy-Secret' }; }
 
 // API keys are loaded from environment variables in production
 // To set them: wrangler secret put CEREBRAS_KEY_1, etc.
@@ -102,7 +104,7 @@ var ORDER = ['cerebras', 'groq', 'sambanova', 'mistral', 'openrouter'];
 var ki = {};
 
 function getKey(n) { var k = KEYS[n] || []; if (!k.length || !k[0]) return null; var valid = k.filter(x => x); if (!valid.length) return null; var i = (ki[n] || 0) % valid.length; ki[n] = i + 1; return valid[i]; }
-function j(d, s) { return new Response(JSON.stringify(d), { status: s || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, CORS) }); }
+function j(d, s, origin) { return new Response(JSON.stringify(d), { status: s || 200, headers: Object.assign({ 'Content-Type': 'application/json' }, corsHeaders(origin)) }); }
 
 async function call(name, msgs, stream) {
   var c = PROV[name]; if (!c) throw new Error('No provider: ' + name);

@@ -17,7 +17,9 @@ import (
 const cloudStorageDir = "./uploads/cloud"
 
 func init() {
-	os.MkdirAll(cloudStorageDir, 0755)
+	if err := os.MkdirAll(cloudStorageDir, 0755); err != nil {
+		log.Printf("[CLOUD] Failed to create storage directory: %v", err)
+	}
 }
 
 // ─── Premium check ─────────────────────────────────────────────────────
@@ -160,10 +162,14 @@ func CloudDelete(c *fiber.Ctx) error {
 	// Delete physical file
 	filename := filepath.Base(cloudFile.URL)
 	filePath := filepath.Join(cloudStorageDir, filename)
-	os.Remove(filePath) // ignore error
+	if err := os.Remove(filePath); err != nil {
+		log.Printf("[CLOUD] Failed to delete physical file: %v", err)
+	}
 
 	// Delete record
-	db.GetDB().Delete(&cloudFile)
+	if err := db.GetDB().Delete(&cloudFile).Error; err != nil {
+		log.Printf("[CLOUD] Failed to delete file record: %v", err)
+	}
 
 	log.Printf("[CLOUD] Deleted: userId=%s fileId=%s", userID, fileID)
 

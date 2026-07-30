@@ -45,12 +45,16 @@ class MessageCache {
     this.cache.clear();
   }
 
-  // Добавить новое сообщение в кэш
   addMessage(chatId: string, message: Message) {
     const entry = this.cache.get(chatId);
     if (entry) {
       entry.messages.push(message);
       entry.timestamp = Date.now();
+    } else {
+      this.cache.set(chatId, {
+        messages: [message],
+        timestamp: Date.now(),
+      });
     }
   }
 

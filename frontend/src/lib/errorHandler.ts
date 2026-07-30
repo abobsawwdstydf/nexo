@@ -28,8 +28,6 @@ export enum ErrorType {
 
 // Обработчик ошибок
 export const handleError = (error: any, context?: string): void => {
-  console.error(`[${context || 'Error'}]:`, error);
-
   let message = 'Произошла ошибка';
   let type: ErrorType = ErrorType.UNKNOWN;
 
@@ -37,7 +35,6 @@ export const handleError = (error: any, context?: string): void => {
     message = error.message;
     type = (error.code as ErrorType) || ErrorType.UNKNOWN;
   } else if (error?.response) {
-    // Axios error
     const status = error.response.status;
     if (status === 401) {
       message = 'Необходима авторизация';
@@ -61,8 +58,7 @@ export const handleError = (error: any, context?: string): void => {
     }
   }
 
-  // Логируем ошибку в консоль
-  console.error(`[Error${context ? `: ${context}` : ''}]:`, message);
+  console.error(`[${context || 'Error'}]:`, message);
 };
 
 // Wrapper для async функций с обработкой ошибок

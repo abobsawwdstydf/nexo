@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import type { Chat } from '../lib/types';
 
 interface ChatStore {
-  chats: any[];
+  chats: Chat[];
   activeChat: string | null;
   setActiveChat: (id: string | null) => void;
 }

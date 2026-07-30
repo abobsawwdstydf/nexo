@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strconv"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -39,12 +40,18 @@ func main() {
 	if dbPath == "" {
 		dbPath = "nexo.db"
 	}
-	db.InitLocal(dbPath)
+	if err := db.InitLocal(dbPath); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
 	
 	// Initialize local KV store
-	db.InitLocalKV()
+	if err := db.InitLocalKV(); err != nil {
+		log.Fatalf("Failed to initialize KV store: %v", err)
+	}
 	
-	middleware.InitJWT()
+	if err := middleware.InitJWT(); err != nil {
+		log.Fatalf("Failed to initialize JWT: %v", err)
+	}
 
 	// Initialize beta config
 	beta.Init()
@@ -497,10 +504,8 @@ func main() {
 	auth.Get("/security/audit-log", func(c *fiber.Ctx) error {
 		limit := 100
 		if l := c.Query("limit"); l != "" {
-			for _, ch := range l {
-				if ch >= '0' && ch <= '9' {
-					limit = limit*10 + int(ch-'0')
-				}
+			if n, err := strconv.Atoi(l); err == nil && n > 0 && n <= 500 {
+				limit = n
 			}
 		}
 		return c.JSON(fiber.Map{"entries": middleware.GetAuditLog(limit)})

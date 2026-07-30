@@ -1,4 +1,5 @@
 import { registerSW } from 'virtual:pwa-register';
+import { logger } from './logger';
 
 let _updateSW: (() => Promise<void>) | null = null;
 
@@ -19,16 +20,16 @@ export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     const updateSW = registerSW({
       onNeedRefresh() {
-        console.log('[PWA] New content available, please refresh.');
+        logger.log('[PWA] New content available, please refresh.');
         _updateSW = updateSW;
         // Dispatch a custom event so the UI can show a non-blocking update banner
         window.dispatchEvent(new CustomEvent('pwa-update-available'));
       },
       onOfflineReady() {
-        console.log('[PWA] App ready to work offline');
+        logger.log('[PWA] App ready to work offline');
       },
       onRegistered(registration: any) {
-        console.log('[PWA] Service Worker registered:', registration);
+        logger.log('[PWA] Service Worker registered:', registration);
       },
       onRegisterError(error: any) {
         console.error('[PWA] Service Worker registration failed:', error);

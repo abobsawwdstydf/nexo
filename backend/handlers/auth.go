@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/smtp"
 	"regexp"
 	"strings"
@@ -71,16 +72,22 @@ func resetLoginAttempts(email string) {
 func init() {
 	// Cleanup expired lockouts every 5 minutes
 	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
 		for {
-			time.Sleep(5 * time.Minute)
-			loginAttemptsMu.Lock()
-			now := time.Now()
-			for email, entry := range loginAttempts {
-				if !entry.LockedUntil.IsZero() && now.After(entry.LockedUntil) {
-					delete(loginAttempts, email)
+			select {
+			case <-ticker.C:
+				loginAttemptsMu.Lock()
+				now := time.Now()
+				for email, entry := range loginAttempts {
+					if !entry.LockedUntil.IsZero() && now.After(entry.LockedUntil) {
+						delete(loginAttempts, email)
+					}
 				}
+				loginAttemptsMu.Unlock()
+			case <-StopCh:
+				return
 			}
-			loginAttemptsMu.Unlock()
 		}
 	}()
 }
@@ -234,7 +241,7 @@ func LoginConfirm(c *fiber.Ctx) error {
 func sendLoginCodeEmail(to, code string) {
 	host, port, username, password, from := getSMTPConfig()
 	if username == "" || password == "" {
-		fmt.Printf("[EMAIL] SMTP not configured, login code for %s: %s\n", to, code)
+		log.Printf("[EMAIL] SMTP not configured, login code for %s: %s", to, code)
 		return
 	}
 
@@ -243,8 +250,6 @@ func sendLoginCodeEmail(to, code string) {
 
 	messageID := fmt.Sprintf("<%s@nexo.hakerone.ru>", generateID())
 
-	// Simple plain-text email — no multipart, no bulk headers.
-	// Precedence: bulk, List-Unsubscribe, Auto-Submitted = spam triggers.
 	msg := fmt.Sprintf("From: =?UTF-8?B?%s?= <%s>\r\n"+
 		"To: %s\r\n"+
 		"Subject: =?UTF-8?B?%s?=\r\n"+
@@ -269,9 +274,9 @@ func sendLoginCodeEmail(to, code string) {
 
 	err := smtp.SendMail(addr, auth, from, []string{to}, []byte(msg))
 	if err != nil {
-		fmt.Printf("[EMAIL] Failed to send login code to %s: %v\n", to, err)
+		log.Printf("[EMAIL] Failed to send login code to %s: %v", to, err)
 	} else {
-		fmt.Printf("[EMAIL] Login code sent to %s\n", to)
+		log.Printf("[EMAIL] Login code sent to %s", to)
 	}
 }
 

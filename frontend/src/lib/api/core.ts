@@ -44,7 +44,7 @@ export class ApiClient {
       } else {
         localStorage.removeItem('nexo_refresh_token');
       }
-    } catch {}
+    } catch { /* localStorage not available */ }
   }
 
   /** @internal */

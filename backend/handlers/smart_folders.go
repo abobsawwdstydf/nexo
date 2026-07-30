@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -762,29 +763,37 @@ func JoinVoiceRoom(c *fiber.Ctx) error {
 		return c.Status(409).JSON(fiber.Map{"error": "Already in voice room"})
 	}
 
-	// Check max users
-	var participantCount int64
-	db.GetDB().Model(&models.VoiceRoomParticipant{}).
-		Where("room_id = ?", roomID).
-		Count(&participantCount)
-	if int(participantCount) >= room.MaxUsers {
-		return c.Status(400).JSON(fiber.Map{"error": "Voice room is full"})
-	}
-
+	// Check max users (atomic: count + create in transaction)
 	participant := models.VoiceRoomParticipant{
 		ID:     generateID(),
 		RoomID: roomID,
 		UserID: userID,
 	}
 
-	if err := db.GetDB().Create(&participant).Error; err != nil {
+	err := db.GetDB().Transaction(func(tx *gorm.DB) error {
+		var participantCount int64
+		if err := tx.Model(&models.VoiceRoomParticipant{}).
+			Where("room_id = ?", roomID).
+			Count(&participantCount).Error; err != nil {
+			return err
+		}
+		if int(participantCount) >= room.MaxUsers {
+			return fiber.NewError(fiber.StatusBadRequest, "Voice room is full")
+		}
+		return tx.Create(&participant).Error
+	})
+	if err != nil {
+		var fiberErr *fiber.Error
+		if errors.As(err, &fiberErr) {
+			return c.Status(fiberErr.Code).JSON(fiber.Map{"error": fiberErr.Message})
+		}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to join voice room"})
 	}
 
 	// WS notification
 	wsHub := ws.HubInstance
 	if wsHub != nil {
-		wsHub.SendToChat(room.ChatID, []byte(`{"type":"voiceroom:user_joined","roomId":"`+roomID+`","userId":"`+userID+`"}`), "")
+		wsHub.SendToChat(room.ChatID, mustWSMap("voiceroom:user_joined", map[string]string{"roomId": roomID, "userId": userID}), "")
 	}
 
 	return c.JSON(fiber.Map{"ok": true, "participant": participant})
@@ -805,7 +814,7 @@ func LeaveVoiceRoom(c *fiber.Ctx) error {
 	// WS notification
 	wsHub := ws.HubInstance
 	if wsHub != nil {
-		wsHub.SendToChat(room.ChatID, []byte(`{"type":"voiceroom:user_left","roomId":"`+roomID+`","userId":"`+userID+`"}`), "")
+		wsHub.SendToChat(room.ChatID, mustWSMap("voiceroom:user_left", map[string]string{"roomId": roomID, "userId": userID}), "")
 	}
 
 	return c.JSON(fiber.Map{"ok": true})
@@ -848,7 +857,7 @@ func UpdateVoiceRoomParticipant(c *fiber.Ctx) error {
 	db.GetDB().First(&room, "id = ?", roomID)
 	wsHub := ws.HubInstance
 	if wsHub != nil {
-		wsHub.SendToChat(room.ChatID, []byte(`{"type":"voiceroom:participant_updated","roomId":"`+roomID+`","userId":"`+userID+`"}`), "")
+		wsHub.SendToChat(room.ChatID, mustWSMap("voiceroom:participant_updated", map[string]string{"roomId": roomID, "userId": userID}), "")
 	}
 
 	return c.JSON(fiber.Map{"ok": true})
@@ -870,7 +879,7 @@ func DeleteVoiceRoom(c *fiber.Ctx) error {
 	// WS notification
 	wsHub := ws.HubInstance
 	if wsHub != nil {
-		wsHub.SendToChat(room.ChatID, []byte(`{"type":"voiceroom:deleted","roomId":"`+roomID+`"}`), "")
+		wsHub.SendToChat(room.ChatID, mustWSMsg("voiceroom:deleted", "roomId", roomID), "")
 	}
 
 	return c.JSON(fiber.Map{"ok": true})
@@ -894,7 +903,9 @@ func FindAnonymousMatch(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
 	var req models.CreateAnonymousChatRequest
-	c.BodyParser(&req)
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
 
 	anonymousMatchMu.Lock()
 	defer anonymousMatchMu.Unlock()

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 var DB *gorm.DB
 
-func Init(dsn string) {
+func Init(dsn string) error {
 	var err error
 	DB, err = gorm.Open(D1Open(), &gorm.Config{
 		Logger:                                   logger.Default.LogMode(logger.Warn),
@@ -20,12 +21,12 @@ func Init(dsn string) {
 		SkipDefaultTransaction:                   true,
 	})
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	sqlDB, err := DB.DB()
 	if err != nil {
-		log.Fatalf("Failed to get sql.DB: %v", err)
+		return fmt.Errorf("failed to get sql.DB: %w", err)
 	}
 	sqlDB.SetMaxOpenConns(10)
 	sqlDB.SetMaxIdleConns(5)
@@ -106,7 +107,7 @@ func Init(dsn string) {
 		&models.ScreenshotLog{},
 	)
 	if err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+		return fmt.Errorf("failed to migrate database: %w", err)
 	}
 
 	// Health check
@@ -115,6 +116,7 @@ func Init(dsn string) {
 	}
 
 	log.Println("Database connected successfully")
+	return nil
 }
 
 func GetDB() *gorm.DB {

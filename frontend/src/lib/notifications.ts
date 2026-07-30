@@ -1,5 +1,7 @@
 // Web Push notifications manager
 import { getApiUrl } from '../config';
+import { logger } from './logger';
+import type { PushSubscriptionJSON } from './api/realtime';
 
 // VAPID public key (can be overridden from server config)
 const VAPID_PUBLIC_KEY = 'BPVXBg4HHqwRgo2rX4fnScnnL1bD0AgeSyAiufQluXGctTM0WsSD8VqJx5DUsUsev4uP1pCH42qRGFg8PsrbDd0';
@@ -19,7 +21,7 @@ export async function registerNotificationServiceWorker(): Promise<ServiceWorker
     for (const registration of registrations) {
       const scriptURL = registration.active?.scriptURL || '';
       if (scriptURL.includes('firebase') || scriptURL.includes('web-push-sw')) {
-        console.log('[Push] Unregistering old service worker:', scriptURL);
+        logger.log('[Push] Unregistering old service worker:', scriptURL);
         await registration.unregister();
       }
     }
@@ -29,7 +31,7 @@ export async function registerNotificationServiceWorker(): Promise<ServiceWorker
       scope: '/'
     });
 
-    console.log('[Push] Service Worker registered:', registration.scope);
+    logger.log('[Push] Service Worker registered:', registration.scope);
 
     // Wait for service worker to be active
     await navigator.serviceWorker.ready;
@@ -72,7 +74,7 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
   try {
     // Check current permission
     if (Notification.permission === 'denied') {
-      console.log('[Push] Notification permission previously denied');
+      logger.log('[Push] Notification permission previously denied');
       return null;
     }
 
@@ -80,10 +82,10 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
       // Request permission
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        console.log('[Push] Notification permission denied by user');
+        logger.log('[Push] Notification permission denied by user');
         return null;
       }
-      console.log('[Push] Permission granted');
+      logger.log('[Push] Permission granted');
     }
 
     // Register service worker
@@ -136,7 +138,7 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource
     });
 
-    console.log('[Push] Subscribed successfully');
+    logger.log('[Push] Subscribed successfully');
 
     // Send subscription to server
     const saved = await sendSubscriptionToServer(subscription);
@@ -157,8 +159,8 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
 async function sendSubscriptionToServer(subscription: PushSubscription): Promise<boolean> {
   try {
     const { api } = await import('../lib/api');
-    await api.pushSubscribeWS(subscription.toJSON());
-    console.log('[Push] Subscription saved to server');
+    await api.pushSubscribeWS(subscription.toJSON() as PushSubscriptionJSON);
+    logger.log('[Push] Subscription saved to server');
     return true;
   } catch (error) {
     console.error('[Push] Failed to save subscription:', error);
@@ -183,7 +185,7 @@ export async function unsubscribeFromNotifications(): Promise<boolean> {
         credentials: 'include',
       });
       
-      console.log('[Push] Unsubscribed from push notifications');
+      logger.log('[Push] Unsubscribed from push notifications');
       return true;
     }
     

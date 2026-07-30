@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 // Debounce function - delays execution until after wait time has elapsed
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -141,7 +143,7 @@ export function measurePerformance(name: string, fn: () => void): void {
   const start = performance.now();
   fn();
   const end = performance.now();
-  console.log(`[Performance] ${name}: ${(end - start).toFixed(2)}ms`);
+  logger.log(`[Performance] ${name}: ${(end - start).toFixed(2)}ms`);
 }
 
 // Async measure performance
@@ -152,7 +154,7 @@ export async function measurePerformanceAsync(
   const start = performance.now();
   await fn();
   const end = performance.now();
-  console.log(`[Performance] ${name}: ${(end - start).toFixed(2)}ms`);
+  logger.log(`[Performance] ${name}: ${(end - start).toFixed(2)}ms`);
 }
 
 // Web Worker helper

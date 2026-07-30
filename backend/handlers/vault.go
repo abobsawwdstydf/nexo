@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -28,24 +29,29 @@ func VaultUpload(c *fiber.Ctx) error {
 	safeFilename := filepath.Base(file.Filename)
 	filename := generateID() + "_" + safeFilename
 	savePath := filepath.Join("..", "uploads", "vault", filename)
-	os.MkdirAll("../uploads/vault", 0755)
+	if err := os.MkdirAll("../uploads/vault", 0755); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create directory"})
+	}
 	if err := c.SaveFile(file, savePath); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file"})
 	}
 
 	// Calculate checksum
-	f, _ := os.Open(savePath)
-	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err == nil {
-		// checksum calculated
+	var checksum string
+	f, err := os.Open(savePath)
+	if err == nil {
+		h := sha256.New()
+		if _, err := io.Copy(h, f); err == nil {
+			checksum = fmt.Sprintf("%x", h.Sum(nil))
+		}
+		f.Close()
 	}
 
 	// Detect MIME type server-side
 	mimeType := "application/octet-stream"
 	if f, err := os.Open(savePath); err == nil {
 		buf := make([]byte, 512)
-		if n, _ := f.Read(buf); n > 0 {
+		if n, err := f.Read(buf); err == nil && n > 0 {
 			mimeType = http.DetectContentType(buf[:n])
 		}
 		f.Close()
@@ -58,10 +64,12 @@ func VaultUpload(c *fiber.Ctx) error {
 		EncryptedURL: "/uploads/vault/" + filename,
 		Size:         file.Size,
 		MimeType:     mimeType,
-		Checksum:     fmt.Sprintf("%x", h.Sum(nil)),
+		Checksum:     checksum,
 		CreatedAt:    time.Now(),
 	}
-	db.GetDB().Create(&vaultFile)
+	if err := db.GetDB().Create(&vaultFile).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file record"})
+	}
 
 	return c.Status(201).JSON(vaultFile)
 }
@@ -71,7 +79,9 @@ func VaultList(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
 	var files []models.VaultFile
-	db.GetDB().Where("user_id = ?", userID).Order("created_at DESC").Find(&files)
+	if err := db.GetDB().Where("user_id = ?", userID).Order("created_at DESC").Find(&files).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to list files"})
+	}
 
 	return c.JSON(fiber.Map{"items": files})
 }
@@ -105,8 +115,12 @@ func VaultDelete(c *fiber.Ctx) error {
 	}
 
 	// Delete physical file
-	os.Remove("." + file.EncryptedURL)
-	db.GetDB().Delete(&file)
+	if err := os.Remove("." + file.EncryptedURL); err != nil {
+		log.Printf("[VAULT] Failed to delete physical file: %v", err)
+	}
+	if err := db.GetDB().Delete(&file).Error; err != nil {
+		log.Printf("[VAULT] Failed to delete file record: %v", err)
+	}
 
 	return c.JSON(fiber.Map{"success": true})
 }
@@ -117,7 +131,8 @@ func VaultStats(c *fiber.Ctx) error {
 
 	var totalSize int64
 	var fileCount int64
-	db.GetDB().Model(&models.VaultFile{}).Where("user_id = ?", userID).Count(&fileCount).Select("COALESCE(SUM(size), 0)").Scan(&totalSize)
+	db.GetDB().Model(&models.VaultFile{}).Where("user_id = ?", userID).Count(&fileCount)
+	db.GetDB().Model(&models.VaultFile{}).Where("user_id = ?", userID).Select("COALESCE(SUM(size), 0)").Scan(&totalSize)
 
 	return c.JSON(fiber.Map{
 		"totalSize": totalSize,

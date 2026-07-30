@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"math/big"
 	"net/smtp"
 	"os"
@@ -139,7 +140,7 @@ func ConfirmEmailCode(c *fiber.Ctx) error {
 func sendVerificationEmail(to, code string) {
 	host, port, username, password, from := getSMTPConfig()
 	if username == "" || password == "" {
-		fmt.Printf("[EMAIL] SMTP not configured, code for %s: %s\n", to, code)
+		log.Printf("[EMAIL] SMTP not configured, code for %s: %s", to, code)
 		return
 	}
 
@@ -148,7 +149,6 @@ func sendVerificationEmail(to, code string) {
 
 	messageID := fmt.Sprintf("<%s@nexo.hakerone.ru>", generateID())
 
-	// Simple plain-text email — no multipart, no bulk headers.
 	msg := fmt.Sprintf("From: =?UTF-8?B?%s?= <%s>\r\n"+
 		"To: %s\r\n"+
 		"Subject: =?UTF-8?B?%s?=\r\n"+
@@ -173,9 +173,9 @@ func sendVerificationEmail(to, code string) {
 
 	err := smtp.SendMail(addr, auth, from, []string{to}, []byte(msg))
 	if err != nil {
-		fmt.Printf("[EMAIL] Failed to send to %s: %v\n", to, err)
+		log.Printf("[EMAIL] Failed to send to %s: %v", to, err)
 	} else {
-		fmt.Printf("[EMAIL] Verification sent to %s\n", to)
+		log.Printf("[EMAIL] Verification sent to %s", to)
 	}
 }
 

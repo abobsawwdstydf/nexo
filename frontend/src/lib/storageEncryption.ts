@@ -101,7 +101,7 @@ function xorDecryptOld(encrypted: string, key: string): string {
 // --- Public API (synchronous) ---
 
 // Encrypt and save to localStorage
-export function saveEncrypted(key: string, data: any): void {
+export function saveEncrypted(key: string, data: unknown): void {
   try {
     const jsonString = JSON.stringify(data);
     const encrypted = encryptData(jsonString);
@@ -112,7 +112,7 @@ export function saveEncrypted(key: string, data: any): void {
 }
 
 // Load and decrypt from localStorage
-export function loadDecrypted(key: string): any | null {
+export function loadDecrypted(key: string): unknown | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;

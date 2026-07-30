@@ -1,6 +1,8 @@
 ﻿package handlers
 
 import (
+	"crypto/rand"
+	"math/big"
 	"time"
 
 	"nexo/db"
@@ -130,8 +132,12 @@ func generateShortCode() string {
 	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, 8)
 	for i := range result {
-		result[i] = chars[time.Now().UnixNano()%int64(len(chars))]
-		time.Sleep(1)
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			result[i] = chars[time.Now().UnixNano()%int64(len(chars))]
+		} else {
+			result[i] = chars[n.Int64()]
+		}
 	}
 	return string(result)
 }
@@ -139,7 +145,9 @@ func generateShortCode() string {
 func generateAlias() string {
 	adjectives := []string{"Таинственный", "Неизвестный", "Скрытный", "Загадочный", "Странник", "Призрак", "Тень", "Фантом"}
 	nouns := []string{"Волк", "Дракон", "Феникс", "Рыцарь", "Маг", "Ворон", "Лис", "Медведь"}
-	a := adjectives[time.Now().UnixNano()%int64(len(adjectives))]
-	n := nouns[time.Now().UnixNano()%int64(len(nouns))]
+	ai, _ := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
+	ni, _ := rand.Int(rand.Reader, big.NewInt(int64(len(nouns))))
+	a := adjectives[ai.Int64()]
+	n := nouns[ni.Int64()]
 	return a + " " + n
 }

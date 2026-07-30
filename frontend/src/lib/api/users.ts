@@ -1,4 +1,4 @@
-import type { User, UserPresence, Chat, Message } from '../types';
+import type { User, UserPresence, UserXP, Chat, Message, Achievement, UserAchievement } from '../types';
 import { ApiClient, getApiBase } from './core';
 
 declare module './core' {
@@ -15,13 +15,13 @@ declare module './core' {
       defaultChatBackground: string | null;
       settingsSyncEnabled: boolean;
       hideStoryViews: boolean;
-      ringtone: any | null;
+      ringtone: string | null;
     }>;
     updateUserSettings(settings: {
       defaultChatBackground?: string | null;
       settingsSyncEnabled?: boolean;
       hideStoryViews?: boolean;
-      ringtone?: any | null;
+      ringtone?: string | null;
     }): Promise<User>;
     getNotificationSettings(): Promise<{
       notifyAll: boolean;
@@ -72,18 +72,18 @@ declare module './core' {
       }>;
     }>;
     markPostViewed(messageId: string): Promise<{ viewCount: number }>;
-    getUserStatus(userId: string): Promise<any>;
-    setUserStatus(text: string, emoji?: string, duration?: number): Promise<any>;
-    deleteUserStatus(): Promise<any>;
-    getFriendStatuses(): Promise<any>;
+    getUserStatus(userId: string): Promise<Record<string, unknown>>;
+    setUserStatus(text: string, emoji?: string, duration?: number): Promise<{ success: boolean }>;
+    deleteUserStatus(): Promise<{ success: boolean }>;
+    getFriendStatuses(): Promise<Record<string, unknown>>;
     getUserXP(): Promise<{
-      userXP: any;
+      userXP: UserXP;
       level: number;
       nextLevelXP: number;
-      achievements: any[];
-      userAchievements: any[];
+      achievements: Achievement[];
+      userAchievements: UserAchievement[];
     }>;
-    getLeaderboard(page?: number): Promise<{ items: Array<{ userId: string; totalXP: number; level: number; user: any }>; page: number }>;
+    getLeaderboard(page?: number): Promise<{ items: Array<{ userId: string; totalXP: number; level: number; user: UserPresence }>; page: number }>;
   }
 }
 
@@ -153,7 +153,7 @@ export function installUsers(api: ApiClient): void {
       defaultChatBackground: string | null;
       settingsSyncEnabled: boolean;
       hideStoryViews: boolean;
-      ringtone: any | null;
+      ringtone: string | null;
     }>('/users/settings');
   };
 
@@ -284,16 +284,16 @@ export function installUsers(api: ApiClient): void {
   // ─── Gamification ─────────────────────────────────────────────────
   api.getUserXP = async () => {
     return api.request<{
-      userXP: any;
+      userXP: UserXP;
       level: number;
       nextLevelXP: number;
-      achievements: any[];
-      userAchievements: any[];
+      achievements: Achievement[];
+      userAchievements: UserAchievement[];
     }>('/gamification/xp');
   };
 
   api.getLeaderboard = async (page?: number) => {
-    return api.request<{ items: Array<{ userId: string; totalXP: number; level: number; user: any }>; page: number }>(
+    return api.request<{ items: Array<{ userId: string; totalXP: number; level: number; user: UserPresence }>; page: number }>(
       `/gamification/leaderboard?page=${page || 1}`
     );
   };

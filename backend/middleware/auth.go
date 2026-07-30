@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -58,18 +58,19 @@ func IsTokenBlacklisted(token string) bool {
 	return blacklisted
 }
 
-func InitJWT() {
+func InitJWT() error {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		log.Fatal("FATAL: JWT_SECRET environment variable is not set. Refusing to start with weak default secrets.")
+		return fmt.Errorf("JWT_SECRET environment variable is not set")
 	}
 	JWTSecret = []byte(secret)
 
 	refreshSecret := os.Getenv("JWT_REFRESH_SECRET")
 	if refreshSecret == "" {
-		log.Fatal("FATAL: JWT_REFRESH_SECRET environment variable is not set. Refusing to start with weak default secrets.")
+		return fmt.Errorf("JWT_REFRESH_SECRET environment variable is not set")
 	}
 	JWTRefreshSecret = []byte(refreshSecret)
+	return nil
 }
 
 type Claims struct {

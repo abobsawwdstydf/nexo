@@ -178,14 +178,13 @@ func DeleteAccount(c *fiber.Ctx) error {
 	tx.Where("user_id = ?", userID).Delete(&models.ChatNote{})
 	tx.Where("user_id = ?", userID).Delete(&models.CollectedLink{})
 
+	tx.Model(&models.User{}).Where("id = ?", userID).Update("is_online", false)
 	tx.Delete(&user)
 
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete account"})
 	}
-
-	db.GetDB().Model(&models.User{}).Where("id = ?", userID).Update("is_online", false)
 
 	if client := ws.HubInstance.GetUserClient(userID); client != nil {
 		ws.HubInstance.UnregisterClient(client)

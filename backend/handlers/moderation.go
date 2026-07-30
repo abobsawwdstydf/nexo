@@ -125,13 +125,19 @@ func MuteUser(c *fiber.Ctx) error {
 	// Auto-unmute after duration
 	if req.Duration > 0 {
 		go func() {
-			time.Sleep(time.Duration(req.Duration) * time.Minute)
-			db.GetDB().Model(&models.ChatMember{}).
-				Where("chat_id = ? AND user_id = ?", chatID, req.TargetID).
-				Update("is_muted", false)
-			ws.HubInstance.SendToChat(chatID, mustWSMap("moderation:unmute", map[string]string{
-				"targetId": req.TargetID,
-			}), "")
+			timer := time.NewTimer(time.Duration(req.Duration) * time.Minute)
+			defer timer.Stop()
+			select {
+			case <-timer.C:
+				db.GetDB().Model(&models.ChatMember{}).
+					Where("chat_id = ? AND user_id = ?", chatID, req.TargetID).
+					Update("is_muted", false)
+				ws.HubInstance.SendToChat(chatID, mustWSMap("moderation:unmute", map[string]string{
+					"targetId": req.TargetID,
+				}), "")
+			case <-StopCh:
+				return
+			}
 		}()
 	}
 

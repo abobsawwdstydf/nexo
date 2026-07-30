@@ -16,7 +16,7 @@ import (
 )
 
 // InitLocal initializes a local SQLite database
-func InitLocal(dsn string) {
+func InitLocal(dsn string) error {
 	var err error
 	DB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger:                                   logger.Default.LogMode(logger.Warn),
@@ -24,12 +24,12 @@ func InitLocal(dsn string) {
 		SkipDefaultTransaction:                   true,
 	})
 	if err != nil {
-		log.Fatalf("Failed to connect to local database: %v", err)
+		return fmt.Errorf("failed to connect to local database: %w", err)
 	}
 
 	sqlDB, err := DB.DB()
 	if err != nil {
-		log.Fatalf("Failed to get sql.DB: %v", err)
+		return fmt.Errorf("failed to get sql.DB: %w", err)
 	}
 	
 	// Optimize SQLite for local use
@@ -158,13 +158,14 @@ func InitLocal(dsn string) {
 		&models.ScreenshotLog{},
 	)
 	if err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+		return fmt.Errorf("failed to migrate database: %w", err)
 	}
 
 	// Add performance indexes
 	addIndexes(DB)
 
 	log.Printf("Local SQLite database: %s", dsn)
+	return nil
 }
 
 // addIndexes creates indexes for frequently queried columns
@@ -287,13 +288,14 @@ type LocalKV struct {
 var KVStore *LocalKV
 
 // InitLocalKV initializes a local file-based KV store
-func InitLocalKV() {
+func InitLocalKV() error {
 	dir := "./data/kv"
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		log.Fatalf("Failed to create KV directory: %v", err)
+		return fmt.Errorf("failed to create KV directory: %w", err)
 	}
 	KVStore = &LocalKV{dir: dir}
 	log.Println("Local KV store: initialized")
+	return nil
 }
 
 // KVGet retrieves a value from local KV store

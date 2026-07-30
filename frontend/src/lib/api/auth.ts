@@ -1,4 +1,4 @@
-import type { User, Chat, SmartFolder } from '../types';
+import type { User, Chat, SmartFolder, StoryGroup } from '../types';
 import { ApiClient, getApiBase } from './core';
 
 declare module './core' {
@@ -28,7 +28,7 @@ declare module './core' {
         twoFactorEnabled: boolean;
       };
       smartFolders: SmartFolder[];
-      stories: any[];
+      stories: StoryGroup[];
     }>;
     logout(): Promise<{ success: boolean }>;
   }
@@ -118,7 +118,7 @@ export function installAuth(api: ApiClient): void {
         twoFactorEnabled: boolean;
       };
       smartFolders: SmartFolder[];
-      stories: any[];
+      stories: StoryGroup[];
     }>('/init');
   };
 

@@ -66,7 +66,7 @@ export function wsEmit(type: string, data?: Record<string, any>) {
   // Wrap data in payload to avoid "type" field collision with the event name.
   try {
     ws.send(JSON.stringify({ type, payload: data || {} }));
-  } catch {}
+  } catch { /* ws send failed */ }
 }
 
 // ─── Existing socket infrastructure ───────────────────────────────────────────
@@ -83,7 +83,7 @@ function loadReconnectState(): ReconnectState | null {
 function saveReconnectState(state: ReconnectState) {
   try {
     localStorage.setItem(RECONNECT_KEY, JSON.stringify(state));
-  } catch {}
+  } catch { /* storage full or disabled */ }
 }
 
 function clearReconnectState() {

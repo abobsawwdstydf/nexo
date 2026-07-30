@@ -1,7 +1,4 @@
-param(
-    [switch]$Force,
-    [switch]$SkipGitPush
-)
+﻿param([switch]$Force,[switch]$SkipGitPush)
 
 $ErrorActionPreference = "Continue"
 $LogDir = Join-Path $PSScriptRoot ".auto-improve-logs"
@@ -12,18 +9,14 @@ $MaxRetries = 3
 
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
 
-function Write-Log {
-    param([string]$Message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $line = "[$timestamp] $Message"
-    Write-Host $line
-    Add-Content -Path $LogFile -Value $line
+function Write-Log { param([string]$Message)
+    $t = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $l = "[$t] $Message"
+    Write-Host $l; Add-Content -Path $LogFile -Value $l
 }
 
-function Write-State {
-    param($Status, $SessionId = "", $ErrorMessage = "", $RetryCount = 0)
-    $state = @{ status=$Status; sessionId=$SessionId; errorMessage=$ErrorMessage; retryCount=$RetryCount; lastRun=(Get-Date -Format "o") }
-    $state | ConvertTo-Json | Set-Content -Path $StateFile -Force -Encoding UTF8
+function Write-State { param($Status,$SessionId="",$ErrorMessage="",$RetryCount=0)
+    @{status=$Status;sessionId=$SessionId;errorMessage=$ErrorMessage;retryCount=$RetryCount;lastRun=(Get-Date -Format "o")} | ConvertTo-Json | Set-Content $StateFile -Force -Encoding UTF8
 }
 
 function Read-State {
@@ -31,40 +24,51 @@ function Read-State {
     return $null
 }
 
-function Invoke-Opencode {
-    param($Prompt, $SessionId = "", $RetryNumber = 0)
-    $args = @("run")
-    if ($SessionId) { $args += "--continue" }
-    $args += "--model"; $args += "opencode/big-pickle"
-    $args += "--auto"; $args += "--print-logs"
-    $args += $Prompt
+function Invoke-Opencode { param($Prompt, $SessionId="")
+    # Build argument list, escaping the prompt for inline PowerShell -Command
+    $argsList = @("run")
+    if ($SessionId) { $argsList += "--continue" }
+    $argsList += "--model"; $argsList += "opencode/big-pickle"
+    $argsList += "--auto"
+    $argsList += "--print-logs"
 
-    $pPreview = if ($Prompt.Length -gt 100) { $Prompt.Substring(0,100)+"..." } else { $Prompt }
+    # Quote the prompt for safe command-line passing
+    $escapedPrompt = $Prompt -replace "'", "''"
+    $psCmd = "opencode $($argsList -join ' ') '$escapedPrompt'"
+
+    $pPrev = if ($Prompt.Length -gt 100) { $Prompt.Substring(0,100)+"..." } else { $Prompt }
     Write-Log "Running: opencode run --model opencode/big-pickle --auto"
-    Write-Log "Prompt: $pPreview"
+    Write-Log "Prompt: $pPrev"
 
     $start = Get-Date
-    $sLog = Join-Path $LogDir "session-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-
     try {
-        $proc = Start-Process -FilePath "opencode" -ArgumentList $args -NoNewWindow -Wait -PassThru -RedirectStandardOutput $sLog -RedirectStandardError "$sLog.err"
-        $dur = (Get-Date) - $start
-        if ($proc.ExitCode -eq 0) {
-            Write-Log "OK (exit:0, $($dur.TotalMinutes.ToString('F1'))min)"
-            return @{ Success=$true }
-        } else {
-            Write-Log "FAIL (exit:$($proc.ExitCode), $($dur.TotalMinutes.ToString('F1'))min)"
-            return @{ Success=$false; ExitCode=$proc.ExitCode }
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "powershell.exe"
+        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command $psCmd"
+        $psi.WorkingDirectory = $PSScriptRoot
+        $psi.UseShellExecute = $true
+        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        if ($proc) {
+            Write-Log "PID: $($proc.Id)"
+            $exited = $proc.WaitForExit(7200000) # 2 hour timeout
+            $dur = (Get-Date) - $start
+            if ($exited) {
+                Write-Log "Exit code: $($proc.ExitCode), duration: $($dur.TotalMinutes.ToString('F1'))min"
+                if ($proc.ExitCode -eq 0) { return @{Success=$true} }
+                return @{Success=$false; ExitCode=$proc.ExitCode; Duration=$dur}
+            } else {
+                Write-Log "TIMEOUT after 2h"
+                try { $proc.Kill() } catch {}
+                return @{Success=$false; ExitCode=-999; Duration=$dur}
+            }
         }
-    } catch {
-        Write-Log "Exception: $_"
-        return @{ Success=$false; ExitCode=-1 }
-    }
+    } catch { Write-Log "Exception: $_"; return @{Success=$false; ExitCode=-1} }
+    return @{Success=$false; ExitCode=-1}
 }
 
 function Invoke-GitOps {
-    Write-Log "=== GIT ==="
-    Push-Location $PSScriptRoot
+    Write-Log "=== GIT ==="; Push-Location $PSScriptRoot
     git add -A 2>&1 | % { Write-Log "add: $_" }
     $d = git diff --cached --stat 2>&1
     if (-not $d) { Write-Log "No changes"; Pop-Location; return $true }
@@ -74,8 +78,7 @@ function Invoke-GitOps {
         git push 2>&1 | % { Write-Log "push: $_" }
         if ($LASTEXITCODE) { Start-Sleep 5; git push 2>&1 | % { Write-Log "push-retry: $_" } }
     }
-    Pop-Location
-    return $true
+    Pop-Location; return $true
 }
 
 Write-Log "============================="
@@ -93,26 +96,24 @@ if (Test-Path $LockFile) {
 "pid=$pid" | Out-File $LockFile -Force -Encoding UTF8
 
 try {
-    $st = Read-State
-    $sid = if ($st) { $st.sessionId } else { "" }
-    $rc = if ($st) { [int]$st.retryCount } else { 0 }
-    Write-Log "State: status=$($st.status) sid=$sid retry=$rc"
-
+    $st = Read-State; $sid = if ($st) { $st.sessionId } else { "" }
     Write-Log "Starting opencode run..."
-    $result = Invoke-Opencode -Prompt "You are an autonomous code improvement agent for the Nexo project. CRITICAL: NEVER touch nexo.db, uploads/, AGENTS.md, PLANS.md, README.md. Execute in order: 1) git status, npx tsc --noEmit, go build 2) Fix errors found 3) Remove dead code, optimize 4) Verify with tsc+go build again 5) Report changes made." -SessionId $sid -RetryNumber 0
 
-    if ($result.Success) {
-        Write-Log "=== SUCCESS ==="
-        Write-State "" "" "" 0
-    } else {
-        Write-Log "=== RETRY ==="
+    $prompt = "Ты - автономный агент по улучшению кода проекта Нексо (защищённый мессенджер). КРИТИЧЕСКИЕ ПРАВИЛА: 1) НИКОГДА не трогай nexo.db, uploads/, backend/uploads/, JWT токены, пароли, личные данные пользователей. 2) НИКОГДА не изменяй AGENTS.md, PLANS.md, README.md. 3) Фокус ТОЛЬКО на: качество кода, производительность, баг-фиксы, рефакторинг, оптимизация. Выполняй по порядку: ФАЗА 1 - Диагностика: git status, cd frontend && npx tsc --noEmit, cd backend && go build ./.... ФАЗА 2 - Исправь все найденные ошибки компиляции и баги. ФАЗА 3 - Удали мёртвый код, упрости сложные выражения, вынеси повторяющуюся логику в функции, оптимизируй React ре-рендеры, улучши обработку ошибок в Go. ФАЗА 4 - Добавь ErrorBoundary где нужно, улучши TypeScript типы, поправь null/undefined проверки. ФАЗА 5 - Перезапусти tsc и go build для проверки. После завершения сделай git add -A && git commit -m 'auto-improve: список изменений' (НЕ пушить, этим занимается скрипт). Отчитайся на русском языке что было сделано."
+
+    $result = Invoke-Opencode -Prompt $prompt -SessionId $sid
+
+    if (-not $result.Success) {
+        Write-Log "Failed (exit:$($result.ExitCode)), retrying with --continue..."
         Start-Sleep 30
-        $result2 = Invoke-Opencode -Prompt "Continue the previous auto-improvement session. Run diagnostics, fix remaining issues, verify, and report." -SessionId $sid -RetryNumber 1
+        $result2 = Invoke-Opencode -Prompt "Продолжи предыдущую сессию авто-улучшения. Проверь что уже сделано и что осталось. Заверши оставшиеся задачи: исправь ошибки компиляции, отрефактори код, оптимизируй производительность. Сделай git add -A && git commit -m 'auto-improve: продолжение улучшений'. Отчитайся на русском." -SessionId $sid
     }
 
-    Write-Log "=== Git ==="
+    Write-Log "=== Git Operations ==="
     Invoke-GitOps | Out-Null
-} finally {
+    Write-Log "=== DONE ==="
+    Write-State "completed" "" "" 0
+} catch { Write-Log "FATAL: $_" } finally {
     if (Test-Path $LockFile) { Remove-Item $LockFile -Force }
-    Write-Log "DONE: $(Get-Date)"
+    Write-Log "Finished: $(Get-Date)"
 }

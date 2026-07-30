@@ -33,10 +33,11 @@ export async function loadBaseUrlConfig(): Promise<void> {
       _baseUrlFromConfig = url;
     }
   } catch {
+    // base-url.json not available — using defaults
   }
 
   if (typeof window !== 'undefined') {
-    try { localStorage.removeItem('nexo_server_url'); } catch {}
+    try { localStorage.removeItem('nexo_server_url'); } catch { /* ignore */ }
   }
 }
 

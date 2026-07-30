@@ -268,21 +268,4 @@ func DeleteSession(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// ─── E2E Middleware ──────────────────────────────────────────────────
 
-// E2EMiddleware — помечает контекст если чат зашифрован
-func E2EMiddleware(c *fiber.Ctx) error {
-	chatID := c.Params("chatId")
-	if chatID == "" {
-		return c.Next()
-	}
-
-	database := db.GetDB()
-	var session models.E2ESession
-	if err := database.Where("chat_id = ? AND is_active = ?", chatID, true).First(&session).Error; err == nil {
-		c.Locals("e2eSessionId", session.ID)
-		c.Locals("isE2E", true)
-	}
-
-	return c.Next()
-}

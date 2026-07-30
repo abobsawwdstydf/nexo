@@ -606,8 +606,14 @@ func MarkMessageRead(c *fiber.Ctx) error {
 
 			// Schedule deletion after timer
 			go func(msgID string, timerSec int) {
-				time.Sleep(time.Duration(timerSec) * time.Second)
-				database.Delete(&models.Message{}, "id = ?", msgID)
+				timer := time.NewTimer(time.Duration(timerSec) * time.Second)
+				defer timer.Stop()
+				select {
+				case <-timer.C:
+					database.Delete(&models.Message{}, "id = ?", msgID)
+				case <-StopCh:
+					return
+				}
 			}(messageID, message.SelfDestructTimer)
 		}
 	}

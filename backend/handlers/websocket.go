@@ -733,6 +733,19 @@ type wsDataResponse struct {
 
 func (e *wsDataResponse) Error() string { return "" }
 
+// wsHandle routes an inbound WS message to the correct handler and sends an RPC response if needed.
+func wsHandle(client *ws.Client, env *wsEnvelope, fn func(*ws.Client, *wsEnvelope) error) {
+	err := fn(client, env)
+	if env.ID == "" {
+		return
+	}
+	if err != nil {
+		wsResponse(client, env.ID, err)
+	} else {
+		wsResponse(client, env.ID, nil)
+	}
+}
+
 // handleWSMessage routes an inbound WS message to the correct handler.
 func handleWSMessage(client *ws.Client, msg []byte) {
 	var env wsEnvelope
@@ -744,137 +757,32 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 	// Route by type
 	switch env.Type {
 	case "typing":
-		err := handleTyping(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleTyping)
 	case "read_receipt", "read-receipt":
-		err := handleReadReceipt(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleReadReceipt)
 	case "reaction":
-		err := handleReaction(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleReaction)
 	case "online_status", "online-status":
-		err := handleOnlineStatus(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleOnlineStatus)
 	case "user_status", "user-status":
-		err := handleUserStatus(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleUserStatus)
 	case "chat_members", "chat-members":
-		err := handleChatMembers(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleChatMembers)
 	case "send_message", "send-message":
-		err := handleSendMessage(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleSendMessage)
 	case "fetch_messages", "fetch-messages":
-		err := handleFetchMessages(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleFetchMessages)
 	case "fetch_friends", "fetch-friends":
-		err := handleFetchFriends(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleFetchFriends)
 	case "fetch_friend_requests", "fetch-friend-requests":
-		err := handleFetchFriendRequests(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleFetchFriendRequests)
 	case "fetch_notifications", "fetch-notifications":
-		err := handleFetchNotifications(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleFetchNotifications)
 	case "fetch_init", "fetch-init":
-		err := handleFetchInit(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handleFetchInit)
 	case "push_subscribe", "push-subscribe":
-		err := handlePushSubscribe(client, &env)
-		if env.ID != "" {
-			if err != nil {
-				wsResponse(client, env.ID, err)
-			} else {
-				wsResponse(client, env.ID, nil)
-			}
-		}
-
+		wsHandle(client, &env, handlePushSubscribe)
 	default:
-		// Unknown type with RPC ID — respond with error
 		if env.ID != "" {
 			wsResponse(client, env.ID, &wsError{Code: "unknown_type", Message: "Unknown message type: " + env.Type})
 		} else {

@@ -16,7 +16,9 @@ import (
 const badgeStorageDir = "./uploads/badges"
 
 func init() {
-	os.MkdirAll(badgeStorageDir, 0755)
+	if err := os.MkdirAll(badgeStorageDir, 0755); err != nil {
+		log.Printf("[BADGE] Failed to create badge directory: %v", err)
+	}
 }
 
 // ─── Upload premium badge ─────────────────────────────────────────────
@@ -52,7 +54,9 @@ func UploadPremiumBadge(c *fiber.Ctx) error {
 
 	if user.PremiumBadgeUrl != "" {
 		oldFile := filepath.Join(badgeStorageDir, filepath.Base(user.PremiumBadgeUrl))
-		os.Remove(oldFile)
+		if err := os.Remove(oldFile); err != nil {
+			log.Printf("[BADGE] Failed to delete old badge: %v", err)
+		}
 	}
 
 	// Validate MIME type server-side (not just extension)
@@ -61,9 +65,9 @@ func UploadPremiumBadge(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to open file"})
 	}
 	buf := make([]byte, 512)
-	n, _ := f.Read(buf)
+	n, err := f.Read(buf)
 	f.Close()
-	if n > 0 {
+	if err == nil && n > 0 {
 		mimeType := http.DetectContentType(buf[:n])
 		if !strings.HasPrefix(mimeType, "image/") {
 			return c.Status(400).JSON(fiber.Map{"error": "File is not a valid image"})
@@ -101,7 +105,9 @@ func DeletePremiumBadge(c *fiber.Ctx) error {
 
 	if user.PremiumBadgeUrl != "" {
 		oldFile := filepath.Join(badgeStorageDir, filepath.Base(user.PremiumBadgeUrl))
-		os.Remove(oldFile)
+		if err := os.Remove(oldFile); err != nil {
+			log.Printf("[BADGE] Failed to delete badge file: %v", err)
+		}
 	}
 
 	db.GetDB().Model(&user).Update("premium_badge_url", "")

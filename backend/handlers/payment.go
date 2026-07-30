@@ -354,7 +354,11 @@ func CreatePayment(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[YOOKASSA] Failed to read response: %v", err)
+		return c.Status(502).JSON(fiber.Map{"error": "Payment service unavailable"})
+	}
 
 	if resp.StatusCode != 200 {
 		log.Printf("[YOOKASSA] Payment creation failed: status=%d body=%s", resp.StatusCode, string(respBody))
@@ -564,7 +568,10 @@ func verifyPaymentWithYooKassa(paymentID string) (*YooKassaGetPaymentResponse, e
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read YooKassa response: %w", err)
+	}
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("YooKassa API returned status %d: %s", resp.StatusCode, string(body))
