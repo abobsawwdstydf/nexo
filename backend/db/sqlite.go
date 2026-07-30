@@ -252,6 +252,36 @@ func addIndexes(db *gorm.DB) {
 
 		// Incognito members
 		"CREATE INDEX IF NOT EXISTS idx_incognito_members_chat_user ON incognito_members(chat_id, user_id)",
+
+		// Users - commonly filtered columns
+		"CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+		"CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+		"CREATE INDEX IF NOT EXISTS idx_users_username_email ON users(username, email)",
+
+		// Blocked users
+		"CREATE INDEX IF NOT EXISTS idx_blocked_users_blocker ON blocked_users(blocker_id)",
+		"CREATE INDEX IF NOT EXISTS idx_blocked_users_blocked ON blocked_users(blocked_id)",
+
+		// Story views & reactions
+		"CREATE INDEX IF NOT EXISTS idx_story_views_story_user ON story_views(story_id, user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_story_reactions_story_user ON story_reactions(story_id, user_id)",
+
+		// Moderation logs
+		"CREATE INDEX IF NOT EXISTS idx_moderation_logs_chat ON moderation_logs(chat_id)",
+		"CREATE INDEX IF NOT EXISTS idx_moderation_logs_target ON moderation_logs(target_id)",
+
+		// Payments
+		"CREATE INDEX IF NOT EXISTS idx_payments_user_status ON payments(user_id, status)",
+
+		// Call logs
+		"CREATE INDEX IF NOT EXISTS idx_call_logs_room ON call_logs(room_id)",
+
+		// Webhook deliveries
+		"CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_config ON webhook_deliveries(webhook_config_id)",
+
+		// E2E key bundles & sessions
+		"CREATE INDEX IF NOT EXISTS idx_e2e_key_bundles_user ON e2e_key_bundles(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_e2e_sessions_chat_user ON e2e_sessions(chat_id, user_id)",
 	}
 	for _, idx := range indexes {
 		db.Exec(idx)

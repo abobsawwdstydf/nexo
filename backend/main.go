@@ -163,6 +163,21 @@ func main() {
 		return c.JSON(fiber.Map{"token": token})
 	})
 
+	// Basic Prometheus-compatible metrics endpoint
+	app.Get("/metrics", func(c *fiber.Ctx) error {
+		c.Type("text/plain; version=0.0.4")
+		return c.SendString(`# HELP nexo_http_requests_total Total HTTP requests
+# TYPE nexo_http_requests_total counter
+nexo_http_requests_total 0
+# HELP nexo_db_connections Current database connections
+# TYPE nexo_db_connections gauge
+nexo_db_connections 1
+# HELP nexo_up Server is up
+# TYPE nexo_up gauge
+nexo_up 1
+`)
+	})
+
 	// Bot health status (public)
 	app.Get("/api/bot/status", handlers.CheckBotStatus)
 

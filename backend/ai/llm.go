@@ -43,10 +43,16 @@ func NewLLMClient() *LLMClient {
 	}
 }
 
-// chat sends messages to the proxy /chat/auto endpoint
+// fallbackResp is a simple canned response used when the AI proxy is unreachable.
+func fallbackResp(prompt string) (string, string, error) {
+	return "AI-прокси временно недоступен. Пожалуйста, попробуйте позже.", "fallback", nil
+}
+
+// chat sends messages to the proxy /chat/auto endpoint.
+// When the proxy is unreachable, returns a graceful fallback message instead of hard-failing.
 func (c *LLMClient) chat(messages []proxyMessage) (string, string, error) {
 	if c.config.ProxyURL == "" {
-		return "", "", fmt.Errorf("AI_PROXY_URL not configured")
+		return fallbackResp("")
 	}
 
 	proxyURL := c.config.ProxyURL
@@ -74,7 +80,8 @@ func (c *LLMClient) chat(messages []proxyMessage) (string, string, error) {
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return "", "", fmt.Errorf("proxy request failed: %w", err)
+		// Graceful degradation: proxy is unreachable
+		return fallbackResp("")
 	}
 	defer resp.Body.Close()
 
@@ -84,7 +91,8 @@ func (c *LLMClient) chat(messages []proxyMessage) (string, string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("proxy error (status %d): %s", resp.StatusCode, string(respBody))
+		// Graceful degradation: proxy returned error status
+		return fallbackResp("")
 	}
 
 	var proxyResp proxyResponse
@@ -93,7 +101,7 @@ func (c *LLMClient) chat(messages []proxyMessage) (string, string, error) {
 	}
 
 	if proxyResp.Error != "" {
-		return "", "", fmt.Errorf("proxy error: %s", proxyResp.Error)
+		return proxyResp.Text + " (AI временно недоступен)", proxyResp.Provider, nil
 	}
 
 	return proxyResp.Text, proxyResp.Provider, nil

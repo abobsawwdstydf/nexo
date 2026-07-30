@@ -51,15 +51,21 @@ export class ApiClient {
   async doRefresh(): Promise<boolean> {
     try {
       const refreshToken = this.getStoredRefreshToken();
-      if (!refreshToken) return false;
 
       const refreshController = new AbortController();
       const refreshTimer = setTimeout(() => refreshController.abort(), 10_000);
+
+      // Send refresh token in body if available, otherwise rely on HTTP-only cookie
+      const body: Record<string, string> = {};
+      if (refreshToken) {
+        body.refreshToken = refreshToken;
+      }
+
       const refreshResponse = await fetch(`${getApiBase()}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify(body),
         signal: refreshController.signal,
       });
       clearTimeout(refreshTimer);

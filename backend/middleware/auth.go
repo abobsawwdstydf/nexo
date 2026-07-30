@@ -19,6 +19,33 @@ var (
 	JWTRefreshSecret []byte
 )
 
+// SetRefreshCookie sets an HTTP-only, secure cookie for the refresh token.
+func SetRefreshCookie(c *fiber.Ctx, refreshToken string) {
+	secure := c.Protocol() == "https"
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/api/auth",
+		HTTPOnly: true,
+		Secure:   secure,
+		SameSite: "Strict",
+		MaxAge:   30 * 24 * 60 * 60, // 30 days
+	})
+}
+
+// ClearRefreshCookie clears the refresh token cookie (for logout).
+func ClearRefreshCookie(c *fiber.Ctx) {
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/api/auth",
+		HTTPOnly: true,
+		Secure:   c.Protocol() == "https",
+		SameSite: "Strict",
+		MaxAge:   -1,
+	})
+}
+
 // Refresh token blacklist
 var (
 	refreshBlacklist   = make(map[string]time.Time)
