@@ -5,6 +5,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"crypto/sha256"
+	"encoding/hex"
+	"crypto/rand"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -51,38 +54,50 @@ var (
 	refreshBlacklist   = make(map[string]time.Time)
 	refreshBlacklistMu sync.RWMutex
 )
-
-func init() {
-	// Cleanup expired tokens from blacklist every 10 minutes
-	go func() {
-		for {
-			time.Sleep(10 * time.Minute)
-			refreshBlacklistMu.Lock()
-			now := time.Now()
-			for token, expiry := range refreshBlacklist {
-				if now.After(expiry) {
-					delete(refreshBlacklist, token)
-				}
-			}
-			refreshBlacklistMu.Unlock()
-		}
-	}()
-}
-
 // BlacklistRefreshToken adds a refresh token to the blacklist
 func BlacklistRefreshToken(token string) {
+	hash := sha256.Sum256([]byte(token))
+	tokenHash := hex.EncodeToString(hash[:])
+
+	entry := models.RefreshTokenBlacklist{
+		ID:        generateBlacklistID(),
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
+	}
+	db.GetDB().Create(&entry)
+
 	refreshBlacklistMu.Lock()
-	defer refreshBlacklistMu.Unlock()
-	// Store with 30-day expiry (max refresh token lifetime)
-	refreshBlacklist[token] = time.Now().Add(30 * 24 * time.Hour)
+	refreshBlacklist[tokenHash] = time.Now().Add(30 * 24 * time.Hour)
+	refreshBlacklistMu.Unlock()
 }
+
 
 // IsTokenBlacklisted checks if a refresh token is blacklisted
 func IsTokenBlacklisted(token string) bool {
+	hash := sha256.Sum256([]byte(token))
+	tokenHash := hex.EncodeToString(hash[:])
+
 	refreshBlacklistMu.RLock()
-	defer refreshBlacklistMu.RUnlock()
-	_, blacklisted := refreshBlacklist[token]
-	return blacklisted
+	expiry, exists := refreshBlacklist[tokenHash]
+	refreshBlacklistMu.RUnlock()
+	if exists && time.Now().Before(expiry) {
+		return true
+	}
+
+	var entry models.RefreshTokenBlacklist
+	if result := db.GetDB().Where("token_hash = ? AND expires_at > ?", tokenHash, time.Now()).First(&entry); result.Error == nil {
+		return true
+	}
+
+	return false
+}
+
+
+
+func generateBlacklistID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 func InitJWT() error {

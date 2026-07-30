@@ -124,6 +124,7 @@ type Message struct {
 	Thumbnail        string     `json:"thumbnail"`
 	IsEncrypted      bool       `json:"isEncrypted" gorm:"default:false"`
 	EncryptedContent string     `json:"encryptedContent"`
+	EncryptedIV      string     `json:"encryptedIv"`
 	SenderKeyID      string     `json:"senderKeyId"`
 	ThreadID         string     `json:"threadId"`
 	SelfDestructTimer int      `json:"selfDestructTimer"`
@@ -467,12 +468,13 @@ type LoginCodeResponse struct {
 }
 
 type SendMessageRequest struct {
-	Content         string `json:"content"`
-	Type            string `json:"type"`
-	ReplyToID       string `json:"replyToId"`
-	ForwardedFromID string `json:"forwardedFromId"`
-	IsEncrypted     bool   `json:"isEncrypted"`
+	Content          string `json:"content"`
+	Type             string `json:"type"`
+	ReplyToID        string `json:"replyToId"`
+	ForwardedFromID  string `json:"forwardedFromId"`
+	IsEncrypted      bool   `json:"isEncrypted"`
 	EncryptedContent string `json:"encryptedContent"`
+	EncryptedIV      string `json:"encryptedIv"`
 }
 
 type CreateChatRequest struct {
@@ -1567,4 +1569,10 @@ type DeadManSwitchRecipient struct {
 
 	Switch DeadManSwitch `json:"-" gorm:"foreignKey:SwitchID"`
 	User   User          `json:"-" gorm:"foreignKey:UserID"`
+}
+// RefreshTokenBlacklist stores blacklisted refresh token hashes (survives restarts)
+type RefreshTokenBlacklist struct {
+	ID        string    `json:"id" gorm:"primaryKey"`
+	TokenHash string    `json:"tokenHash" gorm:"uniqueIndex;size:64"`
+	ExpiresAt time.Time `json:"expiresAt" gorm:"index"`
 }

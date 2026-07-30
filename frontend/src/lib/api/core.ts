@@ -1,4 +1,4 @@
-import { getApiUrl } from '../../config';
+﻿import { getApiUrl } from '../../config';
 
 export const getApiBase = (): string => {
   const url = getApiUrl();
@@ -9,6 +9,7 @@ export class ApiClient {
   /** @internal */ csrfToken: string | null = null;
   /** @internal */ refreshPromise: Promise<boolean> | null = null;
   /** @internal */ onAuthFailed?: () => void;
+  private pendingRequests = new Map<string, Promise<any>>();
 
   setCsrfToken(token: string | null) {
     this.csrfToken = token;
@@ -55,7 +56,6 @@ export class ApiClient {
       const refreshController = new AbortController();
       const refreshTimer = setTimeout(() => refreshController.abort(), 10_000);
 
-      // Send refresh token in body if available, otherwise rely on HTTP-only cookie
       const body: Record<string, string> = {};
       if (refreshToken) {
         body.refreshToken = refreshToken;
@@ -90,8 +90,22 @@ export class ApiClient {
     }
   }
 
-  /** @internal Core request method — handles auth, CSRF, timeout, and refresh. */
+  /** @internal Core request method — handles auth, CSRF, timeout, refresh, and deduplication. */
   async request<T>(endpoint: string, options: RequestInit & { timeout?: number } = {}): Promise<T> {
+    const method = options.method || 'GET';
+    if (method === 'GET') {
+      const cacheKey = `GET:${endpoint}`;
+      const pending = this.pendingRequests.get(cacheKey);
+      if (pending) return pending as Promise<T>;
+      const promise = this._doRequest<T>(endpoint, options);
+      this.pendingRequests.set(cacheKey, promise);
+      promise.finally(() => this.pendingRequests.delete(cacheKey));
+      return promise;
+    }
+    return this._doRequest<T>(endpoint, options);
+  }
+
+  private async _doRequest<T>(endpoint: string, options: RequestInit & { timeout?: number } = {}): Promise<T> {
     const { timeout = 30_000, ...fetchOptions } = options;
     const controller = new AbortController();
     const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : undefined;
@@ -160,8 +174,6 @@ export class ApiClient {
     
     return data;
   }
-
-  // ─── Generic HTTP helpers ──────────────────────────────────────────
 
   async delete<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });

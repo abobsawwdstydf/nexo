@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"crypto/rand"
+	"encoding/hex"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -25,6 +27,13 @@ import (
 	"nexo/middleware"
 	"nexo/ws"
 )
+
+
+func generateSessionID() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
 
 func main() {
 	// Load .env file if it exists
@@ -159,8 +168,9 @@ func main() {
 
 	// CSRF token endpoint
 	app.Get("/api/csrf-token", func(c *fiber.Ctx) error {
-		token := middleware.GenerateCSRFToken(c.IP())
-		return c.JSON(fiber.Map{"token": token})
+		sessionID := generateSessionID()
+		token := middleware.GenerateCSRFToken(sessionID)
+		return c.JSON(fiber.Map{"token": token, "sessionId": sessionID})
 	})
 
 	// Basic Prometheus-compatible metrics endpoint
@@ -201,7 +211,7 @@ nexo_up 1
 	api.Post("/auth/register", handlers.AuthRateLimit(5, time.Minute), handlers.Register)
 	api.Post("/auth/login/code", handlers.AuthRateLimit(5, time.Minute), handlers.SendLoginCode)
 	api.Post("/auth/login/confirm", handlers.AuthRateLimit(10, time.Minute), handlers.LoginConfirm)
-	api.Post("/auth/refresh", handlers.RefreshToken)
+	api.Post("/auth/refresh", handlers.AuthRateLimit(10, time.Minute), handlers.RefreshToken)
 	api.Post("/auth/email/send-code", handlers.AuthRateLimit(3, 15*time.Minute), handlers.SendEmailCode)
 	api.Post("/auth/email/confirm", handlers.AuthRateLimit(5, time.Minute), handlers.ConfirmEmailCode)
 

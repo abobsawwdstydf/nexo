@@ -66,6 +66,9 @@ import type { Chat, Message, Reaction } from '../lib/types';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
 import { LinkPreview, extractUrls, renderTextWithLinks } from './LinkPreview';
+import { e2eManager } from '../lib/e2eSession';
+import { tryInitE2EForChat } from '../lib/e2eStore';
+import { EncryptionBadge } from './EncryptionBadge';
 
 const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Лица', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🫨', '🤗', '🫡', '🤔', '🫣', '🤫', '😶', '😏'] },
@@ -135,7 +138,7 @@ function shouldShowDateSeparator(messages: Message[], index: number): boolean {
   );
 }
 
-function VoiceMessagePlayer({ url, isOwn }: { url: string; isOwn: boolean }) {
+function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: boolean; decryptedUrl?: string }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -143,7 +146,7 @@ function VoiceMessagePlayer({ url, isOwn }: { url: string; isOwn: boolean }) {
 
   const togglePlay = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio(normalizeMediaUrl(url));
+      audioRef.current = new Audio(decryptedUrl || normalizeMediaUrl(url));
       audioRef.current.addEventListener('loadedmetadata', () => {
         setDuration(audioRef.current?.duration || 0);
       });
@@ -197,12 +200,32 @@ function VoiceMessagePlayer({ url, isOwn }: { url: string; isOwn: boolean }) {
   );
 }
 
-function VideoNotePlayer({ url, thumbnail }: { url: string; thumbnail?: string | null }) {
+function VideoNotePlayer({ url, thumbnail, decryptedUrl }: { url: string; thumbnail?: string | null; decryptedUrl?: string }) {
   const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const togglePlay = () => {
+    if (!videoRef.current) return;
+    if (playing) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play();
+    }
+    setPlaying(!playing);
+  };
 
   return (
     <div className="relative w-[140px] h-[140px] rounded-full overflow-hidden bg-black/40">
-      {thumbnail ? (
+      {decryptedUrl ? (
+        <video
+          ref={videoRef}
+          src={decryptedUrl}
+          className="w-full h-full object-cover"
+          loop
+          playsInline
+          onEnded={() => setPlaying(false)}
+        />
+      ) : thumbnail ? (
         <img src={normalizeMediaUrl(thumbnail)} alt="" className="w-full h-full object-cover" />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-white/5">
@@ -210,7 +233,7 @@ function VideoNotePlayer({ url, thumbnail }: { url: string; thumbnail?: string |
         </div>
       )}
       <button
-        onClick={() => setPlaying(!playing)}
+        onClick={togglePlay}
         className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
       >
         {playing ? (
@@ -291,12 +314,14 @@ const MessageBubble = memo(function MessageBubble({
   isChannel,
   onReply,
   onReact,
+  decryptedMediaUrls,
 }: {
   message: Message;
   isOwn: boolean;
   isChannel?: boolean;
   onReply?: () => void;
   onReact?: () => void;
+  decryptedMediaUrls?: Record<string, string>;
 }) {
   const time = formatTime(message.createdAt);
   const showSender = !isOwn && message.sender && (isChannel || message.sender.displayName);
@@ -341,6 +366,7 @@ const MessageBubble = memo(function MessageBubble({
             <VideoNotePlayer
               url={message.videoUrl || message.media?.[0]?.url || ''}
               thumbnail={message.thumbnail || message.media?.[0]?.thumbnail}
+              decryptedUrl={decryptedMediaUrls?.[message.id]}
             />
           </div>
         )}
@@ -371,7 +397,7 @@ const MessageBubble = memo(function MessageBubble({
           {/* Voice Message */}
           {hasVoice && hasMedia && (
             <div className="mb-1">
-              <VoiceMessagePlayer url={message.media[0].url} isOwn={isOwn} />
+              <VoiceMessagePlayer url={message.media[0].url} isOwn={isOwn} decryptedUrl={decryptedMediaUrls?.[message.id]} />
             </div>
           )}
 
@@ -461,11 +487,15 @@ function ChatHeader({
   onBack,
   onSearchToggle,
   pinnedMessages,
+  e2eReady,
+  e2eFingerprint,
 }: {
   chat: Chat;
   onBack: () => void;
   onSearchToggle?: () => void;
   pinnedMessages?: Array<{ id: string; message: Message }>;
+  e2eReady?: boolean;
+  e2eFingerprint?: string | null;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showPinned, setShowPinned] = useState(false);
@@ -529,17 +559,27 @@ function ChatHeader({
             <h2 className="text-sm font-semibold text-white/90 truncate">
               {chat.name || 'Без названия'}
             </h2>
-            <p className="text-[11px] text-white/30">
-              {chat.type === 'personal'
-                ? 'Личный чат'
-                : chat.type === 'group'
-                ? `${chat.members?.length || 0} участников`
-                : chat.type === 'channel'
-                ? 'Канал'
-                : chat.type === 'secret'
-                ? 'Секретный чат 🔐'
-                : ''}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] text-white/30">
+                {chat.type === 'personal'
+                  ? 'Личный чат'
+                  : chat.type === 'group'
+                  ? `${chat.members?.length || 0} участников`
+                  : chat.type === 'channel'
+                  ? 'Канал'
+                  : chat.type === 'secret'
+                  ? 'Секретный чат'
+                  : ''}
+              </p>
+              <EncryptionBadge
+                chatId={chat.id}
+                isE2E={chat.isE2E}
+                isSecret={chat.isSecret}
+                isChannel={chat.type === 'channel'}
+                e2eReady={e2eReady}
+                e2eFingerprint={e2eFingerprint}
+              />
+            </div>
           </div>
         </div>
 
@@ -674,11 +714,13 @@ function MessageInput({
   replyTo,
   onCancelReply,
   chatId,
+  e2eReady,
 }: {
-  onSend: (text: string, options?: { replyToId?: string; media?: any[] }) => void;
+  onSend: (text: string, options?: { replyToId?: string; media?: any[]; isEncrypted?: boolean; encryptedContent?: string }) => void;
   replyTo?: { id: string; content: string; sender: string } | null;
   onCancelReply?: () => void;
   chatId: string;
+  e2eReady?: boolean;
 }) {
   const [text, setText] = useState('');
   const [showAttach, setShowAttach] = useState(false);
@@ -921,11 +963,25 @@ function MessageInput({
           if (chunksRef.current.length === 0) return;
 
           const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-          const file = new File([blob], `video_note_${Date.now()}.webm`, { type: 'video/webm' });
 
           try {
+            let uploadBlob = blob;
+            let encMime = '';
+            if (e2eReady) {
+              const encBlob = await e2eManager.encryptChatMedia(chatId, blob);
+              if (encBlob) {
+                uploadBlob = encBlob;
+                encMime = 'video/webm';
+              }
+            }
+            const file = new File([uploadBlob], `video_note_${Date.now()}.webm`, { type: 'video/webm' });
             const media = await api.uploadFile(file);
-            onSend('📹 Видеокружок', { replyToId: replyTo?.id, media: [media] });
+            const opts: any = { replyToId: replyTo?.id, media: [media] };
+            if (encMime) {
+              opts.isEncrypted = true;
+              opts.encryptedContent = encMime;
+            }
+            onSend('📹 Видеокружок', opts);
           } catch (err) {
             console.error('[VideoNote] Failed to upload:', err);
             setRecordingError('Ошибка отправки');
@@ -960,11 +1016,25 @@ function MessageInput({
           if (chunksRef.current.length === 0) return;
 
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-          const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
 
           try {
+            let uploadBlob = blob;
+            let encMime = '';
+            if (e2eReady) {
+              const encBlob = await e2eManager.encryptChatMedia(chatId, blob);
+              if (encBlob) {
+                uploadBlob = encBlob;
+                encMime = 'audio/webm';
+              }
+            }
+            const file = new File([uploadBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
             const media = await api.uploadFile(file);
-            onSend('🎤 Голосовое сообщение', { replyToId: replyTo?.id, media: [media] });
+            const opts: any = { replyToId: replyTo?.id, media: [media] };
+            if (encMime) {
+              opts.isEncrypted = true;
+              opts.encryptedContent = encMime;
+            }
+            onSend('🎤 Голосовое сообщение', opts);
           } catch (err) {
             console.error('[Voice] Failed to upload:', err);
             setRecordingError('Ошибка отправки');
@@ -1601,6 +1671,12 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [linkConfirmUrl, setLinkConfirmUrl] = useState<string | null>(null);
+  const [e2eReady, setE2eReady] = useState(false);
+  const [e2eFingerprint, setE2eFingerprint] = useState<string | null>(null);
+  const e2eInitRef = useRef(false);
+  const e2eReadyRef = useRef(false);
+  const [decryptedMediaUrls, setDecryptedMediaUrls] = useState<Record<string, string>>({});
+  const decryptedMediaUrlsRef = useRef<Record<string, string>>({});
 
   // Feature states
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; sender: string } | null>(null);
@@ -1612,6 +1688,39 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const [showForward, setShowForward] = useState<Message | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<Message | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+
+  // Decrypt loaded messages
+  const decryptLoadedMessages = useCallback(async (msgs: Message[]) => {
+    const decrypted = await Promise.all(msgs.map(async (msg) => {
+      if (msg.isEncrypted && msg.encryptedContent && msg.encryptedIv) {
+        const plaintext = await e2eManager.decryptChatMessage(chat.id, msg.encryptedContent, msg.encryptedIv);
+        if (plaintext) {
+          return { ...msg, content: plaintext };
+        }
+      }
+      return msg;
+    }));
+    return decrypted;
+  }, [chat.id]);
+
+  // Decrypt media for a message and store the ObjectURL
+  const decryptMessageMedia = useCallback(async (msg: Message) => {
+    if (!msg.isEncrypted || !msg.encryptedContent || !msg.media?.[0]?.url) return;
+    if (decryptedMediaUrlsRef.current[msg.id]) return;
+    try {
+      const mimeType = msg.encryptedContent;
+      const response = await fetch(normalizeMediaUrl(msg.media[0].url));
+      const encryptedBlob = await response.blob();
+      const decrypted = await e2eManager.decryptChatMedia(chat.id, encryptedBlob, mimeType);
+      if (decrypted) {
+        const url = URL.createObjectURL(decrypted);
+        decryptedMediaUrlsRef.current[msg.id] = url;
+        setDecryptedMediaUrls(prev => ({ ...prev, [msg.id]: url }));
+      }
+    } catch (err) {
+      console.error('[E2E] Failed to decrypt media:', err);
+    }
+  }, [chat.id]);
 
   const isChannel = chat.type === 'channel';
   const pinnedMessages = chat.pinnedMessages || [];
@@ -1635,7 +1744,6 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         if (chat.id === NOTES_CHAT_ID) {
           if (!cancelled) setMessages(getNotesMessages());
         } else {
-          // Try WS RPC first, fall back to HTTP
           const { getSocket } = await import('../lib/socket');
           let data;
           if (getSocket()?.connected) {
@@ -1643,6 +1751,9 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
             data = resp.messages;
           } else {
             data = await api.getMessages(chat.id);
+          }
+          if (data && e2eReadyRef.current) {
+            data = await decryptLoadedMessages(data);
           }
           if (!cancelled) setMessages(data || []);
         }
@@ -1657,6 +1768,42 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
     load();
     return () => { cancelled = true; };
   }, [chat.id]);
+
+  // E2E initialization
+  useEffect(() => {
+    if (e2eInitRef.current || !user || chat.id === NOTES_CHAT_ID) return;
+    const isSecret = chat.isSecret || chat.isE2E || false;
+    if (!isSecret) return;
+
+    e2eInitRef.current = true;
+    const otherUserId = chat.otherMember?.id || chat.members?.find(m => m.userId !== user.id)?.userId || null;
+
+    (async () => {
+      const status = await tryInitE2EForChat(user.id, chat.id, otherUserId, isSecret);
+      setE2eReady(status.isReady);
+      e2eReadyRef.current = status.isReady;
+      setE2eFingerprint(status.keyFingerprint);
+      if (status.isReady) {
+        const stored = await import('../lib/e2e').then(m => m.getSessionInfo(chat.id));
+        if (stored) setE2eFingerprint(stored.keyFingerprint);
+      }
+    })();
+  }, [chat.id, chat.isSecret, chat.isE2E, user]);
+
+  // Sync e2eReadyRef whenever e2eReady changes
+  useEffect(() => {
+    e2eReadyRef.current = e2eReady;
+  }, [e2eReady]);
+
+  // Decrypt media for all encrypted media messages
+  useEffect(() => {
+    if (!e2eReady) return;
+    for (const msg of messages) {
+      if (msg.isEncrypted && msg.media?.[0]?.url && msg.encryptedContent) {
+        decryptMessageMedia(msg);
+      }
+    }
+  }, [messages, e2eReady, decryptMessageMedia]);
 
   // Auto-scroll
   useEffect(() => {
@@ -1674,22 +1821,38 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   }, []);
 
   // Send message
-  const handleSend = useCallback(async (text: string, options?: { replyToId?: string; media?: any[] }) => {
+  const handleSend = useCallback(async (text: string, options?: { replyToId?: string; media?: any[]; isEncrypted?: boolean; encryptedContent?: string }) => {
     try {
       const optimisticId = `opt_${Date.now()}`;
       const media = options?.media;
       const hasMedia = media && media.length > 0;
       const msgType = hasMedia ? (media[0]?.type?.startsWith('video') ? 'video_note' : media[0]?.type?.startsWith('audio') ? 'audio' : 'photo') : 'text';
 
+      let finalText = text || (hasMedia ? (msgType === 'video_note' ? '📹 Видеокружок' : msgType === 'audio' ? '🎤 Голосовое сообщение' : '') : '');
+      let isEncrypted = options?.isEncrypted || false;
+      let encryptedContent = options?.encryptedContent || '';
+      let encryptedIv = '';
+
+      if (!isEncrypted && e2eReady && finalText && !hasMedia) {
+        const encResult = await e2eManager.encryptChatMessage(chat.id, finalText);
+        if (encResult) {
+          encryptedContent = encResult.encryptedContent;
+          encryptedIv = encResult.iv;
+          isEncrypted = true;
+          finalText = '🔒 Зашифрованное сообщение';
+        }
+      }
+
       const optimisticMsg: Message = {
         id: optimisticId,
         chatId: chat.id,
         senderId: user?.id || '',
-        content: text || (hasMedia ? (msgType === 'video_note' ? '📹 Видеокружок' : msgType === 'audio' ? '🎤 Голосовое сообщение' : '') : ''),
+        content: finalText,
         type: msgType,
         replyToId: options?.replyToId || null,
         isEdited: false,
         isDeleted: false,
+        isEncrypted,
         createdAt: new Date().toISOString(),
         sender: {
           id: user?.id || '',
@@ -1713,7 +1876,13 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
           prev.map(m => (m.id === optimisticId ? savedMsg : m))
         );
       } else {
-        const result = await api.sendMessageWS(chat.id, text, { ...options, type: msgType });
+        const result = await api.sendMessageWS(chat.id, finalText, {
+          ...options,
+          type: msgType,
+          isEncrypted,
+          encryptedContent,
+          encryptedIv,
+        });
         setMessages(prev =>
           prev.map(m =>
             m.id === optimisticId
@@ -1721,9 +1890,6 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
               : m
           )
         );
-      }
-
-      if (!options?.replyToId) {
       }
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -1735,7 +1901,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         )
       );
     }
-  }, [chat.id, user]);
+  }, [chat.id, user, e2eReady]);
 
   // Toggle reaction
   const handleReact = useCallback(async (messageId: string, emoji: string) => {
@@ -1812,28 +1978,44 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
           if (cancelled) return;
           const msg = data.message;
           if (!msg || msg.chatId !== chat.id) return;
-          setMessages(prev => {
-            if (prev.some(m => m.id === msg.id)) return prev;
-            const now = Date.now();
-            const isDuplicateOptimistic = prev.some(m =>
-              m.id.startsWith('opt_') &&
-              m.senderId === msg.senderId &&
-              m.content === msg.content &&
-              now - new Date(m.createdAt).getTime() < 5000
-            );
-            if (isDuplicateOptimistic) {
-              return prev.map(m =>
-                m.id.startsWith('opt_') &&
-                m.senderId === msg.senderId &&
-                m.content === msg.content &&
-                now - new Date(m.createdAt).getTime() < 5000
-                  ? msg
-                  : m
-              );
+
+          (async () => {
+            let decryptedMsg = { ...msg };
+            if (msg.isEncrypted && msg.encryptedContent && msg.encryptedIv && e2eReadyRef.current) {
+              const plaintext = await e2eManager.decryptChatMessage(chat.id, msg.encryptedContent, msg.encryptedIv);
+              if (plaintext) {
+                decryptedMsg.content = plaintext;
+              }
             }
-            return [...prev, msg];
-          });
-          setAutoScroll(true);
+
+            // Decrypt media for encrypted media messages
+            if (msg.isEncrypted && msg.media?.[0]?.url && msg.encryptedContent) {
+              decryptMessageMedia(decryptedMsg);
+            }
+
+            setMessages(prev => {
+              if (prev.some(m => m.id === decryptedMsg.id)) return prev;
+              const now = Date.now();
+              const isDuplicateOptimistic = prev.some(m =>
+                m.id.startsWith('opt_') &&
+                m.senderId === decryptedMsg.senderId &&
+                m.content === decryptedMsg.content &&
+                now - new Date(m.createdAt).getTime() < 5000
+              );
+              if (isDuplicateOptimistic) {
+                return prev.map(m =>
+                  m.id.startsWith('opt_') &&
+                  m.senderId === decryptedMsg.senderId &&
+                  m.content === decryptedMsg.content &&
+                  now - new Date(m.createdAt).getTime() < 5000
+                    ? decryptedMsg
+                    : m
+                );
+              }
+              return [...prev, decryptedMsg];
+            });
+            setAutoScroll(true);
+          })();
         };
         socket.on('message:new', newMessageHandler);
         addListener('message:new', newMessageHandler);
@@ -1870,7 +2052,13 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
           },
         });
         const data = await response.json();
-        setSearchResults(data?.items || data || []);
+        const results = data?.items || data || [];
+        if (e2eReadyRef.current) {
+          const decrypted = await decryptLoadedMessages(results);
+          setSearchResults(decrypted);
+        } else {
+          setSearchResults(results);
+        }
       } catch (err) {
         console.error('[Search] Failed:', err);
       } finally {
@@ -1884,14 +2072,18 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const handleForward = useCallback(async (targetChatId: string) => {
     if (!forwardingMsg) return;
     try {
-      const content = forwardingMsg.content || '';
+      let content = forwardingMsg.content || '';
+      if (forwardingMsg.isEncrypted && forwardingMsg.encryptedContent && forwardingMsg.encryptedIv) {
+        const decrypted = await e2eManager.decryptChatMessage(chat.id, forwardingMsg.encryptedContent, forwardingMsg.encryptedIv);
+        if (decrypted) content = decrypted;
+      }
       await api.sendMessageWS(targetChatId, `📩 Переслано: ${content}`);
     } catch (err) {
       console.error('[Forward] Failed:', err);
     }
     setShowForward(null);
     setForwardingMsg(null);
-  }, [forwardingMsg]);
+  }, [forwardingMsg, chat.id]);
 
   return (
     <ChatWallpaper chatId={chat.id}>
@@ -1900,6 +2092,8 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         onBack={onBack}
         onSearchToggle={() => setSearchMode(v => !v)}
         pinnedMessages={pinnedMessages}
+        e2eReady={e2eReady}
+        e2eFingerprint={e2eFingerprint}
       />
 
       {/* Search bar */}
@@ -2012,6 +2206,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
                       onReact={() => setShowEmojiPicker(
                         showEmojiPicker === msg.id ? null : msg.id
                       )}
+                      decryptedMediaUrls={decryptedMediaUrls}
                     />
                     {/* Emoji picker for this message */}
                     <AnimatePresence>
@@ -2057,6 +2252,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
         chatId={chat.id}
+        e2eReady={e2eReady}
       />
 
       {/* Forward modal */}

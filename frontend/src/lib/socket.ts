@@ -1,4 +1,4 @@
-import { getApiUrl } from '../config';
+﻿import { getApiUrl } from '../config';
 
 let ws: WebSocket | null = null;
 let connectAttempts = 0;
@@ -34,7 +34,6 @@ export function wsRequest<T = any>(type: string, payload?: Record<string, any>, 
       reject(new Error('WebSocket not connected'));
       return;
     }
-
     rpcCounter++;
     const id = `rpc_${Date.now()}_${rpcCounter}`;
 
@@ -216,9 +215,8 @@ export function connectSocket(token?: string): SocketInterface | null {
     },
     connect: () => {
       if (!ws || ws.readyState === WebSocket.CLOSED) {
-        // Reconnect with token
-        const newUrl = getSocketUrl().replace(/^http/, 'ws') + `/ws/chat?token=${token}`;
-        ws = new WebSocket(newUrl);
+        const newUrl = getSocketUrl().replace(/^http/, 'ws') + '/ws/chat';
+        ws = new WebSocket(newUrl, [token]);
         setupWebSocketHandlers();
       }
     }
@@ -273,7 +271,7 @@ function setupWebSocketHandlers() {
       const data = JSON.parse(event.data);
       
       // ─── RPC response handling ─────────────────────────────────────
-      // If message has an `id` field, it's a response to a pending RPC request
+      // If message has an id field, it's a response to a pending RPC request
       if (data.id && pendingRPCs.has(data.id)) {
         const rpc = pendingRPCs.get(data.id)!;
         pendingRPCs.delete(data.id);

@@ -176,6 +176,10 @@ export interface Message {
   videoUrl?: string | null;
   duration?: number | null;
   thumbnail?: string | null;
+  // E2E encryption fields
+  isEncrypted?: boolean;
+  encryptedContent?: string;
+  encryptedIv?: string;
   // Optimistic send state (client-side only)
   _isSending?: boolean;
   _isFailed?: boolean;

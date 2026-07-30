@@ -15,7 +15,7 @@ declare module './core' {
     getOnlineStatuses(userIds: string[]): Promise<Record<string, boolean>>;
     setUserStatusWS(text: string, emoji?: string, duration?: number): Promise<void>;
     getChatMembersWS(chatId: string): Promise<Array<{ userId: string; username: string; displayName: string; avatar: string; role: string }>>;
-    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[] }): Promise<{ messageId: string; createdAt: string }>;
+    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string }): Promise<{ messageId: string; createdAt: string }>;
     // WS RPC data fetchers
     fetchMessagesWS(chatId: string, cursor?: string, limit?: number): Promise<{ messages: Message[]; hasMore: boolean }>;
     fetchFriendsWS(): Promise<FriendWithId[]>;
@@ -141,14 +141,31 @@ export function installRealtime(api: ApiClient): void {
    * Send message via WebSocket.
    * Falls back to HTTP if WS is not connected.
    */
-  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[] }): Promise<{ messageId: string; createdAt: string }> => {
+  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string }): Promise<{ messageId: string; createdAt: string }> => {
     const socket = getSocket();
     if (socket?.connected) {
-      return wsRequest('send_message', { chatId, content, type: options?.type, replyToId: options?.replyToId, media: options?.media });
+      return wsRequest('send_message', {
+        chatId,
+        content,
+        type: options?.type,
+        replyToId: options?.replyToId,
+        media: options?.media,
+        isEncrypted: options?.isEncrypted,
+        encryptedContent: options?.encryptedContent,
+        encryptedIv: options?.encryptedIv,
+      });
     }
     const result = await api.request<Message>(`/chats/${chatId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content, type: options?.type, replyToId: options?.replyToId, media: options?.media }),
+      body: JSON.stringify({
+        content,
+        type: options?.type,
+        replyToId: options?.replyToId,
+        media: options?.media,
+        isEncrypted: options?.isEncrypted,
+        encryptedContent: options?.encryptedContent,
+        encryptedIv: options?.encryptedIv,
+      }),
     });
     return { messageId: result.id, createdAt: result.createdAt };
   };

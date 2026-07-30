@@ -156,7 +156,8 @@ func InitLocal(dsn string) error {
 		&models.PublicRoom{},
 		// Screenshot Detection
 		&models.ScreenshotLog{},
-	)
+		// Refresh Token Blacklist
+		&models.RefreshTokenBlacklist{},)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}

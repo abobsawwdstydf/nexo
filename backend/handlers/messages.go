@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"nexo/db"
+	"nexo/helpers"
 	"nexo/models"
 	"nexo/ws"
 )
@@ -18,22 +19,23 @@ const maxMessageContentLength = 10000
 
 // MessageJSON for safe JSON output
 type MessageJSON struct {
-	ID               string          `json:"id"`
-	ChatID           string          `json:"chatId"`
-	SenderID         string          `json:"senderId"`
-	Content          string          `json:"content"`
-	Type             string          `json:"type"`
-	ReplyToID        string          `json:"replyToId"`
-	ForwardedFromID  string          `json:"forwardedFromId"`
-	IsEdited         bool            `json:"isEdited"`
-	IsDeleted        bool            `json:"isDeleted"`
-	IsEncrypted      bool            `json:"isEncrypted"`
-	EncryptedContent string          `json:"encryptedContent"`
-	CreatedAt        string          `json:"createdAt"`
-	Sender           SenderJSON      `json:"sender"`
-	ReplyTo          *MessageJSON    `json:"replyTo,omitempty"`
-	Media            []models.Media  `json:"media"`
-	Reactions        []models.Reaction `json:"reactions"`
+	ID               string             `json:"id"`
+	ChatID           string             `json:"chatId"`
+	SenderID         string             `json:"senderId"`
+	Content          string             `json:"content"`
+	Type             string             `json:"type"`
+	ReplyToID        string             `json:"replyToId"`
+	ForwardedFromID  string             `json:"forwardedFromId"`
+	IsEdited         bool               `json:"isEdited"`
+	IsDeleted        bool               `json:"isDeleted"`
+	IsEncrypted      bool               `json:"isEncrypted"`
+	EncryptedContent string             `json:"encryptedContent"`
+	EncryptedIV      string             `json:"encryptedIv"`
+	CreatedAt        string             `json:"createdAt"`
+	Sender           SenderJSON         `json:"sender"`
+	ReplyTo          *MessageJSON       `json:"replyTo,omitempty"`
+	Media            []models.Media     `json:"media"`
+	Reactions        []models.Reaction  `json:"reactions"`
 }
 
 type SenderJSON struct {
@@ -63,6 +65,7 @@ func messageToJSON(msg models.Message) string {
 		IsDeleted:        msg.IsDeleted,
 		IsEncrypted:      msg.IsEncrypted,
 		EncryptedContent: msg.EncryptedContent,
+		EncryptedIV:      msg.EncryptedIV,
 		CreatedAt:        msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		Sender:           senderJSON,
 		Media:            msg.Media,
@@ -111,6 +114,7 @@ func SendMessage(c *fiber.Ctx) error {
 		ForwardedFromID:  req.ForwardedFromID,
 		IsEncrypted:      req.IsEncrypted,
 		EncryptedContent: req.EncryptedContent,
+		EncryptedIV:      req.EncryptedIV,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -119,12 +123,14 @@ func SendMessage(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send message"})
 	}
 
+	// Batch update chat member and chat
 	db.GetDB().Model(&models.ChatMember{}).
 		Where("chat_id = ? AND user_id = ?", chatID, userID).
 		Update("last_message_at", now)
 
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now)
 
+	// Fetch with preload in single query
 	db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msg.ID)
 
 	msgJSON := messageToJSON(msg)
@@ -138,11 +144,7 @@ func GetMessages(c *fiber.Ctx) error {
 	chatID := c.Params("id")
 	userID := c.Locals("userId").(string)
 
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "50"))
-	if page < 1 { page = 1 }
-	if pageSize < 1 || pageSize > 100 { pageSize = 50 }
-	offset := (page - 1) * pageSize
+	p := helpers.ParsePagination(c, 50, 100)
 
 	var member models.ChatMember
 	if result := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&member); result.Error != nil {
@@ -150,26 +152,34 @@ func GetMessages(c *fiber.Ctx) error {
 	}
 
 	var messages []models.Message
-	db.GetDB().
-		Preload("Sender").
-		Preload("Media").
-		Preload("Reactions").
-		Preload("Reactions.User").
-		Where("chat_id = ?", chatID).
-		Order("created_at DESC").
-		Offset(offset).Limit(pageSize).
-		Find(&messages)
-
 	var total int64
-	db.GetDB().Model(&models.Message{}).Where("chat_id = ?", chatID).Count(&total)
 
-	return c.JSON(fiber.Map{
-		"items":    messages,
-		"total":    total,
-		"page":     page,
-		"pageSize": pageSize,
-		"hasMore":  int64(offset+pageSize) < total,
-	})
+	// Count and fetch in parallel using goroutines
+	countDone := make(chan struct{})
+	fetchDone := make(chan struct{})
+
+	go func() {
+		db.GetDB().Model(&models.Message{}).Where("chat_id = ?", chatID).Count(&total)
+		close(countDone)
+	}()
+
+	go func() {
+		db.GetDB().
+			Preload("Sender").
+			Preload("Media").
+			Preload("Reactions").
+			Preload("Reactions.User").
+			Where("chat_id = ?", chatID).
+			Order("created_at DESC").
+			Offset(p.Offset).Limit(p.PageSize).
+			Find(&messages)
+		close(fetchDone)
+	}()
+
+	<-countDone
+	<-fetchDone
+
+	return c.JSON(helpers.NewPaginatedResponse(messages, total, p))
 }
 
 func EditMessage(c *fiber.Ctx) error {

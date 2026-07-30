@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ var (
 	activeWSConnectionsMu sync.Mutex
 )
 
-// WebSocket rate limiting — max 30 messages per second per user
+// WebSocket rate limiting � max 30 messages per second per user
 const (
 	wsRateLimitMax    = 30
 	wsRateLimitWindow = time.Second
@@ -383,11 +383,14 @@ type MediaPayload struct {
 // handleSendMessage sends a message via WS (alternative to HTTP POST).
 func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	var payload struct {
-		ChatID   string           `json:"chatId"`
-		Content  string           `json:"content"`
-		Type     string           `json:"type"`
-		ReplyTo  string           `json:"replyToId"`
-		Media    []MediaPayload   `json:"media"`
+		ChatID           string           `json:"chatId"`
+		Content          string           `json:"content"`
+		Type             string           `json:"type"`
+		ReplyTo          string           `json:"replyToId"`
+		Media            []MediaPayload   `json:"media"`
+		IsEncrypted      bool             `json:"isEncrypted"`
+		EncryptedContent string           `json:"encryptedContent"`
+		EncryptedIV      string           `json:"encryptedIv"`
 	}
 	if env.Payload != nil {
 		if err := json.Unmarshal(env.Payload, &payload); err != nil {
@@ -409,7 +412,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 		return errWSNotMember
 	}
 
-	// Slow mode check — via chat's SlowModeInterval (seconds)
+	// Slow mode check � via chat's SlowModeInterval (seconds)
 	if payload.Type == "" || payload.Type == "text" {
 		var chat models.Chat
 		if result := db.GetDB().First(&chat, "id = ?", payload.ChatID); result.Error == nil && chat.SlowModeInterval > 0 {
@@ -428,14 +431,17 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	}
 
 	msg := models.Message{
-		ID:          generateID(),
-		ChatID:      payload.ChatID,
-		SenderID:    userID,
-		Content:     payload.Content,
-		Type:        payload.Type,
-		ReplyToID:   payload.ReplyTo,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:               generateID(),
+		ChatID:           payload.ChatID,
+		SenderID:         userID,
+		Content:          payload.Content,
+		Type:             payload.Type,
+		ReplyToID:        payload.ReplyTo,
+		IsEncrypted:      payload.IsEncrypted,
+		EncryptedContent: payload.EncryptedContent,
+		EncryptedIV:      payload.EncryptedIV,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 	if msg.Type == "" {
 		msg.Type = "text"
@@ -481,7 +487,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	return &wsDataResponse{Data: map[string]interface{}{"messageId": msg.ID, "createdAt": msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00")}}
 }
 
-// ─── WS RPC: fetch_messages ───────────────────────────────────────────────
+// --- WS RPC: fetch_messages -----------------------------------------------
 func handleFetchMessages(client *ws.Client, env *wsEnvelope) error {
 	var payload struct {
 		ChatID string `json:"chatId"`
@@ -536,7 +542,7 @@ func handleFetchMessages(client *ws.Client, env *wsEnvelope) error {
 	}}
 }
 
-// ─── WS RPC: fetch_friends ────────────────────────────────────────────────
+// --- WS RPC: fetch_friends ------------------------------------------------
 func handleFetchFriends(client *ws.Client, env *wsEnvelope) error {
 	userID := client.UserID
 
@@ -559,7 +565,7 @@ func handleFetchFriends(client *ws.Client, env *wsEnvelope) error {
 	return &wsDataResponse{Data: map[string]interface{}{"friends": friends}}
 }
 
-// ─── WS RPC: fetch_friend_requests ─────────────────────────────────────────
+// --- WS RPC: fetch_friend_requests -----------------------------------------
 func handleFetchFriendRequests(client *ws.Client, _ *wsEnvelope) error {
 	userID := client.UserID
 
@@ -573,7 +579,7 @@ func handleFetchFriendRequests(client *ws.Client, _ *wsEnvelope) error {
 	return &wsDataResponse{Data: map[string]interface{}{"requests": friendships}}
 }
 
-// ─── WS RPC: fetch_init ─────────────────────────────────────────────────────
+// --- WS RPC: fetch_init -----------------------------------------------------
 func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 	userID := client.UserID
 
@@ -665,7 +671,7 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 	}}
 }
 
-// ─── WS RPC: fetch_notifications ───────────────────────────────────────────
+// --- WS RPC: fetch_notifications -------------------------------------------
 func handleFetchNotifications(client *ws.Client, _ *wsEnvelope) error {
 	userID := client.UserID
 
@@ -682,7 +688,7 @@ func handleFetchNotifications(client *ws.Client, _ *wsEnvelope) error {
 	}}
 }
 
-// ─── WS RPC: push_subscribe ─────────────────────────────────────────────────
+// --- WS RPC: push_subscribe -------------------------------------------------
 func handlePushSubscribe(client *ws.Client, env *wsEnvelope) error {
 	var payload struct {
 		Subscription json.RawMessage `json:"subscription"`
@@ -792,6 +798,22 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 }
 
 func HandleWebSocket(c *websocket.Conn) {
+	origin := c.Headers("Origin")
+	if origin != "" {
+		allowed := false
+		allowedDomains := []string{"darkheavens.ru", "hakerone.ru", "localhost"}
+		for _, domain := range allowedDomains {
+			if strings.HasSuffix(origin, domain) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			c.Close()
+			return
+		}
+	}
+
 	token := c.Query("token")
 	if token == "" {
 		protocols := strings.Split(c.Headers("Sec-WebSocket-Protocol"), ",")

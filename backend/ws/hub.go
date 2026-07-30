@@ -1,4 +1,4 @@
-package ws
+﻿package ws
 
 import (
 	"log"
@@ -26,7 +26,6 @@ type Hub struct {
 	mu          sync.RWMutex
 	clients     map[string]map[*Client]bool
 	chatMembers map[string]map[string]bool // chatID -> set of userIDs
-	broadcast   chan []byte
 	register    chan *Client
 	unregister  chan *Client
 	stop        chan struct{}
@@ -39,7 +38,6 @@ func NewHub() *Hub {
 	return &Hub{
 		clients:     make(map[string]map[*Client]bool),
 		chatMembers: make(map[string]map[string]bool),
-		broadcast:   make(chan []byte, 256),
 		register:    make(chan *Client),
 		unregister:  make(chan *Client),
 		stop:        make(chan struct{}),
@@ -86,23 +84,6 @@ func (h *Hub) Run() {
 			h.Metrics.mu.Lock()
 			h.Metrics.CurrentConnections = h.totalConnectionsLocked()
 			h.Metrics.mu.Unlock()
-			h.mu.Unlock()
-
-		case message := <-h.broadcast:
-			h.mu.Lock()
-			h.Metrics.mu.Lock()
-			h.Metrics.TotalBroadcasts++
-			h.Metrics.mu.Unlock()
-			for _, clients := range h.clients {
-				for client := range clients {
-					select {
-					case client.Send <- message:
-					default:
-						close(client.Send)
-						delete(clients, client)
-					}
-				}
-			}
 			h.mu.Unlock()
 		}
 	}
@@ -205,7 +186,19 @@ func (h *Hub) getUserCount(userID string) int {
 }
 
 func (h *Hub) Broadcast(data []byte) {
-	h.broadcast <- data
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, clients := range h.clients {
+		for client := range clients {
+			select {
+			case client.Send <- data:
+			default:
+			}
+		}
+	}
+	h.Metrics.mu.Lock()
+	h.Metrics.TotalBroadcasts++
+	h.Metrics.mu.Unlock()
 }
 
 // SendToClient sends data to a single specific client (for RPC responses).

@@ -16,9 +16,13 @@ import {
   Bluetooth,
   Copy,
   Check,
+  Fingerprint,
+  ShieldCheck,
+  Shield,
 } from 'lucide-react';
 import { getSocket, wsRequest } from '../lib/socket';
 import type { UserBasic } from '../lib/types';
+import { getSessionInfo } from '../lib/e2e';
 
 interface CallOverlayProps {
   open: boolean;
@@ -40,6 +44,9 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const [isPip, setIsPip] = useState(false);
   const [audioOutput, setAudioOutput] = useState<'speaker' | 'earpiece'>('speaker');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showE2EInfo, setShowE2EInfo] = useState(false);
+  const [e2eFingerprint, setE2eFingerprint] = useState<string | null>(null);
+  const [e2eCopySuccess, setE2eCopySuccess] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -50,8 +57,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const iceConfigRef = useRef<RTCConfiguration>({
-    // Audio calls use direct WebRTC only. No TURN relay or credentials are
-    // requested, so restrictive networks may be unable to establish a call.
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun.cloudflare.com:3478' },
@@ -60,6 +65,15 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require',
   });
+
+  useEffect(() => {
+    if (chatId) {
+      const info = getSessionInfo(chatId);
+      if (info) {
+        setE2eFingerprint(info.keyFingerprint);
+      }
+    }
+  }, [chatId]);
 
   const initLocalStream = useCallback(async () => {
     try {
@@ -83,7 +97,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
         localVideoRef.current.srcObject = stream;
       }
 
-      // Audio processing for noise suppression
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       const gain = audioContextRef.current.createGain();
@@ -102,19 +115,16 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     const pc = new RTCPeerConnection(iceConfigRef.current);
     peerRef.current = pc;
 
-    // Add local tracks
     stream.getTracks().forEach(track => {
       pc.addTrack(track, stream);
     });
 
-    // Handle remote stream
     pc.ontrack = (event) => {
       if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0];
       }
     };
 
-    // ICE candidate handling
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         wsRequest('call:ice-candidate', {
@@ -125,7 +135,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
       }
     };
 
-    // Connection state
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       if (state === 'connected') {
@@ -136,7 +145,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
       }
     };
 
-    // ICE connection state
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState === 'failed') {
         pc.restartIce();
@@ -167,7 +175,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
         callType: type,
       });
 
-      // Listen for answer
       const socket = getSocket();
       if (socket) {
         socket.on('call:answer', async (data: any) => {
@@ -228,7 +235,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     onClose();
   }, [cleanupCall, onClose]);
 
-  // Timer
   useEffect(() => {
     if (callState === 'connected') {
       timerRef.current = setInterval(() => {
@@ -240,7 +246,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     };
   }, [callState]);
 
-  // Start call on mount
   useEffect(() => {
     if (open) {
       startCall();
@@ -250,7 +255,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     };
   }, [open]);
 
-  // Toggle mic
   const toggleMic = useCallback(() => {
     if (localStreamRef.current) {
       localStreamRef.current.getAudioTracks().forEach(t => {
@@ -260,7 +264,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     }
   }, []);
 
-  // Toggle video
   const toggleVideo = useCallback(async () => {
     if (!localStreamRef.current) return;
 
@@ -287,7 +290,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     }
   }, [videoOn]);
 
-  // Screen share
   const toggleScreenShare = useCallback(async () => {
     if (screenShare) {
       if (screenStreamRef.current) {
@@ -373,6 +375,15 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     });
   };
 
+  const copyE2EFingerprint = () => {
+    if (e2eFingerprint) {
+      navigator.clipboard.writeText(e2eFingerprint).then(() => {
+        setE2eCopySuccess(true);
+        setTimeout(() => setE2eCopySuccess(false), 2000);
+      });
+    }
+  };
+
   const toggleAudioOutput = () => {
     setAudioOutput(prev => prev === 'speaker' ? 'earpiece' : 'speaker');
     if (remoteVideoRef.current) {
@@ -381,6 +392,8 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   };
 
   if (!open) return null;
+
+  const fingerprintPairs = (e2eFingerprint || '').match(/.{1,8}/g) || [];
 
   return (
     <AnimatePresence>
@@ -392,7 +405,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
           className={`fixed inset-0 z-[90] ${isMinimized ? '' : 'bg-black/80 backdrop-blur-xl'}`}
         >
           {isMinimized ? (
-            // Minimized call bar
             <motion.div
               initial={{ y: 100 }}
               animate={{ y: 0 }}
@@ -400,6 +412,9 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
               className="absolute bottom-4 left-4 right-4 max-w-md mx-auto"
             >
               <div className="glass-strong rounded-2xl p-3 flex items-center gap-3">
+                {e2eFingerprint && (
+                  <div className="w-2 h-2 rounded-full bg-green-400 absolute top-2 right-2" title="E2E защищён" />
+                )}
                 <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                   <Phone size={16} className="text-green-400" />
                 </div>
@@ -425,7 +440,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
             </motion.div>
           ) : (
             <div className="h-full flex flex-col">
-              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3">
                 <button
                   onClick={() => setIsMinimized(true)}
@@ -443,6 +457,9 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                     callState === 'failed' ? 'text-red-400/70' : 'text-white/40'
                   }`}>
                     {getStateText()}
+                    {e2eFingerprint && callState === 'connected' && (
+                      <span className="ml-2 text-green-400/50">· E2E</span>
+                    )}
                   </p>
                 </div>
                 <button
@@ -453,11 +470,9 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                 </button>
               </div>
 
-              {/* Video / Main area */}
               <div className="flex-1 flex items-center justify-center p-4 relative">
                 {type === 'video' ? (
                   <div className="relative w-full h-full max-w-4xl mx-auto">
-                    {/* Remote video */}
                     <video
                       ref={remoteVideoRef}
                       autoPlay
@@ -465,7 +480,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                       className="w-full h-full object-cover rounded-3xl bg-black/40"
                     />
 
-                    {/* Local video (PIP) */}
                     {videoOn && (
                       <div className={`absolute ${isPip ? 'inset-0 z-10' : 'top-4 right-4 w-36 h-64'}`}>
                         <video
@@ -484,7 +498,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                       </div>
                     )}
 
-                    {/* Screen share */}
                     {screenShare && (
                       <div className="absolute bottom-4 right-4 w-36 h-24">
                         <video
@@ -517,13 +530,55 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                         ))}
                       </div>
                     )}
+
+                    {e2eFingerprint && callState === 'connected' && (
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setShowE2EInfo(!showE2EInfo)}
+                          className="flex items-center gap-1.5 mx-auto px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-[10px]"
+                        >
+                          <ShieldCheck size={11} />
+                          E2E защищён
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Controls */}
+              {/* E2E Info Panel */}
+              <AnimatePresence>
+                {showE2EInfo && e2eFingerprint && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mx-4 mb-2 p-3 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Fingerprint size={12} className="text-green-400" />
+                        <span className="text-[10px] text-white/50">Отпечаток ключа звонка</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 mb-2">
+                        {fingerprintPairs.slice(0, 16).map((pair, i) => (
+                          <span key={i} className={`text-[9px] font-mono ${i % 2 === 0 ? 'text-white/60' : 'text-white/40'}`}>
+                            {pair}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        onClick={copyE2EFingerprint}
+                        className="flex items-center gap-1 text-[10px] text-blue-400/60 hover:text-blue-400 transition-colors"
+                      >
+                        {e2eCopySuccess ? <><Check size={10} /> Скопировано</> : <><Copy size={10} /> Копировать</>}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="flex items-center justify-center gap-3 px-4 pb-8 pt-3">
-                {/* Mic */}
                 <button
                   onClick={toggleMic}
                   className={`p-4 rounded-full transition-all ${
@@ -533,7 +588,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                   {micOn ? <Mic size={20} className="text-white/80" /> : <MicOff size={20} className="text-white" />}
                 </button>
 
-                {/* Video (only in video mode) */}
                 {type === 'video' && (
                   <button
                     onClick={toggleVideo}
@@ -545,7 +599,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                   </button>
                 )}
 
-                {/* Screen share */}
                 <button
                   onClick={toggleScreenShare}
                   className={`p-4 rounded-full transition-all ${
@@ -555,7 +608,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                   {screenShare ? <MonitorOff size={20} className="text-white" /> : <Monitor size={20} className="text-white/80" />}
                 </button>
 
-                {/* Audio output */}
                 <button
                   onClick={toggleAudioOutput}
                   className="p-4 rounded-full bg-white/[0.08] hover:bg-white/[0.12] transition-all"
@@ -563,7 +615,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                   <Bluetooth size={20} className="text-white/60" />
                 </button>
 
-                {/* Copy call ID (for debugging / direct connection) */}
                 <button
                   onClick={copyCallId}
                   className="p-4 rounded-full bg-white/[0.08] hover:bg-white/[0.12] transition-all"
@@ -571,7 +622,18 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                   {copySuccess ? <Check size={20} className="text-green-400" /> : <Copy size={20} className="text-white/60" />}
                 </button>
 
-                {/* End call */}
+                {e2eFingerprint && (
+                  <button
+                    onClick={() => setShowE2EInfo(!showE2EInfo)}
+                    className={`p-4 rounded-full transition-all ${
+                      showE2EInfo ? 'bg-green-500/30' : 'bg-white/[0.08] hover:bg-white/[0.12]'
+                    }`}
+                    title="E2E шифрование"
+                  >
+                    {showE2EInfo ? <ShieldCheck size={20} className="text-green-400" /> : <Shield size={20} className="text-white/60" />}
+                  </button>
+                )}
+
                 <button
                   onClick={endCall}
                   className="p-4 rounded-full bg-red-500 hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
