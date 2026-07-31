@@ -3,11 +3,12 @@
 import asyncio
 import logging
 import os
+import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 
 from agent import close_browser, extract_content, screenshot, search
@@ -31,12 +32,63 @@ logger = logging.getLogger(__name__)
 
 _tasks: dict[str, BrowseResult] = {}
 
+# Global task concurrency limiter (browser pages are also limited per-task)
+_task_semaphore = asyncio.Semaphore(settings.max_concurrent_tasks)
+
+
+async def require_token(x_agent_token: str | None = Header(default=None, alias="X-Agent-Token")) -> None:
+    """Rejects requests without the shared agent token. If no token is
+    configured, the service refuses to start processing at all."""
+    if not settings.agent_token:
+        raise HTTPException(status_code=503, detail="Agent token not configured on the service")
+    if not x_agent_token or x_agent_token != settings.agent_token:
+        raise HTTPException(status_code=401, detail="Invalid agent token")
+
+
+def _purge_old_tasks() -> None:
+    """Drop tasks older than TTL and cap total task count (unbounded dict growth)."""
+    cutoff = time.time() - settings.task_ttl_seconds
+    stale = [tid for tid, t in _tasks.items() if t.completed_at.timestamp() < cutoff]
+    for tid in stale:
+        del _tasks[tid]
+    if len(_tasks) > settings.max_tasks:
+        overflow = sorted(_tasks, key=lambda tid: _tasks[tid].created_at.timestamp())[:len(_tasks) - settings.max_tasks]
+        for tid in overflow:
+            del _tasks[tid]
+
+
+def _purge_old_screenshots() -> None:
+    """Remove screenshot files older than 24 hours (disk leak prevention)."""
+    try:
+        entries = os.scandir(settings.screenshots_dir)
+    except FileNotFoundError:
+        return
+    cutoff = time.time() - 24 * 3600
+    with entries:
+        for e in entries:
+            try:
+                if e.is_file() and e.stat().st_mtime < cutoff:
+                    os.remove(e.path)
+            except OSError:
+                continue
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(settings.screenshots_dir, exist_ok=True)
     logger.info("Agent service starting on %s:%s", settings.host, settings.port)
+    if not settings.agent_token:
+        logger.warning("AGENT_TOKEN is not set — browsing endpoints will return 503 (safe default)")
+
+    async def janitor() -> None:
+        while True:
+            await asyncio.sleep(60)
+            _purge_old_tasks()
+            _purge_old_screenshots()
+
+    janitor_task = asyncio.create_task(janitor())
     yield
+    janitor_task.cancel()
     await close_browser()
     logger.info("Agent service stopped")
 
@@ -59,46 +111,51 @@ app.add_middleware(
 async def _process_browse(task_id: str, request: BrowseRequest) -> None:
     result = _tasks[task_id]
     try:
-        result.status = TaskState.RUNNING
-        logger.info("Processing browse task %s for query: %s", task_id, request.query[:100])
+        async with _task_semaphore:
+            result.status = TaskState.RUNNING
+            logger.info("Processing browse task %s for query: %s", task_id, request.query[:100])
 
-        is_url = request.query.startswith("http://") or request.query.startswith("https://")
+            is_url = request.query.startswith("http://") or request.query.startswith("https://")
 
-        if is_url:
-            page = await extract_content(request.query)
-            result.page_results = [page]
-        else:
-            search_res = await search(request.query)
-            result.search_results = search_res
+            if is_url:
+                page = await extract_content(request.query)
+                result.page_results = [page]
+            else:
+                search_res = await search(request.query)
+                result.search_results = search_res
 
-            for sr in search_res.results[:settings.max_pages_per_request]:
-                try:
-                    page = await extract_content(sr.url)
-                    result.page_results.append(page)
-                except Exception as e:
-                    logger.warning("Failed to extract %s: %s", sr.url, e)
+                for sr in search_res.results[:settings.max_pages_per_request]:
+                    try:
+                        page = await extract_content(sr.url)
+                        result.page_results.append(page)
+                    except Exception as e:
+                        logger.warning("Failed to extract %s: %s", sr.url, e)
 
-        all_content = "\n\n".join(
-            f"### {p.title}\n{p.content[:5000]}" for p in result.page_results if p.content
-        )
+            all_content = "\n\n".join(
+                f"### {p.title}\n{p.content[:5000]}" for p in result.page_results if p.content
+            )
 
-        if all_content:
-            result.summary = await summarize(all_content)
-            result.analysis = await analyze_page(all_content, request.query)
+            if all_content:
+                result.summary = await summarize(all_content)
+                result.analysis = await analyze_page(all_content, request.query)
 
-        result.status = TaskState.COMPLETED
-        logger.info("Task %s completed with %d pages", task_id, len(result.page_results))
+            result.status = TaskState.COMPLETED
+            logger.info("Task %s completed with %d pages", task_id, len(result.page_results))
 
     except Exception as e:
         result.status = TaskState.FAILED
         result.error = str(e)
         logger.error("Task %s failed: %s", task_id, e)
     finally:
-        result.completed_at = datetime.utcnow()
+        result.completed_at = datetime.now(timezone.utc)
 
 
 @app.post("/browse", response_model=BrowseResponse)
-async def browse(request: BrowseRequest) -> BrowseResponse:
+async def browse(request: BrowseRequest, _: None = Depends(require_token)) -> BrowseResponse:
+    _purge_old_tasks()
+    if len(_tasks) >= settings.max_tasks:
+        raise HTTPException(status_code=503, detail="Task limit reached, try again later")
+
     task_id = str(uuid.uuid4())
     result = BrowseResult(
         task_id=task_id,
@@ -117,7 +174,7 @@ async def browse(request: BrowseRequest) -> BrowseResponse:
 
 
 @app.get("/browse/status/{task_id}", response_model=TaskStatus)
-async def get_status(task_id: str) -> TaskStatus:
+async def get_status(task_id: str, _: None = Depends(require_token)) -> TaskStatus:
     result = _tasks.get(task_id)
     if not result:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -132,7 +189,7 @@ async def get_status(task_id: str) -> TaskStatus:
 
 
 @app.get("/browse/result/{task_id}")
-async def get_result(task_id: str) -> dict:
+async def get_result(task_id: str, _: None = Depends(require_token)) -> dict:
     result = _tasks.get(task_id)
     if not result:
         raise HTTPException(status_code=404, detail="Task not found")

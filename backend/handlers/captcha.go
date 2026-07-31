@@ -112,8 +112,14 @@ func GenerateCaptcha(c *fiber.Ctx) error {
 		return c.Status(429).JSON(fiber.Map{"error": "Too many requests"})
 	}
 
-	a, _ := rand.Int(rand.Reader, big.NewInt(20))
-	b, _ := rand.Int(rand.Reader, big.NewInt(20))
+	a, err := rand.Int(rand.Reader, big.NewInt(20))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Server error"})
+	}
+	b, err := rand.Int(rand.Reader, big.NewInt(20))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Server error"})
+	}
 	answer := a.Int64() + b.Int64()
 
 	id := generateID()

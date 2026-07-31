@@ -25,6 +25,18 @@ func VaultUpload(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "File required"})
 	}
 
+	// Enforce per-file size limit (was unlimited — disk exhaustion risk)
+	if file.Size > maxVaultFileSize {
+		return c.Status(413).JSON(fiber.Map{"error": "File too large (max 100 MB)"})
+	}
+
+	// Enforce per-user storage quota (5 GB)
+	var totalSize int64
+	db.GetDB().Model(&models.VaultFile{}).Where("user_id = ?", userID).Select("COALESCE(SUM(size), 0)").Scan(&totalSize)
+	if totalSize+file.Size > maxVaultTotalSize {
+		return c.Status(413).JSON(fiber.Map{"error": "Vault storage limit reached (5 GB)"})
+	}
+
 	// Save file — sanitize filename to prevent path traversal
 	safeFilename := filepath.Base(file.Filename)
 	filename := generateID() + "_" + safeFilename
@@ -137,6 +149,13 @@ func VaultStats(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"totalSize": totalSize,
 		"fileCount": fileCount,
-		"maxSize":   1024 * 1024 * 1024 * 5, // 5GB
+		"maxSize":   maxVaultTotalSize,
 	})
 }
+
+const (
+	// maxVaultFileSize — per-file upload limit for the encrypted vault
+	maxVaultFileSize = 100 * 1024 * 1024
+	// maxVaultTotalSize — per-user storage quota (5 GB)
+	maxVaultTotalSize = 5 * 1024 * 1024 * 1024
+)

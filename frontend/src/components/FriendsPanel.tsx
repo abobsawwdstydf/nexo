@@ -182,10 +182,10 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
   };
 
   const tabs: { key: Tab; label: string; icon: typeof Users }[] = [
-    { key: 'online', label: 'Р’ СЃРµС‚Рё', icon: Users },
-    { key: 'all', label: 'Р’СЃРµ', icon: Users },
-    { key: 'pending', label: 'Р—Р°СЏРІРєРё', icon: UserPlus },
-    { key: 'blocked', label: 'Р—Р°Р±Р»РѕРє.', icon: Ban },
+    { key: 'online', label: 'В сети', icon: Users },
+    { key: 'all', label: 'Все', icon: Users },
+    { key: 'pending', label: 'Заявки', icon: UserPlus },
+    { key: 'blocked', label: 'Заблок.', icon: Ban },
   ];
 
   const renderFriendList = (items: FriendWithId[], emptyText: string) => {
@@ -217,7 +217,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
                   {friend.displayName}
                 </span>
                 {friend.isOnline && (
-                  <span className="text-[10px] text-green-400/60">РІ СЃРµС‚Рё</span>
+                  <span className="text-[10px] text-green-400/60">в сети</span>
                 )}
               </div>
               <p className="text-xs text-white/30 truncate">@{friend.username}</p>
@@ -226,14 +226,14 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
               <button
                 onClick={() => onStartChat(friend.id)}
                 className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
-                title="РќР°РїРёСЃР°С‚СЊ"
+                title="Написать"
               >
                 <MessageCircle size={14} className="text-white/40 hover:text-white/70" />
               </button>
               <button
                 onClick={() => handleRemove(friend.friendshipId)}
                 className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
-                title="РЈРґР°Р»РёС‚СЊ РёР· РґСЂСѓР·РµР№"
+                title="Удалить из друзей"
               >
                 <UserX size={14} className="text-red-400/50 hover:text-red-400" />
               </button>
@@ -250,7 +250,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
           <Clock size={28} className="text-white/15 mb-3" />
-          <p className="text-sm text-white/30">РќРµС‚ РІС…РѕРґСЏС‰РёС… Р·Р°СЏРІРѕРє</p>
+          <p className="text-sm text-white/30">Нет входящих заявок</p>
         </div>
       );
     }
@@ -275,14 +275,14 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
               <button
                 onClick={() => handleAccept(req.id)}
                 className="p-1.5 rounded-lg bg-green-400/10 hover:bg-green-400/20 transition-colors"
-                title="РџСЂРёРЅСЏС‚СЊ"
+                title="Принять"
               >
                 <Check size={14} className="text-green-400/70" />
               </button>
               <button
                 onClick={() => handleDecline(req.id)}
                 className="p-1.5 rounded-lg bg-red-400/10 hover:bg-red-400/20 transition-colors"
-                title="РћС‚РєР»РѕРЅРёС‚СЊ"
+                title="Отклонить"
               >
                 <X size={14} className="text-red-400/70" />
               </button>
@@ -301,7 +301,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
           <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center glass-card-enhanced">
             <Users size={15} className="text-indigo-400/70" />
           </div>
-          <h2 className="text-sm font-semibold text-white/90 font-display">Р”СЂСѓР·СЊСЏ</h2>
+          <h2 className="text-sm font-semibold text-white/90 font-display">Друзья</h2>
         </div>
         <div className="flex items-center gap-1">
           <motion.button
@@ -309,7 +309,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
             className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            title="Р”РѕР±Р°РІРёС‚СЊ РґСЂСѓРіР°"
+            title="Добавить друга"
           >
             <UserPlus size={15} className="text-white/40" />
           </motion.button>
@@ -340,12 +340,12 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
                   type="text"
                   value={addQuery}
                   onChange={e => setAddQuery(e.target.value)}
-                  placeholder="РџРѕРёСЃРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№..."
+                  placeholder="Поиск пользователей..."
                   className="w-full h-9 pl-9 pr-3 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
                 />
               </div>
               {addLoading && (
-                <p className="text-xs text-white/30 text-center">РџРѕРёСЃРє...</p>
+                <p className="text-xs text-white/30 text-center">Поиск...</p>
               )}
               {addError && (
                 <p className="text-xs text-red-400/70">{addError}</p>
@@ -367,7 +367,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
                       <button
                         onClick={() => handleSendRequest(u.id)}
                         className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors flex-shrink-0"
-                        title="Р”РѕР±Р°РІРёС‚СЊ РІ РґСЂСѓР·СЊСЏ"
+                        title="Добавить в друзья"
                       >
                         <UserPlus size={12} className="text-indigo-400/70" />
                       </button>
@@ -406,7 +406,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="РџРѕРёСЃРє СЃСЂРµРґРё РґСЂСѓР·РµР№..."
+              placeholder="Поиск среди друзей..."
               className="w-full h-8 pl-9 pr-3 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
             />
           </div>
@@ -428,15 +428,15 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
             ))}
           </div>
         ) : tab === 'online' ? (
-          renderFriendList(onlineFriends, 'РќРµС‚ РґСЂСѓР·РµР№ РІ СЃРµС‚Рё')
+          renderFriendList(onlineFriends, 'Нет друзей в сети')
         ) : tab === 'all' ? (
-          renderFriendList(filteredFriends, 'РќРµС‚ РґСЂСѓР·РµР№')
+          renderFriendList(filteredFriends, 'Нет друзей')
         ) : tab === 'pending' ? (
           renderPending()
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
             <Ban size={28} className="text-white/15 mb-3" />
-            <p className="text-sm text-white/30">РќРµС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРЅС‹С…</p>
+            <p className="text-sm text-white/30">Нет заблокированных</p>
           </div>
         )}
       </div>

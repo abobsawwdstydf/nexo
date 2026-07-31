@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"crypto/rand"
-	"encoding/hex"
 	"os/signal"
+	"runtime"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -31,8 +35,26 @@ import (
 
 func generateSessionID() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: time-based hash (never blocks critical flows on RNG failure)
+		h := sha256.Sum256([]byte(time.Now().UTC().Format(time.RFC3339Nano)))
+		return hex.EncodeToString(h[:])
+	}
 	return hex.EncodeToString(b)
+}
+
+// Simple in-process metrics (real counters)
+var (
+	httpRequestsTotal    atomic.Uint64
+	httpRequestsInFlight atomic.Int64
+	metricsStartTime     = time.Now()
+)
+
+func metricsMiddleware(c *fiber.Ctx) error {
+	httpRequestsTotal.Add(1)
+	httpRequestsInFlight.Add(1)
+	defer httpRequestsInFlight.Add(-1)
+	return c.Next()
 }
 
 func main() {
@@ -90,9 +112,14 @@ func main() {
 	})
 
 	// Initialize security middleware
-	middleware.InitRequestSigning()
+	// Derive the request-signing secret from JWT_SECRET so signatures stay
+	// valid across restarts (a random per-process secret broke them).
+	jwtSecret := os.Getenv("JWT_SECRET")
+	secretSum := sha256.Sum256([]byte(jwtSecret))
+	middleware.InitRequestSigning(secretSum[:])
 
 	// Middleware
+	app.Use(metricsMiddleware)
 	app.Use(recover.New())
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelDefault,
@@ -173,19 +200,27 @@ func main() {
 		return c.JSON(fiber.Map{"token": token, "sessionId": sessionID})
 	})
 
-	// Basic Prometheus-compatible metrics endpoint
+	// Prometheus-compatible metrics endpoint (real counters)
 	app.Get("/metrics", func(c *fiber.Ctx) error {
 		c.Type("text/plain; version=0.0.4")
-		return c.SendString(`# HELP nexo_http_requests_total Total HTTP requests
+		var ms runtime.MemStats
+		runtime.ReadMemStats(&ms)
+		return c.SendString(fmt.Sprintf(`# HELP nexo_http_requests_total Total HTTP requests handled
 # TYPE nexo_http_requests_total counter
-nexo_http_requests_total 0
-# HELP nexo_db_connections Current database connections
-# TYPE nexo_db_connections gauge
-nexo_db_connections 1
+nexo_http_requests_total %d
+# HELP nexo_http_requests_in_flight Currently in-flight HTTP requests
+# TYPE nexo_http_requests_in_flight gauge
+nexo_http_requests_in_flight %d
+# HELP nexo_uptime_seconds Server uptime in seconds
+# TYPE nexo_uptime_seconds gauge
+nexo_uptime_seconds %d
+# HELP nexo_memory_alloc_bytes Current heap allocation in bytes
+# TYPE nexo_memory_alloc_bytes gauge
+nexo_memory_alloc_bytes %d
 # HELP nexo_up Server is up
 # TYPE nexo_up gauge
 nexo_up 1
-`)
+`, httpRequestsTotal.Load(), httpRequestsInFlight.Load(), int64(time.Since(metricsStartTime).Seconds()), ms.Alloc))
 	})
 
 	// Bot health status (public)

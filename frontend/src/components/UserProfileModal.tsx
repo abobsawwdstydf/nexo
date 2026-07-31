@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -28,11 +28,17 @@ interface UserProfileModalProps {
 export default function UserProfileModal({ user, onClose, onOpenSettings, onLogout }: UserProfileModalProps) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+  }, []);
 
   const handleCopyUsername = () => {
     navigator.clipboard.writeText(`@${user.username}`);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
   };
 
   const initials = (user.displayName || user.username || '?')

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/models"
@@ -173,9 +174,14 @@ func KickUser(c *fiber.Ctx) error {
 	}
 
 	// Remove from chat
-	db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, req.TargetID).Delete(&models.ChatMember{})
-	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("subscribers_count",
-		db.GetDB().Raw("subscribers_count - 1"))
+	if err := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, req.TargetID).Delete(&models.ChatMember{}).Error; err != nil {
+		log.Printf("[MODERATION] failed to remove member %s from chat %s: %v", req.TargetID, chatID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove member"})
+	}
+	if err := db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("subscribers_count",
+		gorm.Expr("CASE WHEN subscribers_count > 0 THEN subscribers_count - 1 ELSE 0 END")).Error; err != nil {
+		log.Printf("[MODERATION] failed to decrement subscribers for chat %s: %v", chatID, err)
+	}
 
 	// Log
 	modLog := models.ModerationLog{

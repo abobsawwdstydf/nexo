@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,9 +34,9 @@ func InitLocal(dsn string) error {
 	}
 	
 	// Optimize SQLite for local use
-	sqlDB.SetMaxOpenConns(1)
-	sqlDB.SetMaxIdleConns(1)
-	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetMaxOpenConns(4)
+	sqlDB.SetMaxIdleConns(2)
+	sqlDB.SetConnMaxLifetime(10 * time.Minute)
 
 	// Enable WAL mode for better concurrent performance
 	_, err = sqlDB.Exec("PRAGMA journal_mode=WAL")
@@ -49,8 +50,8 @@ func InitLocal(dsn string) error {
 		log.Printf("Warning: Could not set synchronous=NORMAL: %v", err)
 	}
 
-	// Busy timeout: wait up to 3s before returning "database is locked"
-	_, err = sqlDB.Exec("PRAGMA busy_timeout=3000")
+	// Busy timeout: wait up to 10s before returning "database is locked"
+	_, err = sqlDB.Exec("PRAGMA busy_timeout=10000")
 	if err != nil {
 		log.Printf("Warning: Could not set busy_timeout: %v", err)
 	}
@@ -61,14 +62,14 @@ func InitLocal(dsn string) error {
 		log.Printf("Warning: Could not enable foreign keys: %v", err)
 	}
 
-	// Performance: Increase cache size to 64MB
-	_, err = sqlDB.Exec("PRAGMA cache_size=-65536")
+	// Performance: Increase cache size to 128MB
+	_, err = sqlDB.Exec("PRAGMA cache_size=-131072")
 	if err != nil {
 		log.Printf("Warning: Could not set cache_size: %v", err)
 	}
 
-	// Performance: Memory-mapped I/O for faster reads
-	_, err = sqlDB.Exec("PRAGMA mmap_size=268435456")
+	// Performance: Memory-mapped I/O for faster reads (512MB)
+	_, err = sqlDB.Exec("PRAGMA mmap_size=536870912")
 	if err != nil {
 		log.Printf("Warning: Could not set mmap_size: %v", err)
 	}
@@ -157,7 +158,12 @@ func InitLocal(dsn string) error {
 		// Screenshot Detection
 		&models.ScreenshotLog{},
 		// Refresh Token Blacklist
-		&models.RefreshTokenBlacklist{},)
+		&models.RefreshTokenBlacklist{},
+		// CSRF Tokens (persistent)
+		&models.CSRFToken{},
+		// Security Audit Log (persistent)
+		&models.AuditLogEntry{},
+	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
@@ -280,33 +286,74 @@ func addIndexes(db *gorm.DB) {
 		// Webhook deliveries
 		"CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_config ON webhook_deliveries(webhook_config_id)",
 
-		// E2E key bundles & sessions
-		"CREATE INDEX IF NOT EXISTS idx_e2e_key_bundles_user ON e2e_key_bundles(user_id)",
-		"CREATE INDEX IF NOT EXISTS idx_e2e_sessions_chat_user ON e2e_sessions(chat_id, user_id)",
+		// CSRF tokens
+		"CREATE INDEX IF NOT EXISTS idx_csrf_tokens_expires ON csrf_tokens(expires_at)",
+		"CREATE INDEX IF NOT EXISTS idx_csrf_tokens_token ON csrf_tokens(token)",
+
+		// Audit log
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log_entries(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log_entries(timestamp)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_success ON audit_log_entries(success)",
+
+		// E2E sessions & key bundles
+		"CREATE INDEX IF NOT EXISTS idx_e2e_sessions_chat_created ON e2e_sessions(chat_id, created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_e2e_key_bundles_user_device ON e2e_key_bundles(user_id, device_id)",
+
+		// Voice room participants
+		"CREATE INDEX IF NOT EXISTS idx_voice_room_participants_room_user ON voice_room_participants(room_id, user_id)",
+
+		// Cloud storage
+		"CREATE INDEX IF NOT EXISTS idx_cloud_files_user_created ON cloud_files(user_id, created_at)",
+
+		// Vault files
+		"CREATE INDEX IF NOT EXISTS idx_vault_files_user ON vault_files(user_id)",
+
+		// AI browse tasks
+		"CREATE INDEX IF NOT EXISTS idx_ai_browse_tasks_user_status ON ai_browse_tasks(user_id, status)",
+
+		// Moderation actions
+		"CREATE INDEX IF NOT EXISTS idx_moderation_actions_chat_created ON moderation_actions(chat_id, created_at)",
+
+		// Whiteboard edits
+		"CREATE INDEX IF NOT EXISTS idx_whiteboard_edits_wb_version ON whiteboard_edits(whiteboard_id, version)",
 	}
 	for _, idx := range indexes {
 		db.Exec(idx)
 	}
 }
 
-// periodicBackup creates a backup of the SQLite database every 10 minutes
-// and forces a WAL checkpoint to minimize data loss on power failure.
+// periodicBackup forces a WAL checkpoint every 10 minutes (cheap, prevents
+// data loss) and creates a full VACUUM INTO backup every BACKUP_INTERVAL_MINUTES
+// (default 6 hours). A full backup every 10 minutes caused heavy disk I/O and
+// lock contention on busy databases.
 func periodicBackup(sqlDB *sql.DB, dsn string) {
-	ticker := time.NewTicker(10 * time.Minute)
-	defer ticker.Stop()
+	checkpointTicker := time.NewTicker(10 * time.Minute)
+	defer checkpointTicker.Stop()
 
-	for range ticker.C {
-		// Force WAL checkpoint — flushes WAL to main DB file
-		if _, err := sqlDB.Exec("PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
-			log.Printf("[BACKUP] WAL checkpoint error: %v", err)
+	backupInterval := 6 * time.Hour
+	if env := os.Getenv("BACKUP_INTERVAL_MINUTES"); env != "" {
+		if minutes, err := strconv.Atoi(env); err == nil && minutes >= 1 {
+			backupInterval = time.Duration(minutes) * time.Minute
 		}
+	}
+	backupTicker := time.NewTicker(backupInterval)
+	defer backupTicker.Stop()
 
-		// Create a safe backup copy
-		backupPath := dsn + ".backup"
-		if _, err := sqlDB.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupPath)); err != nil {
-			log.Printf("[BACKUP] VACUUM INTO error: %v", err)
-		} else {
-			log.Printf("[BACKUP] Database backed up to %s", backupPath)
+	for {
+		select {
+		case <-checkpointTicker.C:
+			// Force WAL checkpoint — flushes WAL to main DB file
+			if _, err := sqlDB.Exec("PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
+				log.Printf("[BACKUP] WAL checkpoint error: %v", err)
+			}
+		case <-backupTicker.C:
+			// Create a safe backup copy
+			backupPath := dsn + ".backup"
+			if _, err := sqlDB.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupPath)); err != nil {
+				log.Printf("[BACKUP] VACUUM INTO error: %v", err)
+			} else {
+				log.Printf("[BACKUP] Database backed up to %s", backupPath)
+			}
 		}
 	}
 }

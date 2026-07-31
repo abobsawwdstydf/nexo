@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"sync"
 	"time"
 
 	"nexo/db"
@@ -9,6 +11,13 @@ import (
 	"nexo/ws"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
+)
+
+// Sentinel errors for the one-time pre-key consumption transaction.
+var (
+	errE2ENoBundles = errors.New("no bundles")
+	errE2ENoKeys    = errors.New("no one-time pre keys available")
 )
 
 // ─── Feature 7: E2E Key Exchange ─────────────────────────────────────
@@ -125,6 +134,11 @@ func FetchKeyBundle(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"bundles": result})
 }
 
+// preKeyMu serializes one-time pre-key consumption. The read-modify-write
+// (unmarshal → drop first key → save) is not atomic in SQLite without a
+// write lock, so two parallel requests could consume the same key twice.
+var preKeyMu sync.Mutex
+
 // ConsumeOneTimePreKey — забрать one-time преключатель (одноразовый)
 func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
@@ -133,38 +147,56 @@ func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 
 	// Verify requester and target share at least one chat
 	var sharedChatCount int64
-	database.Model(&models.ChatMember{}).
+	if err := database.Model(&models.ChatMember{}).
 		Where("user_id = ? AND chat_id IN (SELECT chat_id FROM chat_members WHERE user_id = ?)", userID, targetUserID).
-		Count(&sharedChatCount)
+		Count(&sharedChatCount).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "database error"})
+	}
 	if sharedChatCount == 0 {
 		return c.Status(403).JSON(fiber.Map{"error": "No shared chat with target user"})
 	}
 
-	var bundle models.E2EKeyBundle
-	if err := database.Where("user_id = ?", targetUserID).First(&bundle).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "no bundles"})
-	}
+	preKeyMu.Lock()
+	defer preKeyMu.Unlock()
 
-	var keys []string
-	if err := json.Unmarshal([]byte(bundle.OneTimePreKeys), &keys); err != nil || len(keys) == 0 {
-		return c.Status(404).JSON(fiber.Map{"error": "no one-time pre keys available"})
-	}
+	var usedKey string
+	var deviceID string
+	err := database.Transaction(func(tx *gorm.DB) error {
+		var bundle models.E2EKeyBundle
+		if err := tx.Where("user_id = ?", targetUserID).First(&bundle).Error; err != nil {
+			return errE2ENoBundles
+		}
 
-	// Забираем первый ключ
-	usedKey := keys[0]
-	remaining := keys[1:]
-	remainingJSON, err := json.Marshal(remaining)
+		var keys []string
+		if err := json.Unmarshal([]byte(bundle.OneTimePreKeys), &keys); err != nil || len(keys) == 0 {
+			return errE2ENoKeys
+		}
+
+		usedKey = keys[0]
+		deviceID = bundle.DeviceID
+		remainingJSON, err := json.Marshal(keys[1:])
+		if err != nil {
+			return err
+		}
+		bundle.OneTimePreKeys = string(remainingJSON)
+		return tx.Save(&bundle).Error
+	})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to update keys"})
+		switch err {
+		case errE2ENoBundles:
+			return c.Status(404).JSON(fiber.Map{"error": "no bundles"})
+		case errE2ENoKeys:
+			return c.Status(404).JSON(fiber.Map{"error": "no one-time pre keys available"})
+		default:
+			return c.Status(500).JSON(fiber.Map{"error": "failed to update keys"})
+		}
 	}
-	bundle.OneTimePreKeys = string(remainingJSON)
-	database.Save(&bundle)
 
 	// WS уведомление — ключ извлечён
 	e2eKeyMsg, _ := json.Marshal(fiber.Map{
 		"type":     "e2e_key_consumed",
 		"byUser":   userID,
-		"deviceId": bundle.DeviceID,
+		"deviceId": deviceID,
 	})
 	ws.HubInstance.SendToUser(targetUserID, e2eKeyMsg)
 

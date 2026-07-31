@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"log"
-	"math/big"
 	"net/smtp"
 	"os"
 	"strings"
@@ -37,9 +35,7 @@ func getSMTPConfig() (host, port, username, password, from string) {
 }
 
 func generateEmailCode() string {
-	n, _ := rand.Int(rand.Reader, big.NewInt(900000))
-	code := n.Int64() + 100000
-	return fmt.Sprintf("%d", code)
+	return generateCode()
 }
 
 func SendEmailCode(c *fiber.Ctx) error {

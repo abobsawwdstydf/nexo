@@ -194,6 +194,11 @@ export function ChatList({
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const searchBlurTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => {
+    if (searchBlurTimerRef.current) clearTimeout(searchBlurTimerRef.current);
+  }, []);
 
   useEffect(() => {
     try {
@@ -322,7 +327,10 @@ export function ChatList({
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             onFocus={() => setShowRecentSearches(true)}
-            onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
+            onBlur={() => {
+              if (searchBlurTimerRef.current) clearTimeout(searchBlurTimerRef.current);
+              searchBlurTimerRef.current = setTimeout(() => setShowRecentSearches(false), 200);
+            }}
             onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(searchQuery); }}
             placeholder="Поиск чатов, сообщений..."
             className="w-full h-10 pl-10 pr-10 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06] focus:ring-2 focus:ring-white/5 focus:translate-y-[-1px]"

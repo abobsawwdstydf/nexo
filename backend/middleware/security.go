@@ -1,4 +1,4 @@
-﻿package middleware
+package middleware
 
 import (
 	"crypto/hmac"
@@ -9,16 +9,58 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"nexo/db"
+	"nexo/models"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECURITY MIDDLEWARE - Maximum Protection Level
 // ═══════════════════════════════════════════════════════════════════════════
 
-const maxCSRFTokens = 10000
+const (
+	maxCSRFTokens  = 10000
+	auditQueueSize = 1024
+)
+
+// truncate bounds a string to max runes so audit logging never panics on short input.
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max]
+}
+
+// generateID creates a random hex ID for tokens and audit entries
+func generateID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: time-based hash (never blocks critical flows on RNG failure)
+		h := sha256.Sum256([]byte(strconv.FormatInt(time.Now().UnixNano(), 10)))
+		return hex.EncodeToString(h[:16])
+	}
+	return hex.EncodeToString(b)
+}
+
+// CSRF tokens are also persisted to the database for resilience across restarts.
+func persistCSRFToken(tokenHex, sessionID string) {
+	var entry models.CSRFToken
+	if result := db.GetDB().Where("token = ?", tokenHex).First(&entry); result.Error != nil {
+		db.GetDB().Create(&models.CSRFToken{
+			Token:     tokenHex,
+			SessionID: sessionID,
+			ExpiresAt: time.Now().Add(1 * time.Hour),
+		})
+	}
+}
+
+func cleanupExpiredCSRFTokens() {
+	db.GetDB().Exec("DELETE FROM csrf_tokens WHERE expires_at < ?", time.Now())
+}
 
 var (
 	// CSRF token store (per-session)
@@ -37,8 +79,11 @@ var (
 	RequestSigningSecret []byte
 
 	// Audit log
-	auditLog   []AuditEntry
-	auditLogMu sync.RWMutex
+	auditLog          []AuditEntry
+	auditLogMu        sync.RWMutex
+	auditPersistQueue = make(chan AuditEntry, auditQueueSize)
+	auditDropped      atomic.Uint64
+	auditWriteErrors  atomic.Uint64
 )
 
 type AuditEntry struct {
@@ -70,6 +115,9 @@ func GenerateCSRFToken(sessionID string) string {
 	csrfTokens[tokenHex] = time.Now().Add(1 * time.Hour)
 	csrfTokensMu.Unlock()
 
+	// Also persist to database
+	go persistCSRFToken(tokenHex, sessionID)
+
 	return tokenHex
 }
 
@@ -79,6 +127,14 @@ func ValidateCSRFToken(token string) bool {
 	csrfTokensMu.RUnlock()
 
 	if !exists {
+		// Fallback to database check
+		var entry models.CSRFToken
+		if result := db.GetDB().Where("token = ? AND expires_at > ?", token, time.Now()).First(&entry); result.Error == nil {
+			csrfTokensMu.Lock()
+			csrfTokens[token] = entry.ExpiresAt
+			csrfTokensMu.Unlock()
+			return true
+		}
 		return false
 	}
 
@@ -86,6 +142,8 @@ func ValidateCSRFToken(token string) bool {
 		csrfTokensMu.Lock()
 		delete(csrfTokens, token)
 		csrfTokensMu.Unlock()
+		// Also remove from database
+		db.GetDB().Where("token = ?", token).Delete(&models.CSRFToken{})
 		return false
 	}
 
@@ -173,7 +231,7 @@ func IPBlockMiddleware() fiber.Handler {
 
 func UserRateLimit(maxRequests int, window time.Duration) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userID := c.Locals("userId").(string)
+		userID := UserIDFromCtx(c)
 		if userID == "" {
 			userID = c.IP()
 		}
@@ -219,40 +277,32 @@ func SanitizeInput(input string) string {
 	// Remove null bytes
 	input = strings.ReplaceAll(input, "\x00", "")
 
-	// Remove control characters (except newlines and tabs)
-	sanitized := make([]rune, 0, len(input))
+	// Remove control characters (except newlines and tabs).
+	// NOTE: HTML-entity escaping was REMOVED here — escaping request bodies
+	// corrupted user content (e.g. "<3" was stored as "&lt;3") and broke
+	// encrypted payloads. Content is escaped at render time on the client.
+	var b strings.Builder
+	b.Grow(len(input))
 	for _, r := range input {
 		if r >= 32 || r == '\n' || r == '\t' {
-			sanitized = append(sanitized, r)
+			b.WriteRune(r)
 		}
 	}
-
-	// Escape HTML entities
-	result := string(sanitized)
-	result = strings.ReplaceAll(result, "&", "&amp;")
-	result = strings.ReplaceAll(result, "<", "&lt;")
-	result = strings.ReplaceAll(result, ">", "&gt;")
-	result = strings.ReplaceAll(result, "\"", "&quot;")
-	result = strings.ReplaceAll(result, "'", "&#x27;")
-
-	return result
+	return b.String()
 }
 
 func InputSanitization() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// Sanitize query string values only (null bytes / control characters).
+		// Request bodies must stay byte-for-byte identical: JSON payloads
+		// contain user content and encrypted data that must not be rewritten.
 		query := c.Queries()
 		for key, value := range query {
-			query[key] = SanitizeInput(value)
-		}
-
-		if c.Method() != "GET" && c.Method() != "HEAD" && c.Method() != "OPTIONS" {
-			body := c.Body()
-			if len(body) > 0 && len(body) < 1024*1024 {
-				sanitized := SanitizeInput(string(body))
-				c.Request().SetBody([]byte(sanitized))
+			sanitized := SanitizeInput(value)
+			if sanitized != value {
+				query[key] = sanitized
 			}
 		}
-
 		return c.Next()
 	}
 }
@@ -261,9 +311,12 @@ func InputSanitization() fiber.Handler {
 // REQUEST SIGNING
 // ═══════════════════════════════════════════════════════════════════════════
 
-func InitRequestSigning() {
-	secret := make([]byte, 32)
-	rand.Read(secret)
+func InitRequestSigning(secret []byte) {
+	if len(secret) == 0 {
+		// Fallback: random per-process secret (signatures will not survive restarts)
+		secret = make([]byte, 32)
+		rand.Read(secret)
+	}
 	RequestSigningSecret = secret
 }
 
@@ -277,7 +330,7 @@ func SignRequest(method, path, body string, timestamp int64) string {
 func VerifyRequestSignature(c *fiber.Ctx) error {
 	// Skip for non-signed endpoints and public API endpoints
 	path := c.Path()
-	if !strings.HasPrefix(path, "/api/") || 
+	if !strings.HasPrefix(path, "/api/") ||
 		strings.HasPrefix(path, "/api/auth/") ||
 		strings.HasPrefix(path, "/api/beta/") ||
 		strings.HasPrefix(path, "/api/captcha/") ||
@@ -318,6 +371,8 @@ func VerifyRequestSignature(c *fiber.Ctx) error {
 // ═══════════════════════════════════════════════════════════════════════════
 
 func LogAudit(c *fiber.Ctx, action string, success bool, details string) {
+	userID := UserIDFromCtx(c)
+
 	entry := AuditEntry{
 		Timestamp: time.Now(),
 		Action:    action,
@@ -325,12 +380,10 @@ func LogAudit(c *fiber.Ctx, action string, success bool, details string) {
 		UserAgent: c.Get("User-Agent"),
 		Success:   success,
 		Details:   details,
+		UserID:    userID,
 	}
 
-	if userID, ok := c.Locals("userId").(string); ok {
-		entry.UserID = userID
-	}
-
+	// In-memory log (fast, recent entries)
 	auditLogMu.Lock()
 	auditLog = append(auditLog, entry)
 	if len(auditLog) > 10000 {
@@ -338,21 +391,63 @@ func LogAudit(c *fiber.Ctx, action string, success bool, details string) {
 	}
 	auditLogMu.Unlock()
 
+	// Persist through a bounded queue so abusive traffic cannot create an
+	// unbounded number of goroutines or SQLite writes. The in-memory audit log
+	// above remains complete even when persistence is saturated.
+	select {
+	case auditPersistQueue <- entry:
+	default:
+		dropped := auditDropped.Add(1)
+		if dropped == 1 || dropped%100 == 0 {
+			log.Printf("AUDIT: persistence queue full; dropped=%d", dropped)
+		}
+	}
+
 	if !success {
-		log.Printf("AUDIT: %s from %s (user: %s) - FAILED: %s", action, entry.UserID, entry.IP, details)
+		log.Printf("AUDIT: %s from %s (user: %s) - FAILED: %s", action, userID, entry.IP, details)
 	}
 }
 
-func GetAuditLog(limit int) []AuditEntry {
-	auditLogMu.RLock()
-	defer auditLogMu.RUnlock()
+func persistAuditEntries() {
+	for entry := range auditPersistQueue {
+		if err := db.GetDB().Create(&models.AuditLogEntry{
+			ID:        generateID(),
+			Timestamp: entry.Timestamp,
+			UserID:    entry.UserID,
+			Action:    entry.Action,
+			IP:        entry.IP,
+			UserAgent: entry.UserAgent,
+			Success:   entry.Success,
+			Details:   entry.Details,
+		}).Error; err != nil {
+			errors := auditWriteErrors.Add(1)
+			if errors == 1 || errors%100 == 0 {
+				log.Printf("AUDIT: persistence failed; errors=%d: %v", errors, err)
+			}
+		}
+	}
+}
 
-	if limit <= 0 || limit > len(auditLog) {
-		limit = len(auditLog)
+func AuditPersistenceStats() (dropped, writeErrors uint64) {
+	return auditDropped.Load(), auditWriteErrors.Load()
+}
+
+func GetAuditLog(limit int) []AuditEntry {
+	// First get in-memory entries
+	auditLogMu.RLock()
+	memEntries := make([]AuditEntry, len(auditLog))
+	copy(memEntries, auditLog)
+	auditLogMu.RUnlock()
+
+	if limit <= 0 || limit > len(memEntries) {
+		limit = len(memEntries)
+	}
+	if limit == 0 {
+		return []AuditEntry{}
 	}
 
 	result := make([]AuditEntry, limit)
-	copy(result, auditLog[len(auditLog)-limit:])
+	copy(result, memEntries[len(memEntries)-limit:])
 	return result
 }
 
@@ -464,7 +559,7 @@ func SQLInjectionProtection() fiber.Handler {
 		upperQuery := strings.ToUpper(query)
 		for _, pattern := range sqlPatterns {
 			if strings.Contains(upperQuery, pattern) {
-				LogAudit(c, "SQL_INJECTION_ATTEMPT", false, query[:100])
+				LogAudit(c, "SQL_INJECTION_ATTEMPT", false, truncate(query, 100))
 				return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 			}
 		}
@@ -496,7 +591,7 @@ func XSSProtection() fiber.Handler {
 			lowerInput := strings.ToLower(input)
 			for _, pattern := range xssPatterns {
 				if strings.Contains(lowerInput, pattern) {
-					LogAudit(c, "XSS_ATTEMPT", false, input[:100])
+					LogAudit(c, "XSS_ATTEMPT", false, truncate(input, 100))
 					return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 				}
 			}
@@ -511,6 +606,8 @@ func XSSProtection() fiber.Handler {
 // ═══════════════════════════════════════════════════════════════════════════
 
 func init() {
+	go persistAuditEntries()
+
 	// Cleanup expired CSRF tokens every 10 minutes
 	go func() {
 		for {
@@ -539,6 +636,8 @@ func init() {
 				}
 			}
 			csrfTokensMu.Unlock()
+			// Also cleanup database
+			cleanupExpiredCSRFTokens()
 		}
 	}()
 

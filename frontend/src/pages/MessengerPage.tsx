@@ -102,7 +102,8 @@ export default function MessengerPage() {
   useEffect(() => {
     if (!loading && chats.length > 0 && firstLoad) {
       setFirstLoad(false);
-      setTimeout(() => setConfettiTrigger(t => t + 1), 500);
+      const t = setTimeout(() => setConfettiTrigger(t => t + 1), 500);
+      return () => clearTimeout(t);
     }
   }, [loading, chats.length, firstLoad]);
 

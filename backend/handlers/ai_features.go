@@ -4,6 +4,8 @@ import (
 	"nexo/ai"
 	"nexo/db"
 	"nexo/models"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -105,6 +107,14 @@ func SetModerationConfig(c *fiber.Ctx) error {
 	chatID := c.Params("chatId")
 	userID := c.Locals("userId").(string)
 
+	var member models.ChatMember
+	if result := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&member); result.Error != nil {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
+	if member.Role != "owner" && member.Role != "admin" {
+		return c.Status(403).JSON(fiber.Map{"error": "No moderation permissions"})
+	}
+
 	var req struct {
 		AutoModEnabled bool    `json:"autoModEnabled"`
 		SpamThreshold  float64 `json:"spamThreshold"`
@@ -128,18 +138,21 @@ func SetModerationConfig(c *fiber.Ctx) error {
 			NSFWThreshold:  req.NSFWThreshold,
 			Action:         req.Action,
 		}
-		db.GetDB().Create(&config)
+		if err := db.GetDB().Create(&config).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save config"})
+		}
 	} else {
-		db.GetDB().Model(&config).Updates(map[string]interface{}{
+		if err := db.GetDB().Model(&config).Updates(map[string]interface{}{
 			"auto_mod_enabled": req.AutoModEnabled,
 			"spam_threshold":   req.SpamThreshold,
 			"toxic_threshold":  req.ToxicThreshold,
 			"nsfw_threshold":   req.NSFWThreshold,
 			"action":           req.Action,
-		})
+		}).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save config"})
+		}
 	}
 
-	_ = userID
 	return c.JSON(config)
 }
 
@@ -202,11 +215,12 @@ func ProcessVoiceCommand(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Audio file required"})
 	}
 
-	// Save audio temporarily
-	tempPath := "/tmp/voice_cmd_" + generateID() + ".webm"
+	// Save audio temporarily and always clean it up afterwards
+	tempPath := filepath.Join(os.TempDir(), "voice_cmd_"+generateID()+".webm")
 	if err := c.SaveFile(file, tempPath); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save audio"})
 	}
+	defer os.Remove(tempPath)
 
 	// For now, we'll use a simple text fallback since Whisper requires additional setup
 	// In production, integrate with OpenAI Whisper API

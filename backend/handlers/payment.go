@@ -23,6 +23,19 @@ import (
 	"nexo/ws"
 )
 
+const maxYooKassaResponseBytes int64 = 2 * 1024 * 1024
+
+func readLimitedBody(body io.Reader, limit int64) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(body, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("response exceeds %d bytes", limit)
+	}
+	return data, nil
+}
+
 // webhookEntry stores a payment ID with its processing timestamp
 type webhookEntry struct {
 	PaymentID string
@@ -62,17 +75,17 @@ type YooKassaPaymentRequest struct {
 		Type      string `json:"type"`
 		ReturnURL string `json:"return_url"`
 	} `json:"confirmation"`
-	Capture    bool              `json:"capture"`
-	Receipt    string            `json:"receipt,omitempty"`
-	Metadata   map[string]string `json:"metadata"`
+	Capture  bool              `json:"capture"`
+	Receipt  string            `json:"receipt,omitempty"`
+	Metadata map[string]string `json:"metadata"`
 }
 
 type YooKassaPaymentResponse struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
+	ID           string `json:"id"`
+	Status       string `json:"status"`
 	Confirmation struct {
-		Type             string `json:"type"`
-		ConfirmationURL  string `json:"confirmation_url"`
+		Type            string `json:"type"`
+		ConfirmationURL string `json:"confirmation_url"`
 	} `json:"confirmation"`
 	Amount struct {
 		Value    string `json:"value"`
@@ -91,9 +104,9 @@ type YooKassaRefundRequest struct {
 
 // YooKassaGetPaymentResponse — ответ API для GET /v3/payments/{id}
 type YooKassaGetPaymentResponse struct {
-	ID       string `json:"id"`
-	Status   string `json:"status"`
-	Amount   struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Amount struct {
 		Value    string `json:"value"`
 		Currency string `json:"currency"`
 	} `json:"amount"`
@@ -114,6 +127,13 @@ func isWebhookProcessed(paymentID string) bool {
 		CreatedAt: now,
 	})
 	return loaded
+}
+
+// clearWebhookProcessing releases the idempotency lock so a failed/partial
+// webhook can be retried by the provider instead of being dropped as a
+// "duplicate" for up to an hour.
+func clearWebhookProcessing(paymentID string) {
+	webhookProcessing.Delete(paymentID)
 }
 
 func cleanupWebhookLocks() {
@@ -143,8 +163,8 @@ func init() {
 // ─── Valid payment types ────────────────────────────────────────────────────
 
 var validPaymentTypes = map[string]bool{
-	"premium":       true,
-	"premium_gift":  true,
+	"premium":      true,
+	"premium_gift": true,
 }
 
 // ─── YooKassa IP whitelist (official ranges) ───────────────────────────────
@@ -354,7 +374,7 @@ func CreatePayment(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := readLimitedBody(resp.Body, maxYooKassaResponseBytes)
 	if err != nil {
 		log.Printf("[YOOKASSA] Failed to read response: %v", err)
 		return c.Status(502).JSON(fiber.Map{"error": "Payment service unavailable"})
@@ -439,11 +459,11 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 
 	// ─── 3. Парсимо подію ───────────────────────────────────────────────
 	var event struct {
-		Type   string `json:"type"`
+		Type    string `json:"type"`
 		Payment struct {
-			ID       string            `json:"id"`
-			Status   string            `json:"status"`
-			Amount   struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+			Amount struct {
 				Value    string `json:"value"`
 				Currency string `json:"currency"`
 			} `json:"amount"`
@@ -486,6 +506,7 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 		verifiedPayment, err := verifyPaymentWithYooKassa(paymentID)
 		if err != nil {
 			log.Printf("[SECURITY] Server-side verification failed for payment %s: %v", paymentID, err)
+			clearWebhookProcessing(paymentID)
 			return c.Status(502).JSON(fiber.Map{"error": "Payment verification failed"})
 		}
 
@@ -493,6 +514,7 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 		if verifiedPayment.Status != "succeeded" {
 			log.Printf("[SECURITY] Payment %s status mismatch: webhook=%s api=%s",
 				paymentID, event.Payment.Status, verifiedPayment.Status)
+			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Payment not confirmed by provider"})
 		}
 
@@ -500,18 +522,21 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 		expectedAmount := getPremiumPrice(payment.PremiumMonths)
 		if expectedAmount == 0 {
 			log.Printf("[SECURITY] Payment %s has invalid premium months: %d", paymentID, payment.PremiumMonths)
+			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid payment configuration"})
 		}
 
 		apiAmount, err := strconv.ParseFloat(verifiedPayment.Amount.Value, 64)
 		if err != nil {
 			log.Printf("[SECURITY] Payment %s: cannot parse API amount: %s", paymentID, verifiedPayment.Amount.Value)
+			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid amount format"})
 		}
 
 		if int(apiAmount) != expectedAmount {
 			log.Printf("[SECURITY] Payment %s amount mismatch: expected=%d api=%.0f webhook_amount=%s",
 				paymentID, expectedAmount, apiAmount, event.Payment.Amount.Value)
+			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Payment amount mismatch"})
 		}
 
@@ -568,7 +593,7 @@ func verifyPaymentWithYooKassa(paymentID string) (*YooKassaGetPaymentResponse, e
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readLimitedBody(resp.Body, maxYooKassaResponseBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read YooKassa response: %w", err)
 	}

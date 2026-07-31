@@ -1,5 +1,5 @@
 import type { Message } from '../types';
-import { ApiClient, getApiBase } from './core';
+import { ApiClient } from './core';
 
 declare module './core' {
   interface ApiClient {
@@ -22,26 +22,11 @@ export function installMessages(api: ApiClient): void {
     const formData = new FormData();
     formData.append('file', file, file.name);
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 300_000);
-    const storedToken = api.getStoredAccessToken();
-    const response = await fetch(`${getApiBase()}/upload`, {
+    const result = await api.request<any>('/upload', {
       method: 'POST',
-      credentials: 'include',
-      headers: {
-        ...(storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {}),
-        ...(api.csrfToken ? { 'X-CSRF-Token': api.csrfToken } : {}),
-      },
       body: formData,
-      signal: controller.signal,
+      timeout: 300_000,
     });
-    clearTimeout(timer);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Ошибка загрузки файла' }));
-      throw new Error(error.error || `Ошибка загрузки: ${response.status}`);
-    }
-    const result = await response.json();
 
     if (Array.isArray(result)) return result[0];
     if (result.files && Array.isArray(result.files)) return result.files[0];

@@ -57,6 +57,8 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callListenersRef = useRef<{ event: string; handler: (data: any) => void }[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const e2eCopyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const iceConfigRef = useRef<RTCConfiguration>({
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -75,6 +77,11 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
       }
     }
   }, [chatId]);
+
+  useEffect(() => () => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    if (e2eCopyTimerRef.current) clearTimeout(e2eCopyTimerRef.current);
+  }, []);
 
   const initLocalStream = useCallback(async () => {
     try {
@@ -392,7 +399,8 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const copyCallId = () => {
     navigator.clipboard.writeText(callId).then(() => {
       setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopySuccess(false), 2000);
     });
   };
 
@@ -400,7 +408,8 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     if (e2eFingerprint) {
       navigator.clipboard.writeText(e2eFingerprint).then(() => {
         setE2eCopySuccess(true);
-        setTimeout(() => setE2eCopySuccess(false), 2000);
+        if (e2eCopyTimerRef.current) clearTimeout(e2eCopyTimerRef.current);
+        e2eCopyTimerRef.current = setTimeout(() => setE2eCopySuccess(false), 2000);
       });
     }
   };

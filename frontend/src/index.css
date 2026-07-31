@@ -603,14 +603,6 @@ textarea:focus-visible {
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-shadow-inset);
 }
-.glass-floating {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: var(--glass-bg-ultra);
-  backdrop-filter: blur(var(--glass-blur-ultra)) saturate(var(--glass-saturation-strong));
-  -webkit-backdrop-filter: blur(var(--glass-blur-ultra)) saturate(var(--glass-saturation-strong));
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
 
 /* ---- Glass glow for interactive elements ---- */
 .glass-glow {
@@ -665,25 +657,6 @@ textarea:focus-visible {
   transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }
 
-/* Glass glow effect for interactive elements */
-.glass-glow {
-  position: relative;
-}
-.glass-glow::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(163, 163, 163, 0.3), rgba(115, 115, 115, 0.2), rgba(163, 163, 163, 0.3));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
-  filter: blur(8px);
-}
-.glass-glow:hover::after {
-  opacity: 1;
-}
-
 /* Floating glass panel (for side panels) */
 .glass-floating {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -724,30 +697,6 @@ textarea:focus-visible {
   );
   animation: glass-shimmer 4s ease-in-out infinite;
   pointer-events: none;
-}
-
-/* Р­Р»РµРјРµРЅС‚С‹ СЃРїРёСЃРєР° */
-.glass-list-item {
-  background: transparent;
-  border: 1px solid transparent;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-list-item:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.06);
-}
-
-.glass-list-item:active {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.01) 100%
-  );
 }
 
 /* ======================== */

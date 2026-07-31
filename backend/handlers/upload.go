@@ -119,8 +119,9 @@ func detectContentType(data []byte, filename, claimedType string) string {
 		if data[0] == 'G' && data[1] == 'I' && data[2] == 'F' {
 			return "image/gif"
 		}
-		// WebP
-		if data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' && data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P' {
+		// WebP (RIFF header is 12 bytes; guard separately to avoid a short-slice panic)
+		if len(data) >= 12 &&
+			data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' && data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P' {
 			return "image/webp"
 		}
 		// PDF

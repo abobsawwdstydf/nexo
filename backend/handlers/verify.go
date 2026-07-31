@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -35,7 +34,11 @@ func getTelegramProxyURL() string {
 }
 
 func generateCode() string {
-	n, _ := rand.Int(rand.Reader, big.NewInt(900000))
+	n, err := rand.Int(rand.Reader, big.NewInt(900000))
+	if err != nil {
+		// Fallback: time-based code (never blocks on RNG failure)
+		return fmt.Sprintf("%d", 100000+time.Now().UnixNano()%900000)
+	}
 	return fmt.Sprintf("%d", n.Int64()+100000)
 }
 
@@ -171,7 +174,7 @@ func sendTelegramVerification(username string, code string) {
 		"chat_id": username,
 		"text":    msg,
 	})
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(data)))
+	resp, err := httpClient.Post(url, "application/json", strings.NewReader(string(data)))
 	if err != nil {
 		updateBotHealth("telegram", false, err.Error())
 		return
@@ -192,7 +195,7 @@ func sendMaxVerification(username string, code string) {
 		"chat_id": username,
 		"text":    msg,
 	})
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(data)))
+	resp, err := httpClient.Post(url, "application/json", strings.NewReader(string(data)))
 	if err != nil {
 		updateBotHealth("max", false, err.Error())
 		return
@@ -250,7 +253,7 @@ func checkTelegramHealth() {
 
 	proxyURL := getTelegramProxyURL()
 	url := fmt.Sprintf("%s/bot%s/getMe", proxyURL, token)
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		updateBotHealth("telegram", false, err.Error())
 		return
@@ -268,7 +271,7 @@ func checkMaxHealth() {
 
 	proxyURL := getTelegramProxyURL()
 	url := fmt.Sprintf("%s/bot%s/getMe", proxyURL, token)
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		updateBotHealth("max", false, err.Error())
 		return

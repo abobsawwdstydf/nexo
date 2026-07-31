@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft,
-  Phone,
-  Video,
-  MoreVertical,
   Send,
   Paperclip,
   Smile,
@@ -22,8 +18,8 @@ import {
   Pin,
   Check,
   CheckCheck,
-  MessageCircle,
   Camera,
+  Video,
   MapPin,
   FileText,
   Wallet,
@@ -31,30 +27,14 @@ import {
   Play,
   Pause,
   Trash,
-  RotateCcw,
-  Zap,
   ExternalLink,
 } from 'lucide-react';
 import {
   Menu,
   CallCalling,
   VideoCircle,
-  More,
-  SearchNormal1,
-  NotificationBing,
-  Flag2,
-  Trash as TrashIcon,
   ArrowLeft2,
-  Send2,
-  Smileys,
-  Microphone2,
   Gallery,
-  Camera as CameraIcon,
-  Document,
-  Location,
-  Wallet as WalletIcon,
-  PlayCircle,
-  PauseCircle,
 } from 'iconsax-react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -817,7 +797,8 @@ function MessageInput({
   }, []);
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
+    const t = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(t);
   }, [replyTo]);
 
   const handleSubmit = (media?: any[]) => {
@@ -904,6 +885,11 @@ function MessageInput({
   const [gifQuery, setGifQuery] = useState('');
   const [emojiCategory, setEmojiCategory] = useState(0);
   const gifSearchRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Clear pending GIF search debounce on unmount
+  useEffect(() => () => {
+    if (gifSearchRef.current) clearTimeout(gifSearchRef.current);
+  }, []);
 
   useEffect(() => {
     if (showEmojiPanel && emojiTab === 'gif' && gifs.length === 0 && !gifQuery) {
@@ -2091,15 +2077,11 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const response = await fetch(`/api/messages/search?q=${encodeURIComponent(searchQuery)}&chatId=${chat.id}`, {
-          credentials: 'include',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('nexo_access_token')}`,
-          },
-        });
-        const data = await response.json();
+        const data = await api.request<{ items?: Message[] }>(
+          `/messages/search?q=${encodeURIComponent(searchQuery)}&chatId=${chat.id}`
+        );
         if (cancelled) return;
-        const results = data?.items || data || [];
+        const results = data.items || [];
         if (e2eReadyRef.current) {
           const decrypted = await decryptLoadedMessages(results);
           if (cancelled) return;

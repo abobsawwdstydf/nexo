@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/smtp"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -95,7 +97,11 @@ func init() {
 
 func generateID() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: time-based hash (never blocks critical flows on RNG failure)
+		h := sha256.Sum256([]byte(strconv.FormatInt(time.Now().UnixNano(), 10)))
+		return hex.EncodeToString(h[:16])
+	}
 	return hex.EncodeToString(b)
 }
 
@@ -431,6 +437,9 @@ func RefreshToken(c *fiber.Ctx) error {
 
 	claims := &middleware.Claims{}
 	token, err := jwt.ParseWithClaims(req.RefreshToken, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
+		}
 		return middleware.JWTRefreshSecret, nil
 	})
 	if err != nil || !token.Valid {

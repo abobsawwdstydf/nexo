@@ -2,6 +2,7 @@
 
 import (
 	"encoding/json"
+	"unicode/utf8"
 
 	"nexo/ai"
 	"nexo/db"
@@ -10,6 +11,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+// Global concurrency limit for AI browse tasks — each task spawns its own
+// headless browser, so unbounded goroutines exhausted CPU/RAM on the server.
+var aiBrowseSlots = make(chan struct{}, 5)
 
 // POST /ai/browse - start AI browsing task
 func StartAIBrowse(c *fiber.Ctx) error {
@@ -20,8 +25,17 @@ func StartAIBrowse(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
+	req.Query = trimSafely(req.Query, 2000)
 	if req.Query == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Query is required"})
+	}
+	req.Context = trimSafely(req.Context, 10000)
+
+	// Acquire a browser slot (non-blocking) to cap concurrent headless browsers
+	select {
+	case aiBrowseSlots <- struct{}{}:
+	default:
+		return c.Status(429).JSON(fiber.Map{"error": "Too many AI browse tasks running, try again later"})
 	}
 
 	// Create task
@@ -40,6 +54,7 @@ func StartAIBrowse(c *fiber.Ctx) error {
 
 	// Start background browsing
 	go func() {
+		defer func() { <-aiBrowseSlots }()
 		agent := ai.NewAgent()
 		defer agent.Close()
 		agent.Browse(taskID, req.Query, req.Context)
@@ -75,12 +90,13 @@ func StartAIBrowse(c *fiber.Ctx) error {
 // GET /ai/browse/status/:id - get task status
 func GetAIBrowseStatus(c *fiber.Ctx) error {
 	taskID := c.Params("id")
+	userID := c.Locals("userId").(string)
 
 	task := ai.GlobalTaskManager.GetTask(taskID)
 	if task == nil {
-		// Try DB
+		// Try DB — scoped to the calling user so tasks cannot be read by ID guessing
 		var dbTask models.AIBrowseTask
-		if err := db.GetDB().Where("id = ?", taskID).First(&dbTask).Error; err != nil {
+		if err := db.GetDB().Where("id = ? AND user_id = ?", taskID, userID).First(&dbTask).Error; err != nil {
 			return c.Status(404).JSON(fiber.Map{"error": "Task not found"})
 		}
 		return c.JSON(fiber.Map{
@@ -90,6 +106,11 @@ func GetAIBrowseStatus(c *fiber.Ctx) error {
 			"pagesViewed": dbTask.PagesViewed,
 			"error":       dbTask.Error,
 		})
+	}
+
+	// Ownership check for in-memory tasks too
+	if task.UserID != userID {
+		return c.Status(403).JSON(fiber.Map{"error": "Task not found"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -110,4 +131,12 @@ func GetAIBrowseHistory(c *fiber.Ctx) error {
 	db.GetDB().Where("user_id = ?", userID).Order("created_at DESC").Limit(50).Find(&tasks)
 
 	return c.JSON(fiber.Map{"items": tasks})
+}
+
+// trimSafely truncates s to at most maxLen characters (UTF-8 safe)
+func trimSafely(s string, maxLen int) string {
+	if s == "" || utf8.RuneCountInString(s) <= maxLen {
+		return s
+	}
+	return string([]rune(s)[:maxLen])
 }

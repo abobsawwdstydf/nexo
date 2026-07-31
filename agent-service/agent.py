@@ -1,11 +1,13 @@
 ﻿from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import os
 import re
-from datetime import datetime
-from urllib.parse import urlparse
+import socket
+from datetime import datetime, timezone
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from playwright.async_api import (
     Browser,
@@ -23,6 +25,53 @@ logger = logging.getLogger(__name__)
 _playwright: Playwright | None = None
 _browser: Browser | None = None
 _semaphore = asyncio.Semaphore(settings.max_pages_per_request)
+
+
+def _is_private_host(host: str) -> bool:
+    """True for loopback, private, link-local and other non-public IPs."""
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        # Hostname — resolve it (asyncio-safe thread for DNS)
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except socket.gaierror:
+            # Unresolvable host: let the browser fail naturally, do not block
+            return False
+        for info in infos:
+            try:
+                if ipaddress.ip_address(info[4][0]).is_private:
+                    return True
+            except ValueError:
+                continue
+        return False
+    return addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved
+
+
+def _validate_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Unsupported scheme: {parsed.scheme}")
+    host = parsed.hostname or ""
+    if not host:
+        raise ValueError("Missing hostname")
+    if not settings.is_domain_allowed(host):
+        raise ValueError(f"Domain not allowed: {host}")
+    if not settings.allow_private_urls and _is_private_host(host):
+        raise ValueError(f"Private/internal address not allowed: {host}")
+    return url
+
+
+def _check_final_url(final_url: str) -> None:
+    """SSRF guard: a page may redirect anywhere, so re-validate the final URL."""
+    parsed = urlparse(final_url)
+    host = parsed.hostname or ""
+    if not host:
+        raise ValueError("Navigation failed (no hostname)")
+    if not settings.is_domain_allowed(host):
+        raise ValueError(f"Redirected to disallowed domain: {host}")
+    if not settings.allow_private_urls and _is_private_host(host):
+        raise ValueError(f"Redirected to private address: {host}")
 
 
 async def get_browser() -> Browser:
@@ -54,17 +103,6 @@ async def close_browser() -> None:
     logger.info("Browser closed")
 
 
-def _validate_url(url: str) -> str:
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        raise ValueError(f"Unsupported scheme: {parsed.scheme}")
-    if not parsed.hostname:
-        raise ValueError("Missing hostname")
-    if not settings.is_domain_allowed(url):
-        raise ValueError(f"Domain not allowed: {parsed.hostname}")
-    return url
-
-
 async def _new_context() -> BrowserContext:
     browser = await get_browser()
     return await browser.new_context(
@@ -86,6 +124,8 @@ async def navigate(url: str) -> PageResult:
             page = await ctx.new_page()
             await page.goto(url, wait_until="domcontentloaded", timeout=settings.browser_timeout)
             await page.wait_for_load_state("networkidle", timeout=min(settings.browser_timeout, 10000))
+            # SSRF guard: re-validate the final URL after any redirects
+            _check_final_url(page.url)
             title = await page.title()
             return PageResult(
                 url=page.url,
@@ -107,8 +147,8 @@ async def search(query: str) -> SearchResults:
         page: Page | None = None
         try:
             page = await ctx.new_page()
-            encoded = query.replace(" ", "+")
-            search_url = f"https://www.google.com/search?q={encoded}&hl=en"
+            encoded = urlencode({"q": query})
+            search_url = f"https://www.google.com/search?{encoded}&hl=en"
             await page.goto(search_url, wait_until="domcontentloaded", timeout=settings.browser_timeout)
 
             results: list[SearchResult] = []
@@ -149,6 +189,8 @@ async def extract_content(url: str) -> PageResult:
         try:
             page = await ctx.new_page()
             await page.goto(url, wait_until="domcontentloaded", timeout=settings.browser_timeout)
+            # SSRF guard: re-validate the final URL after any redirects
+            _check_final_url(page.url)
 
             title = await page.title()
             content = await page.evaluate("""() => {
@@ -186,8 +228,10 @@ async def screenshot(url: str) -> PageResult:
             page = await ctx.new_page()
             await page.goto(url, wait_until="domcontentloaded", timeout=settings.browser_timeout)
             await page.wait_for_load_state("networkidle", timeout=min(settings.browser_timeout, 10000))
+            # SSRF guard: re-validate the final URL after any redirects
+            _check_final_url(page.url)
 
-            ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             safe_name = re.sub(r'[^\w\-]', '_', urlparse(url).hostname or "page")
             path = os.path.join(settings.screenshots_dir, f"{safe_name}_{ts}.png")
             await page.screenshot(path=path, full_page=False)

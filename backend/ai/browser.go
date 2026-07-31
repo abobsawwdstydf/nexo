@@ -118,6 +118,7 @@ func (b *BrowserAgent) Navigate(targetURL string) (*PageResult, error) {
 			if err := chromedp.Run(ctx, chromedp.CaptureScreenshot(&screenshotBuf)); err == nil {
 				if err := os.WriteFile(screenshotPath, screenshotBuf, 0644); err == nil {
 					result.Screenshot = screenshotPath
+					cleanupOldScreenshots(b.config.ScreenshotDir)
 				}
 			}
 		}
@@ -298,17 +299,32 @@ func extractTextFromHTML(html string) string {
 		}
 	}
 
-	// Clean up whitespace
-	output := result.String()
-	output = strings.ReplaceAll(output, "\t", " ")
-	output = strings.ReplaceAll(output, "\n", " ")
+	// Clean up whitespace: collapse all whitespace runs to a single space
+	// (strings.Fields handles tabs/newlines/multi-space in one pass — O(n),
+	// previously this was an O(n²) ReplaceAll loop).
+	return strings.Join(strings.Fields(result.String()), " ")
+}
 
-	// Collapse multiple spaces
-	for strings.Contains(output, "  ") {
-		output = strings.ReplaceAll(output, "  ", " ")
+// cleanupOldScreenshots removes screenshots older than 24 hours to prevent
+// unbounded disk growth on the server.
+func cleanupOldScreenshots(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
 	}
-
-	return strings.TrimSpace(output)
+	cutoff := time.Now().Add(-24 * time.Hour)
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			os.Remove(filepath.Join(dir, e.Name()))
+		}
+	}
 }
 
 func parseGoogleResults(html string) []SearchResult {

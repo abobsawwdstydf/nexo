@@ -3,53 +3,53 @@ package models
 import "time"
 
 type User struct {
-	ID           string     `json:"id" gorm:"primaryKey"`
-	Username     string     `json:"username" gorm:"uniqueIndex;size:64"`
-	DisplayName  string     `json:"displayName" gorm:"size:128"`
-	Email        string     `json:"email" gorm:"uniqueIndex;size:256"`
-	EmailVerified bool       `json:"emailVerified" gorm:"default:false"`
-	Avatar       string     `json:"avatar"`
-	Bio          string     `json:"bio"`
-	IsOnline     bool       `json:"isOnline" gorm:"default:false"`
-	IsVerified   bool       `json:"isVerified" gorm:"default:false"`
-	IsPremium    bool       `json:"isPremium" gorm:"default:false"`
-	IsBanned     bool       `json:"isBanned" gorm:"default:false"`
-	BanReason    string     `json:"banReason"`
-	IsAdmin      bool       `json:"isAdmin" gorm:"default:false"`
-	PremiumUntil  *time.Time `json:"premiumUntil"`
-	PremiumBadgeUrl string   `json:"premiumBadgeUrl"`
-	Subscribers  int        `json:"subscribersCount" gorm:"default:0"`
-	IsVerifiedByBot bool   `json:"isVerifiedByBot" gorm:"default:false"`
-	LastSeen     time.Time  `json:"lastSeen" gorm:"autoCreateTime"`
-	CreatedAt    time.Time  `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt    time.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
+	ID              string     `json:"id" gorm:"primaryKey"`
+	Username        string     `json:"username" gorm:"uniqueIndex;size:64"`
+	DisplayName     string     `json:"displayName" gorm:"size:128"`
+	Email           string     `json:"email" gorm:"uniqueIndex;size:256"`
+	EmailVerified   bool       `json:"emailVerified" gorm:"default:false"`
+	Avatar          string     `json:"avatar"`
+	Bio             string     `json:"bio"`
+	IsOnline        bool       `json:"isOnline" gorm:"default:false"`
+	IsVerified      bool       `json:"isVerified" gorm:"default:false"`
+	IsPremium       bool       `json:"isPremium" gorm:"default:false"`
+	IsBanned        bool       `json:"isBanned" gorm:"default:false"`
+	BanReason       string     `json:"banReason"`
+	IsAdmin         bool       `json:"isAdmin" gorm:"default:false"`
+	PremiumUntil    *time.Time `json:"premiumUntil"`
+	PremiumBadgeUrl string     `json:"premiumBadgeUrl"`
+	Subscribers     int        `json:"subscribersCount" gorm:"default:0"`
+	IsVerifiedByBot bool       `json:"isVerifiedByBot" gorm:"default:false"`
+	LastSeen        time.Time  `json:"lastSeen" gorm:"autoCreateTime"`
+	CreatedAt       time.Time  `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
 
 	// Signal Protocol
-	IdentityKey  string `json:"identityKey"`
-	SignedPreKey string `json:"signedPreKey"`
+	IdentityKey    string `json:"identityKey"`
+	SignedPreKey   string `json:"signedPreKey"`
 	OneTimePreKeys string `json:"oneTimePreKeys"`
 
 	// Settings
-	NotifyAll        bool   `json:"notifyAll" gorm:"default:true"`
-	NotifyMessages   bool   `json:"notifyMessages" gorm:"default:true"`
-	NotifyCalls      bool   `json:"notifyCalls" gorm:"default:true"`
-	NotifyFriends    bool   `json:"notifyFriends" gorm:"default:true"`
-	TwoFactorEnabled bool   `json:"twoFactorEnabled" gorm:"default:false"`
+	NotifyAll        bool `json:"notifyAll" gorm:"default:true"`
+	NotifyMessages   bool `json:"notifyMessages" gorm:"default:true"`
+	NotifyCalls      bool `json:"notifyCalls" gorm:"default:true"`
+	NotifyFriends    bool `json:"notifyFriends" gorm:"default:true"`
+	TwoFactorEnabled bool `json:"twoFactorEnabled" gorm:"default:false"`
 
 	// DND (Do Not Disturb)
-	DNDUntil  *time.Time `json:"dndUntil"`
-	DNDMessage string    `json:"dndMessage" gorm:"size:256"`
+	DNDUntil   *time.Time `json:"dndUntil"`
+	DNDMessage string     `json:"dndMessage" gorm:"size:256"`
 
 	// Mood Status
-	MoodStatus     string     `json:"moodStatus" gorm:"size:64"` // emoji or text status
-	MoodExpiresAt  *time.Time `json:"moodExpiresAt"`
+	MoodStatus    string     `json:"moodStatus" gorm:"size:64"` // emoji or text status
+	MoodExpiresAt *time.Time `json:"moodExpiresAt"`
 
 	// Privacy
-	WhoCanMessage    string `json:"whoCanMessage" gorm:"size:32;default:everyone"`
-	WhoCanCall       string `json:"whoCanCall" gorm:"size:32;default:everyone"`
-	WhoCanSeeProfile string `json:"whoCanSeeProfile" gorm:"size:32;default:everyone"`
-	ShowLastSeen     bool   `json:"showLastSeen" gorm:"default:true"`
-	AllowGroupInvites bool  `json:"allowGroupInvites" gorm:"default:true"`
+	WhoCanMessage     string `json:"whoCanMessage" gorm:"size:32;default:everyone"`
+	WhoCanCall        string `json:"whoCanCall" gorm:"size:32;default:everyone"`
+	WhoCanSeeProfile  string `json:"whoCanSeeProfile" gorm:"size:32;default:everyone"`
+	ShowLastSeen      bool   `json:"showLastSeen" gorm:"default:true"`
+	AllowGroupInvites bool   `json:"allowGroupInvites" gorm:"default:true"`
 
 	// Appearance
 	NameColor    string `json:"nameColor"`
@@ -62,16 +62,16 @@ type User struct {
 }
 
 type Chat struct {
-	ID              string    `json:"id" gorm:"primaryKey"`
-	Type            string    `json:"type" gorm:"size:32;default:personal"`
-	Name            string    `json:"name" gorm:"size:128"`
-	Username        string    `json:"username" gorm:"uniqueIndex;size:64"`
-	Avatar          string    `json:"avatar"`
-	Description     string    `json:"description"`
-	IsVerified      bool      `json:"isVerified" gorm:"default:false"`
-	IsSecret        bool      `json:"isSecret" gorm:"default:false"`
-	IsE2E           bool      `json:"isE2E" gorm:"default:false"`
-	SubscribersCount int     `json:"subscribersCount" gorm:"default:0"`
+	ID               string    `json:"id" gorm:"primaryKey"`
+	Type             string    `json:"type" gorm:"size:32;default:personal"`
+	Name             string    `json:"name" gorm:"size:128"`
+	Username         string    `json:"username" gorm:"uniqueIndex;size:64"`
+	Avatar           string    `json:"avatar"`
+	Description      string    `json:"description"`
+	IsVerified       bool      `json:"isVerified" gorm:"default:false"`
+	IsSecret         bool      `json:"isSecret" gorm:"default:false"`
+	IsE2E            bool      `json:"isE2E" gorm:"default:false"`
+	SubscribersCount int       `json:"subscribersCount" gorm:"default:0"`
 	CanMembersPost   bool      `json:"canMembersPost" gorm:"default:true"`
 	CanMembersInvite bool      `json:"canMembersInvite" gorm:"default:true"`
 	SlowModeInterval int       `json:"slowModeInterval" gorm:"default:0"`
@@ -80,23 +80,23 @@ type Chat struct {
 	CustomIcon       string    `json:"customIcon"`
 	CustomColor      string    `json:"customColor"`
 	CustomBackground string    `json:"customBackground"`
-	CreatedAt       time.Time `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt       time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+	CreatedAt        time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt        time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
 	Members  []ChatMember `gorm:"foreignKey:ChatID"`
 	Messages []Message    `gorm:"foreignKey:ChatID"`
 }
 
 type ChatMember struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
-	ChatID      string    `json:"chatId" gorm:"index"`
-	UserID      string    `json:"userId" gorm:"index"`
-	Role        string    `json:"role" gorm:"size:32;default:member"`
-	JoinedAt    time.Time `json:"joinedAt" gorm:"autoCreateTime"`
-	IsMuted     bool      `json:"isMuted" gorm:"default:false"`
-	IsArchived  bool      `json:"isArchived" gorm:"default:false"`
-	IsPinned    bool      `json:"isPinned" gorm:"default:false"`
-	ClearedAt   *time.Time `json:"clearedAt"`
+	ID            string     `json:"id" gorm:"primaryKey"`
+	ChatID        string     `json:"chatId" gorm:"index"`
+	UserID        string     `json:"userId" gorm:"index"`
+	Role          string     `json:"role" gorm:"size:32;default:member"`
+	JoinedAt      time.Time  `json:"joinedAt" gorm:"autoCreateTime"`
+	IsMuted       bool       `json:"isMuted" gorm:"default:false"`
+	IsArchived    bool       `json:"isArchived" gorm:"default:false"`
+	IsPinned      bool       `json:"isPinned" gorm:"default:false"`
+	ClearedAt     *time.Time `json:"clearedAt"`
 	LastMessageAt *time.Time `json:"lastMessageAt"`
 
 	Chat Chat `json:"chat" gorm:"foreignKey:ChatID"`
@@ -106,30 +106,30 @@ type ChatMember struct {
 func (ChatMember) TableName() string { return "chat_members" }
 
 type Message struct {
-	ID               string     `json:"id" gorm:"primaryKey"`
-	ChatID           string     `json:"chatId" gorm:"index:idx_chat_created"`
-	SenderID         string     `json:"senderId" gorm:"index"`
-	Content          string     `json:"content"`
-	Type             string     `json:"type" gorm:"size:32;default:text"`
-	ReplyToID        string     `json:"replyToId"`
-	ForwardedFromID  string     `json:"forwardedFromId"`
-	IsEdited         bool       `json:"isEdited" gorm:"default:false"`
-	IsDeleted        bool       `json:"isDeleted" gorm:"default:false"`
-	ScheduledAt      *time.Time `json:"scheduledAt"`
-	CreatedAt        time.Time  `json:"createdAt" gorm:"autoCreateTime;index:idx_chat_created"`
-	UpdatedAt        time.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
-	EditedAt         *time.Time `json:"editedAt"`
-	VideoURL         string     `json:"videoUrl"`
-	Duration         int        `json:"duration"`
-	Thumbnail        string     `json:"thumbnail"`
-	IsEncrypted      bool       `json:"isEncrypted" gorm:"default:false"`
-	EncryptedContent string     `json:"encryptedContent"`
-	EncryptedIV      string     `json:"encryptedIv"`
-	SenderKeyID      string     `json:"senderKeyId"`
-	ThreadID         string     `json:"threadId"`
-	SelfDestructTimer int      `json:"selfDestructTimer"`
-	CanForward       bool       `json:"canForward" gorm:"default:true"`
-	CanScreenshot    bool       `json:"canScreenshot" gorm:"default:true"`
+	ID                string     `json:"id" gorm:"primaryKey"`
+	ChatID            string     `json:"chatId" gorm:"index:idx_chat_created"`
+	SenderID          string     `json:"senderId" gorm:"index"`
+	Content           string     `json:"content"`
+	Type              string     `json:"type" gorm:"size:32;default:text"`
+	ReplyToID         string     `json:"replyToId"`
+	ForwardedFromID   string     `json:"forwardedFromId"`
+	IsEdited          bool       `json:"isEdited" gorm:"default:false"`
+	IsDeleted         bool       `json:"isDeleted" gorm:"default:false"`
+	ScheduledAt       *time.Time `json:"scheduledAt"`
+	CreatedAt         time.Time  `json:"createdAt" gorm:"autoCreateTime;index:idx_chat_created"`
+	UpdatedAt         time.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
+	EditedAt          *time.Time `json:"editedAt"`
+	VideoURL          string     `json:"videoUrl"`
+	Duration          int        `json:"duration"`
+	Thumbnail         string     `json:"thumbnail"`
+	IsEncrypted       bool       `json:"isEncrypted" gorm:"default:false"`
+	EncryptedContent  string     `json:"encryptedContent"`
+	EncryptedIV       string     `json:"encryptedIv"`
+	SenderKeyID       string     `json:"senderKeyId"`
+	ThreadID          string     `json:"threadId"`
+	SelfDestructTimer int        `json:"selfDestructTimer"`
+	CanForward        bool       `json:"canForward" gorm:"default:true"`
+	CanScreenshot     bool       `json:"canScreenshot" gorm:"default:true"`
 
 	Sender        User          `json:"sender" gorm:"foreignKey:SenderID"`
 	Chat          Chat          `json:"-" gorm:"foreignKey:ChatID"`
@@ -153,8 +153,8 @@ type Media struct {
 	Height    int     `json:"height"`
 	Order     int     `json:"order" gorm:"default:0"`
 
-	ConvertedURL    string `json:"convertedUrl"`
-	OriginalFormat  string `json:"originalFormat"`
+	ConvertedURL   string `json:"convertedUrl"`
+	OriginalFormat string `json:"originalFormat"`
 
 	Message Message `json:"-" gorm:"foreignKey:MessageID"`
 }
@@ -172,8 +172,8 @@ type Reaction struct {
 
 type ReadReceipt struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
-	MessageID string    `json:"messageId" gorm:"index"`
-	UserID    string    `json:"userId" gorm:"index"`
+	MessageID string    `json:"messageId" gorm:"index;uniqueIndex:idx_read_receipts_message_user"`
+	UserID    string    `json:"userId" gorm:"index;uniqueIndex:idx_read_receipts_message_user"`
 	ReadAt    time.Time `json:"readAt" gorm:"autoCreateTime"`
 
 	Message Message `json:"-" gorm:"foreignKey:MessageID"`
@@ -181,21 +181,21 @@ type ReadReceipt struct {
 }
 
 type Story struct {
-	ID            string    `json:"id" gorm:"primaryKey"`
-	UserID        string    `json:"userId" gorm:"index"`
-	Type          string    `json:"type" gorm:"size:32;default:text"`
-	MediaURL      string    `json:"mediaUrl"`
-	Content       string    `json:"content"`
-	BgColor       string    `json:"bgColor"`
-	IsHighlight   bool      `json:"isHighlight" gorm:"default:false"`
-	HighlightTitle string   `json:"highlightTitle"`
-	HighlightCover string  `json:"highlightCover"`
-	CreatedAt     time.Time `json:"createdAt" gorm:"autoCreateTime"`
-	ExpiresAt     time.Time `json:"expiresAt" gorm:"index"`
+	ID             string    `json:"id" gorm:"primaryKey"`
+	UserID         string    `json:"userId" gorm:"index"`
+	Type           string    `json:"type" gorm:"size:32;default:text"`
+	MediaURL       string    `json:"mediaUrl"`
+	Content        string    `json:"content"`
+	BgColor        string    `json:"bgColor"`
+	IsHighlight    bool      `json:"isHighlight" gorm:"default:false"`
+	HighlightTitle string    `json:"highlightTitle"`
+	HighlightCover string    `json:"highlightCover"`
+	CreatedAt      time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	ExpiresAt      time.Time `json:"expiresAt" gorm:"index"`
 
-	User        User         `json:"user" gorm:"foreignKey:UserID"`
-	Views       []StoryView  `json:"views" gorm:"foreignKey:StoryID"`
-	Reactions   []StoryReaction `json:"reactions" gorm:"foreignKey:StoryID"`
+	User      User            `json:"user" gorm:"foreignKey:UserID"`
+	Views     []StoryView     `json:"views" gorm:"foreignKey:StoryID"`
+	Reactions []StoryReaction `json:"reactions" gorm:"foreignKey:StoryID"`
 }
 
 type StoryView struct {
@@ -320,9 +320,9 @@ type UserDevice struct {
 type VerificationRequest struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
 	UserID    string    `json:"userId" gorm:"index"`
-	Provider  string    `json:"provider" gorm:"size:32"` // "telegram" or "max"
-	Token     string    `json:"token" gorm:"size:128"`  // verification token
-	Code      string    `json:"code" gorm:"size:16"`     // numeric code user enters
+	Provider  string    `json:"provider" gorm:"size:32"`               // "telegram" or "max"
+	Token     string    `json:"token" gorm:"size:128"`                 // verification token
+	Code      string    `json:"code" gorm:"size:16"`                   // numeric code user enters
 	Status    string    `json:"status" gorm:"size:32;default:pending"` // pending, confirmed, expired
 	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
 	ExpiresAt time.Time `json:"expiresAt"`
@@ -336,16 +336,16 @@ type Payment struct {
 	YooKassaID    string    `json:"yooKassaId" gorm:"uniqueIndex;size:128"`
 	Amount        int       `json:"amount"` // in rubles
 	Currency      string    `json:"currency" gorm:"size:3;default:RUB"`
-	Type          string    `json:"type" gorm:"size:32"` // "premium", "premium_gift"
+	Type          string    `json:"type" gorm:"size:32"`                   // "premium", "premium_gift"
 	Status        string    `json:"status" gorm:"size:32;default:pending"` // pending, succeeded, canceled
-	GiftToUserID  string    `json:"giftToUserId"` // for gifts
+	GiftToUserID  string    `json:"giftToUserId"`                          // for gifts
 	PremiumMonths int       `json:"premiumMonths"`
 	Metadata      string    `json:"metadata"` // JSON metadata
 	CreatedAt     time.Time `json:"createdAt" gorm:"autoCreateTime"`
 	UpdatedAt     time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
-	User        User  `json:"user" gorm:"foreignKey:UserID"`
-	GiftToUser  *User `json:"giftToUser,omitempty" gorm:"foreignKey:GiftToUserID"`
+	User       User  `json:"user" gorm:"foreignKey:UserID"`
+	GiftToUser *User `json:"giftToUser,omitempty" gorm:"foreignKey:GiftToUserID"`
 }
 
 type BotHealthCheck struct {
@@ -365,10 +365,10 @@ type WallPost struct {
 	CreatedAt      time.Time `json:"createdAt" gorm:"autoCreateTime"`
 	UpdatedAt      time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
-	Author   User              `json:"author" gorm:"foreignKey:AuthorID"`
-	Media    []WallPostMedia   `json:"media" gorm:"foreignKey:PostID"`
+	Author    User               `json:"author" gorm:"foreignKey:AuthorID"`
+	Media     []WallPostMedia    `json:"media" gorm:"foreignKey:PostID"`
 	Reactions []WallPostReaction `json:"reactions" gorm:"foreignKey:PostID"`
-	Comments []WallPostComment `json:"comments" gorm:"foreignKey:PostID"`
+	Comments  []WallPostComment  `json:"comments" gorm:"foreignKey:PostID"`
 }
 
 type WallPostMedia struct {
@@ -396,20 +396,39 @@ type WallPostReaction struct {
 }
 
 type WallPostComment struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
-	PostID      string    `json:"postId" gorm:"index"`
-	AuthorID    string    `json:"authorId" gorm:"index"`
-	ParentID    string    `json:"parentId"`
-	Content     string    `json:"content"`
-	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+	ID        string    `json:"id" gorm:"primaryKey"`
+	PostID    string    `json:"postId" gorm:"index"`
+	AuthorID  string    `json:"authorId" gorm:"index"`
+	ParentID  string    `json:"parentId"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
-	Post     WallPost          `json:"-" gorm:"foreignKey:PostID"`
-	Author   User              `json:"author" gorm:"foreignKey:AuthorID"`
-	Replies   []WallPostComment `json:"replies,omitempty" gorm:"foreignKey:ParentID"`
+	Post    WallPost          `json:"-" gorm:"foreignKey:PostID"`
+	Author  User              `json:"author" gorm:"foreignKey:AuthorID"`
+	Replies []WallPostComment `json:"replies,omitempty" gorm:"foreignKey:ParentID"`
 }
 
-// API request/response types
+// CSRFToken stores CSRF tokens in the database for resilience across restarts.
+type CSRFToken struct {
+	ID        string    `json:"id" gorm:"primaryKey"`
+	Token     string    `json:"token" gorm:"uniqueIndex;size:64"`
+	SessionID string    `json:"sessionId" gorm:"size:64"`
+	ExpiresAt time.Time `json:"expiresAt" gorm:"index"`
+	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
+}
+
+// AuditLogEntry stores security audit events in the database for persistence.
+type AuditLogEntry struct {
+	ID        string    `json:"id" gorm:"primaryKey"`
+	Timestamp time.Time `json:"timestamp" gorm:"autoCreateTime"`
+	UserID    string    `json:"userId" gorm:"size:64;index"`
+	Action    string    `json:"action" gorm:"size:128"`
+	IP        string    `json:"ip" gorm:"size:45"`
+	UserAgent string    `json:"userAgent" gorm:"size:256"`
+	Success   bool      `json:"success"`
+	Details   string    `json:"details" gorm:"size:512"`
+}
 type RegisterRequest struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"displayName"`
@@ -478,20 +497,20 @@ type SendMessageRequest struct {
 }
 
 type CreateChatRequest struct {
-	Type            string `json:"type"`
-	Name            string `json:"name"`
-	Username        string `json:"username"`
-	MemberIDs       []string `json:"memberIds"`
-	IsSecret        bool   `json:"isSecret"`
-	IsE2E           bool   `json:"isE2E"`
-	WelcomeMessage  string `json:"welcomeMessage"`
+	Type           string   `json:"type"`
+	Name           string   `json:"name"`
+	Username       string   `json:"username"`
+	MemberIDs      []string `json:"memberIds"`
+	IsSecret       bool     `json:"isSecret"`
+	IsE2E          bool     `json:"isE2E"`
+	WelcomeMessage string   `json:"welcomeMessage"`
 }
 
 type UpdateProfileRequest struct {
-	DisplayName string `json:"displayName"`
-	Bio         string `json:"bio"`
-	Avatar      string `json:"avatar"`
-	NameColor   string `json:"nameColor"`
+	DisplayName  string `json:"displayName"`
+	Bio          string `json:"bio"`
+	Avatar       string `json:"avatar"`
+	NameColor    string `json:"nameColor"`
 	NameGradient string `json:"nameGradient"`
 }
 
@@ -622,11 +641,11 @@ type SetWebhookRequest struct {
 }
 
 type PrivacySettingsRequest struct {
-	WhoCanMessage    string `json:"whoCanMessage"`
-	WhoCanCall       string `json:"whoCanCall"`
-	WhoCanSeeProfile string `json:"whoCanSeeProfile"`
-	ShowLastSeen     *bool  `json:"showLastSeen"`
-	AllowGroupInvites *bool `json:"allowGroupInvites"`
+	WhoCanMessage     string `json:"whoCanMessage"`
+	WhoCanCall        string `json:"whoCanCall"`
+	WhoCanSeeProfile  string `json:"whoCanSeeProfile"`
+	ShowLastSeen      *bool  `json:"showLastSeen"`
+	AllowGroupInvites *bool  `json:"allowGroupInvites"`
 }
 
 type BanUserRequest struct {
@@ -721,13 +740,13 @@ type VoiceRoom struct {
 }
 
 type VoiceRoomParticipant struct {
-	ID       string    `json:"id" gorm:"primaryKey"`
-	RoomID   string    `json:"roomId" gorm:"index"`
-	UserID   string    `json:"userId" gorm:"index"`
-	IsMuted  bool      `json:"isMuted" gorm:"default:false"`
-	IsDeaf   bool      `json:"isDeaf" gorm:"default:false"`
-	IsSpeaking bool    `json:"isSpeaking" gorm:"default:false"`
-	JoinedAt time.Time `json:"joinedAt" gorm:"autoCreateTime"`
+	ID         string    `json:"id" gorm:"primaryKey"`
+	RoomID     string    `json:"roomId" gorm:"index"`
+	UserID     string    `json:"userId" gorm:"index"`
+	IsMuted    bool      `json:"isMuted" gorm:"default:false"`
+	IsDeaf     bool      `json:"isDeaf" gorm:"default:false"`
+	IsSpeaking bool      `json:"isSpeaking" gorm:"default:false"`
+	JoinedAt   time.Time `json:"joinedAt" gorm:"autoCreateTime"`
 
 	Room VoiceRoom `json:"-" gorm:"foreignKey:RoomID"`
 	User User      `json:"-" gorm:"foreignKey:UserID"`
@@ -755,14 +774,14 @@ type AnonymousChat struct {
 // ─── Feature 6: Gamification ────────────────────────────────────────────
 
 type UserXP struct {
-	ID        string    `json:"id" gorm:"primaryKey"`
-	UserID    string    `json:"userId" gorm:"uniqueIndex"`
-	TotalXP   int       `json:"totalXP" gorm:"default:0"`
-	Level     int       `json:"level" gorm:"default:1"`
-	Streak    int       `json:"streak" gorm:"default:0"` // дни подряд
+	ID         string    `json:"id" gorm:"primaryKey"`
+	UserID     string    `json:"userId" gorm:"uniqueIndex"`
+	TotalXP    int       `json:"totalXP" gorm:"default:0"`
+	Level      int       `json:"level" gorm:"default:1"`
+	Streak     int       `json:"streak" gorm:"default:0"` // дни подряд
 	LastActive time.Time `json:"lastActive" gorm:"autoCreateTime"`
-	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+	CreatedAt  time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt  time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
@@ -780,12 +799,12 @@ type Achievement struct {
 }
 
 type UserAchievement struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
-	UserID      string    `json:"userId" gorm:"index"`
-	AchievementID string  `json:"achievementId" gorm:"index"`
-	Progress    int       `json:"progress" gorm:"default:0"`
-	UnlockedAt  *time.Time `json:"unlockedAt"`
-	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	ID            string     `json:"id" gorm:"primaryKey"`
+	UserID        string     `json:"userId" gorm:"index"`
+	AchievementID string     `json:"achievementId" gorm:"index"`
+	Progress      int        `json:"progress" gorm:"default:0"`
+	UnlockedAt    *time.Time `json:"unlockedAt"`
+	CreatedAt     time.Time  `json:"createdAt" gorm:"autoCreateTime"`
 
 	User        User        `json:"-" gorm:"foreignKey:UserID"`
 	Achievement Achievement `json:"-" gorm:"foreignKey:AchievementID"`
@@ -804,27 +823,27 @@ type XPLog struct {
 // ─── Feature 7: E2E Encryption Key Exchange ────────────────────────────
 
 type E2EKeyBundle struct {
-	ID            string `json:"id" gorm:"primaryKey"`
-	UserID        string `json:"userId" gorm:"index;uniqueIndex:idx_e2e_user_device"`
-	DeviceID      string `json:"deviceId" gorm:"size:128;uniqueIndex:idx_e2e_user_device"`
-	IdentityKey   string `json:"identityKey"`
-	SignedPreKey  string `json:"signedPreKey"`
-	SignedKeySig  string `json:"signedKeySig"`
-	OneTimePreKeys string `json:"oneTimePreKeys" gorm:"type:text"` // JSON array
-	UploadedAt    time.Time `json:"uploadedAt" gorm:"autoCreateTime"`
+	ID             string    `json:"id" gorm:"primaryKey"`
+	UserID         string    `json:"userId" gorm:"index;uniqueIndex:idx_e2e_user_device"`
+	DeviceID       string    `json:"deviceId" gorm:"size:128;uniqueIndex:idx_e2e_user_device"`
+	IdentityKey    string    `json:"identityKey"`
+	SignedPreKey   string    `json:"signedPreKey"`
+	SignedKeySig   string    `json:"signedKeySig"`
+	OneTimePreKeys string    `json:"oneTimePreKeys" gorm:"type:text"` // JSON array
+	UploadedAt     time.Time `json:"uploadedAt" gorm:"autoCreateTime"`
 
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
 type E2ESession struct {
-	ID            string    `json:"id" gorm:"primaryKey"`
-	ChatID        string    `json:"chatId" gorm:"index"`
-	User1ID       string    `json:"user1Id" gorm:"index"`
-	User2ID       string    `json:"user2Id" gorm:"index"`
-	SharedSecret  string    `json:"sharedSecret"` // base64 shared secret
-	IsActive      bool      `json:"isActive" gorm:"default:true"`
-	CreatedAt     time.Time `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt     time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+	ID           string    `json:"id" gorm:"primaryKey"`
+	ChatID       string    `json:"chatId" gorm:"index"`
+	User1ID      string    `json:"user1Id" gorm:"index"`
+	User2ID      string    `json:"user2Id" gorm:"index"`
+	SharedSecret string    `json:"sharedSecret"` // base64 shared secret
+	IsActive     bool      `json:"isActive" gorm:"default:true"`
+	CreatedAt    time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
 	Chat  Chat `json:"-" gorm:"foreignKey:ChatID"`
 	User1 User `json:"-" gorm:"foreignKey:User1ID"`
@@ -952,13 +971,13 @@ type ChatSnooze struct {
 // ─── Feature: Chat Reminders ────────────────────────────────────────────
 
 type ChatReminder struct {
-	ID         string     `json:"id" gorm:"primaryKey"`
-	UserID     string     `json:"userId" gorm:"index"`
-	ChatID     string     `json:"chatId" gorm:"index"`
-	MessageID  string     `json:"messageId" gorm:"index"`
-	RemindAt   time.Time  `json:"remindAt" gorm:"index"`
-	IsSent     bool       `json:"isSent" gorm:"default:false"`
-	CreatedAt  time.Time  `json:"createdAt" gorm:"autoCreateTime"`
+	ID        string    `json:"id" gorm:"primaryKey"`
+	UserID    string    `json:"userId" gorm:"index"`
+	ChatID    string    `json:"chatId" gorm:"index"`
+	MessageID string    `json:"messageId" gorm:"index"`
+	RemindAt  time.Time `json:"remindAt" gorm:"index"`
+	IsSent    bool      `json:"isSent" gorm:"default:false"`
+	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
 
 	User    User    `json:"-" gorm:"foreignKey:UserID"`
 	Chat    Chat    `json:"-" gorm:"foreignKey:ChatID"`
@@ -969,10 +988,10 @@ type ChatReminder struct {
 
 type ContactTag struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
-	UserID    string    `json:"userId" gorm:"index"`      // owner
-	TargetID  string    `json:"targetId" gorm:"index"`    // tagged user
-	Label     string    `json:"label" gorm:"size:32"`     // e.g. "work", "family"
-	Color     string    `json:"color" gorm:"size:16"`     // hex color
+	UserID    string    `json:"userId" gorm:"index"`   // owner
+	TargetID  string    `json:"targetId" gorm:"index"` // tagged user
+	Label     string    `json:"label" gorm:"size:32"`  // e.g. "work", "family"
+	Color     string    `json:"color" gorm:"size:16"`  // hex color
 	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
 
 	User   User `json:"-" gorm:"foreignKey:UserID"`
@@ -982,16 +1001,16 @@ type ContactTag struct {
 // ─── Feature: Public Interest Rooms ─────────────────────────────────────
 
 type PublicRoom struct {
-	ID            string    `json:"id" gorm:"primaryKey"`
-	ChatID        string    `json:"chatId" gorm:"uniqueIndex"`
-	Name          string    `json:"name" gorm:"size:128"`
-	Description   string    `json:"description" gorm:"size:512"`
-	Category      string    `json:"category" gorm:"size:64"` // gaming, music, tech, etc.
-	Icon          string    `json:"icon" gorm:"size:32"`
-	MembersCount  int       `json:"membersCount" gorm:"default:0"`
-	IsFeatured    bool      `json:"isFeatured" gorm:"default:false"`
-	CreatedAt     time.Time `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt     time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+	ID           string    `json:"id" gorm:"primaryKey"`
+	ChatID       string    `json:"chatId" gorm:"uniqueIndex"`
+	Name         string    `json:"name" gorm:"size:128"`
+	Description  string    `json:"description" gorm:"size:512"`
+	Category     string    `json:"category" gorm:"size:64"` // gaming, music, tech, etc.
+	Icon         string    `json:"icon" gorm:"size:32"`
+	MembersCount int       `json:"membersCount" gorm:"default:0"`
+	IsFeatured   bool      `json:"isFeatured" gorm:"default:false"`
+	CreatedAt    time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
 	Chat Chat `json:"chat" gorm:"foreignKey:ChatID"`
 }
@@ -1058,6 +1077,7 @@ type CloudFile struct {
 
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
+
 // ─── AI Browsing ───────────────────────────────────────────────────────
 
 type AIBrowseTask struct {
@@ -1066,8 +1086,8 @@ type AIBrowseTask struct {
 	ChatID      string    `json:"chatId" gorm:"index"`
 	Query       string    `json:"query" gorm:"type:text"`
 	Status      string    `json:"status" gorm:"size:32;default:pending"` // pending, running, completed, failed
-	Result      string    `json:"result" gorm:"type:text"` // JSON result
-	Sources     string    `json:"sources" gorm:"type:text"` // JSON array of URLs
+	Result      string    `json:"result" gorm:"type:text"`               // JSON result
+	Sources     string    `json:"sources" gorm:"type:text"`              // JSON array of URLs
 	Error       string    `json:"error"`
 	PagesViewed int       `json:"pagesViewed" gorm:"default:0"`
 	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
@@ -1131,7 +1151,7 @@ type ModerationConfig struct {
 	ToxicThreshold float64 `json:"toxicThreshold" gorm:"default:0.7"`
 	NSFWThreshold  float64 `json:"nsfwThreshold" gorm:"default:0.9"`
 	Action         string  `json:"action" gorm:"size:32;default:warn"` // warn, mute, delete
-	WhitelistUsers string  `json:"whitelistUsers" gorm:"type:text"` // JSON array of user IDs
+	WhitelistUsers string  `json:"whitelistUsers" gorm:"type:text"`    // JSON array of user IDs
 
 	Chat Chat `json:"-" gorm:"foreignKey:ChatID"`
 }
@@ -1140,7 +1160,7 @@ type AutoReplyConfig struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
 	UserID      string    `json:"userId" gorm:"uniqueIndex"`
 	IsEnabled   bool      `json:"isEnabled" gorm:"default:false"`
-	Persona     string    `json:"persona" gorm:"type:text"` // AI persona description
+	Persona     string    `json:"persona" gorm:"type:text"`     // AI persona description
 	MaxReplies  int       `json:"maxReplies" gorm:"default:10"` // per hour
 	ReplyDelay  int       `json:"replyDelay" gorm:"default:30"` // seconds
 	ActiveChats string    `json:"activeChats" gorm:"type:text"` // JSON array of chat IDs
@@ -1153,13 +1173,13 @@ type AutoReplyConfig struct {
 // ─── Voice Assistant ───────────────────────────────────────────────────
 
 type VoiceCommand struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
-	UserID      string    `json:"userId" gorm:"index"`
-	Command     string    `json:"command" gorm:"size:64"`
-	Transcript  string    `json:"transcript" gorm:"type:text"`
-	Response    string    `json:"response" gorm:"type:text"`
-	Executed    bool      `json:"executed" gorm:"default:false"`
-	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	ID         string    `json:"id" gorm:"primaryKey"`
+	UserID     string    `json:"userId" gorm:"index"`
+	Command    string    `json:"command" gorm:"size:64"`
+	Transcript string    `json:"transcript" gorm:"type:text"`
+	Response   string    `json:"response" gorm:"type:text"`
+	Executed   bool      `json:"executed" gorm:"default:false"`
+	CreatedAt  time.Time `json:"createdAt" gorm:"autoCreateTime"`
 
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
@@ -1176,7 +1196,7 @@ type VoiceRoomActivity struct {
 	StartedBy string    `json:"startedBy"`
 	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
 
-	Room  VoiceRoom `json:"-" gorm:"foreignKey:RoomID"`
+	Room VoiceRoom `json:"-" gorm:"foreignKey:RoomID"`
 }
 
 // ─── Collaborative Whiteboard ──────────────────────────────────────────
@@ -1265,15 +1285,15 @@ type SetChatThemeRequest struct {
 // ─── Kanban Board ──────────────────────────────────────────────────────
 
 type KanbanBoard struct {
-	ID        string          `json:"id" gorm:"primaryKey"`
-	ChatID    string          `json:"chatId" gorm:"index"`
-	Name      string          `json:"name" gorm:"size:128"`
-	CreatorID string          `json:"creatorId"`
-	CreatedAt time.Time       `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt time.Time       `json:"updatedAt" gorm:"autoUpdateTime"`
+	ID        string    `json:"id" gorm:"primaryKey"`
+	ChatID    string    `json:"chatId" gorm:"index"`
+	Name      string    `json:"name" gorm:"size:128"`
+	CreatorID string    `json:"creatorId"`
+	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
-	Chat    Chat            `json:"-" gorm:"foreignKey:ChatID"`
-	Columns []KanbanColumn  `json:"columns" gorm:"foreignKey:BoardID"`
+	Chat    Chat           `json:"-" gorm:"foreignKey:ChatID"`
+	Columns []KanbanColumn `json:"columns" gorm:"foreignKey:BoardID"`
 }
 
 type KanbanColumn struct {
@@ -1365,15 +1385,15 @@ type CreateTemplateRequest struct {
 // ─── AI Smart Reminders ───────────────────────────────────────────────
 
 type SmartReminder struct {
-	ID          string     `json:"id" gorm:"primaryKey"`
-	UserID      string     `json:"userId" gorm:"index"`
-	ChatID      string     `json:"chatId" gorm:"index"`
-	MessageID   string     `json:"messageId" gorm:"index"`
-	TriggerText string     `json:"triggerText" gorm:"type:text"` // AI-detected trigger
-	RemindAt    time.Time  `json:"remindAt" gorm:"index"`
-	IsCompleted bool       `json:"isCompleted" gorm:"default:false"`
-	CreatedBy   string     `json:"createdBy" gorm:"size:32"` // user, ai
-	CreatedAt   time.Time  `json:"createdAt" gorm:"autoCreateTime"`
+	ID          string    `json:"id" gorm:"primaryKey"`
+	UserID      string    `json:"userId" gorm:"index"`
+	ChatID      string    `json:"chatId" gorm:"index"`
+	MessageID   string    `json:"messageId" gorm:"index"`
+	TriggerText string    `json:"triggerText" gorm:"type:text"` // AI-detected trigger
+	RemindAt    time.Time `json:"remindAt" gorm:"index"`
+	IsCompleted bool      `json:"isCompleted" gorm:"default:false"`
+	CreatedBy   string    `json:"createdBy" gorm:"size:32"` // user, ai
+	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
 
 	User    User    `json:"-" gorm:"foreignKey:UserID"`
 	Chat    Chat    `json:"-" gorm:"foreignKey:ChatID"`
@@ -1393,7 +1413,7 @@ type CalendarEvent struct {
 	EndTime     time.Time `json:"endTime"`
 	IsAllDay    bool      `json:"isAllDay" gorm:"default:false"`
 	Reminder    int       `json:"reminder" gorm:"default:15"` // minutes before
-	Recurrence  string    `json:"recurrence" gorm:"size:32"` // none, daily, weekly, monthly, yearly
+	Recurrence  string    `json:"recurrence" gorm:"size:32"`  // none, daily, weekly, monthly, yearly
 	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
 
 	User User `json:"-" gorm:"foreignKey:UserID"`
@@ -1426,17 +1446,17 @@ type CreateEventRequest struct {
 // ─── Photo Albums ──────────────────────────────────────────────────────
 
 type PhotoAlbum struct {
-	ID          string           `json:"id" gorm:"primaryKey"`
-	UserID      string           `json:"userId" gorm:"index"`
-	Name        string           `json:"name" gorm:"size:128"`
-	Description string           `json:"description"`
-	CoverURL    string           `json:"coverUrl"`
-	IsPublic    bool             `json:"isPublic" gorm:"default:false"`
-	CreatedAt   time.Time        `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt   time.Time        `json:"updatedAt" gorm:"autoUpdateTime"`
+	ID          string    `json:"id" gorm:"primaryKey"`
+	UserID      string    `json:"userId" gorm:"index"`
+	Name        string    `json:"name" gorm:"size:128"`
+	Description string    `json:"description"`
+	CoverURL    string    `json:"coverUrl"`
+	IsPublic    bool      `json:"isPublic" gorm:"default:false"`
+	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
-	User   User              `json:"-" gorm:"foreignKey:UserID"`
-	Photos []PhotoAlbumItem  `json:"photos" gorm:"foreignKey:AlbumID"`
+	User   User             `json:"-" gorm:"foreignKey:UserID"`
+	Photos []PhotoAlbumItem `json:"photos" gorm:"foreignKey:AlbumID"`
 }
 
 type PhotoAlbumItem struct {
@@ -1485,25 +1505,25 @@ type VaultFile struct {
 // ─── Anonymous Incognito Chats ────────────────────────────────────────
 
 type IncognitoChat struct {
-	ID           string          `json:"id" gorm:"primaryKey"`
-	CreatorID    string          `json:"creatorId" gorm:"index"`
-	InviteCode   string          `json:"inviteCode" gorm:"uniqueIndex;size:32"`
-	IsEncrypted  bool            `json:"isEncrypted" gorm:"default:false"`
-	MaxMembers   int             `json:"maxMembers" gorm:"default:10"`
-	MessageCount int             `json:"messageCount" gorm:"default:0"`
-	ExpiresAt    *time.Time      `json:"expiresAt"`
-	CreatedAt    time.Time       `json:"createdAt" gorm:"autoCreateTime"`
+	ID           string     `json:"id" gorm:"primaryKey"`
+	CreatorID    string     `json:"creatorId" gorm:"index"`
+	InviteCode   string     `json:"inviteCode" gorm:"uniqueIndex;size:32"`
+	IsEncrypted  bool       `json:"isEncrypted" gorm:"default:false"`
+	MaxMembers   int        `json:"maxMembers" gorm:"default:10"`
+	MessageCount int        `json:"messageCount" gorm:"default:0"`
+	ExpiresAt    *time.Time `json:"expiresAt"`
+	CreatedAt    time.Time  `json:"createdAt" gorm:"autoCreateTime"`
 
-	Creator User               `json:"creator" gorm:"foreignKey:CreatorID"`
-	Members []IncognitoMember  `json:"members" gorm:"foreignKey:ChatID"`
+	Creator User              `json:"creator" gorm:"foreignKey:CreatorID"`
+	Members []IncognitoMember `json:"members" gorm:"foreignKey:ChatID"`
 }
 
 type IncognitoMember struct {
-	ID       string         `json:"id" gorm:"primaryKey"`
-	ChatID   string         `json:"chatId" gorm:"index"`
-	UserID   string         `json:"userId" gorm:"index"`
-	Alias    string         `json:"alias" gorm:"size:64"` // random alias
-	JoinedAt time.Time      `json:"joinedAt" gorm:"autoCreateTime"`
+	ID       string    `json:"id" gorm:"primaryKey"`
+	ChatID   string    `json:"chatId" gorm:"index"`
+	UserID   string    `json:"userId" gorm:"index"`
+	Alias    string    `json:"alias" gorm:"size:64"` // random alias
+	JoinedAt time.Time `json:"joinedAt" gorm:"autoCreateTime"`
 
 	Chat IncognitoChat `json:"-" gorm:"foreignKey:ChatID"`
 	User User          `json:"-" gorm:"foreignKey:UserID"`
@@ -1552,7 +1572,7 @@ type DeadManSwitch struct {
 	InactivityDays  int        `json:"inactivityDays" gorm:"default:30"` // days without activity
 	LastCheckIn     time.Time  `json:"lastCheckIn" gorm:"autoCreateTime"`
 	MessageTemplate string     `json:"messageTemplate" gorm:"type:text"` // message to send
-	RecipientIDs    string     `json:"recipientIds" gorm:"type:text"` // JSON array
+	RecipientIDs    string     `json:"recipientIds" gorm:"type:text"`    // JSON array
 	IsTriggered     bool       `json:"isTriggered" gorm:"default:false"`
 	TriggeredAt     *time.Time `json:"triggeredAt"`
 	CreatedAt       time.Time  `json:"createdAt" gorm:"autoCreateTime"`
@@ -1562,14 +1582,15 @@ type DeadManSwitch struct {
 }
 
 type DeadManSwitchRecipient struct {
-	ID       string         `json:"id" gorm:"primaryKey"`
-	SwitchID string         `json:"switchId" gorm:"index"`
-	UserID   string         `json:"userId" gorm:"index"`
-	SentAt   time.Time      `json:"sentAt"`
+	ID       string    `json:"id" gorm:"primaryKey"`
+	SwitchID string    `json:"switchId" gorm:"index"`
+	UserID   string    `json:"userId" gorm:"index"`
+	SentAt   time.Time `json:"sentAt"`
 
 	Switch DeadManSwitch `json:"-" gorm:"foreignKey:SwitchID"`
 	User   User          `json:"-" gorm:"foreignKey:UserID"`
 }
+
 // RefreshTokenBlacklist stores blacklisted refresh token hashes (survives restarts)
 type RefreshTokenBlacklist struct {
 	ID        string    `json:"id" gorm:"primaryKey"`

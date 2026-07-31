@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExternalLink, Shield, AlertTriangle } from 'lucide-react';
+import { api } from '../lib/api';
 
 interface LinkMeta {
   url: string;
@@ -32,22 +33,23 @@ async function fetchLinkMeta(url: string): Promise<LinkMeta | null> {
   if (linkCache.has(url)) return linkCache.get(url)!;
 
   try {
-    const resp = await fetch(`/api/features/link-preview?url=${encodeURIComponent(url)}`, {
-      credentials: 'include',
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      const meta: LinkMeta = {
-        url,
-        title: data.title || extractDomain(url),
-        description: data.description || '',
-        image: data.image || '',
-        favicon: data.favicon || '',
-        domain: data.domain || extractDomain(url),
-      };
-      linkCache.set(url, meta);
-      return meta;
-    }
+    const data = await api.request<{
+      title?: string;
+      description?: string;
+      image?: string;
+      favicon?: string;
+      domain?: string;
+    }>(`/features/link-preview?url=${encodeURIComponent(url)}`);
+    const meta: LinkMeta = {
+      url,
+      title: data.title || extractDomain(url),
+      description: data.description || '',
+      image: data.image || '',
+      favicon: data.favicon || '',
+      domain: data.domain || extractDomain(url),
+    };
+    linkCache.set(url, meta);
+    return meta;
   } catch {}
 
   const fallback: LinkMeta = {

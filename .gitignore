@@ -49,6 +49,16 @@ Thumbs.db
 .codegraph/
 .omo/
 .gsap-skills/
+.mcp/
+.pi-subagents/
+.auto-improve-logs/
+
+# Local model runtime
+Ollama/
+
+# Python
+__pycache__/
+*.pyc
 
 # Temporary files
 *~

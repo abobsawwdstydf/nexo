@@ -100,6 +100,23 @@ func generateBlacklistID() string {
 	return hex.EncodeToString(b)
 }
 
+// UserIDFromCtx safely extracts the authenticated user ID from the context.
+// Returns empty string if no user is authenticated.
+func UserIDFromCtx(c *fiber.Ctx) string {
+	if v, ok := c.Locals("userId").(string); ok {
+		return v
+	}
+	return ""
+}
+
+// UsernameFromCtx safely extracts the username from the context.
+func UsernameFromCtx(c *fiber.Ctx) string {
+	if v, ok := c.Locals("username").(string); ok {
+		return v
+	}
+	return ""
+}
+
 func InitJWT() error {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
@@ -164,6 +181,9 @@ func AuthenticateToken(c *fiber.Ctx) error {
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
+		}
 		return JWTSecret, nil
 	})
 	if err != nil || !token.Valid {
@@ -199,6 +219,9 @@ func OptionalAuth(c *fiber.Ctx) error {
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
+		}
 		return JWTSecret, nil
 	})
 	if err == nil && token.Valid {

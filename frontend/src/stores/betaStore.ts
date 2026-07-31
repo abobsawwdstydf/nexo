@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getApiBase } from '../lib/api/core';
+import { api } from '../lib/api';
 
 interface BetaStatus {
   active: boolean;
@@ -27,11 +27,7 @@ export const useBetaStore = create<BetaStore>((set) => ({
   fetch: async () => {
     set({ loading: true });
     try {
-      const res = await fetch(`${getApiBase()}/beta/status`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) throw new Error('Failed to fetch beta status');
-      const status: BetaStatus = await res.json();
+      const status: BetaStatus = await api.request<BetaStatus>('/beta/status', { timeout: 5000 });
       set({ status, loaded: true, loading: false });
     } catch {
       set({ loading: false });

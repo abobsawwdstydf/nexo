@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, ShieldCheck, ShieldAlert, Fingerprint, Key, Lock, Copy, Check, Info, X } from 'lucide-react';
 
@@ -14,6 +14,11 @@ interface EncryptionBadgeProps {
 export function EncryptionBadge({ chatId, isE2E, isSecret, isChannel, e2eReady, e2eFingerprint }: EncryptionBadgeProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+  }, []);
 
   const hasE2E = (isE2E || isSecret) && e2eReady;
   const hasE2EPending = (isE2E || isSecret) && !e2eReady;
@@ -25,7 +30,8 @@ export function EncryptionBadge({ chatId, isE2E, isSecret, isChannel, e2eReady, 
     if (!e2eFingerprint) return;
     navigator.clipboard.writeText(e2eFingerprint).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
     });
   }, [e2eFingerprint]);
 

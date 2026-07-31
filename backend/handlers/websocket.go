@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -72,10 +75,10 @@ func wsCheckRateLimit(userID string) bool {
 
 // wsEnvelope is the unified inbound message envelope.
 type wsEnvelope struct {
-	ID       string          `json:"id,omitempty"`       // RPC request ID (empty = broadcast)
-	Type     string          `json:"type"`               // message type
-	ChatID   string          `json:"chatId,omitempty"`   // target chat
-	Payload  json.RawMessage `json:"payload,omitempty"`  // type-specific payload
+	ID      string          `json:"id,omitempty"`      // RPC request ID (empty = broadcast)
+	Type    string          `json:"type"`              // message type
+	ChatID  string          `json:"chatId,omitempty"`  // target chat
+	Payload json.RawMessage `json:"payload,omitempty"` // type-specific payload
 	// Direct fields for backward compatibility with old broadcast format
 	MessageID string `json:"messageId,omitempty"`
 	Emoji     string `json:"emoji,omitempty"`
@@ -142,6 +145,17 @@ func handleTyping(client *ws.Client, env *wsEnvelope) error {
 		return errWSNotMember
 	}
 
+	// Throttle DB writes: if a fresh indicator exists, just broadcast
+	var existing models.TypingIndicator
+	now := time.Now()
+	if err := db.GetDB().Where("chat_id = ? AND user_id = ?", payload.ChatID, userID).First(&existing).Error; err == nil && existing.ExpiresAt.After(now.Add(3*time.Second)) {
+		ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("typing", map[string]string{
+			"chatId": payload.ChatID,
+			"userId": userID,
+		}), userID)
+		return nil
+	}
+
 	// Upsert typing indicator
 	db.GetDB().Where("chat_id = ? AND user_id = ?", payload.ChatID, userID).
 		Delete(&models.TypingIndicator{})
@@ -149,7 +163,7 @@ func handleTyping(client *ws.Client, env *wsEnvelope) error {
 		ID:        generateID(),
 		ChatID:    payload.ChatID,
 		UserID:    userID,
-		ExpiresAt: time.Now().Add(5 * time.Second),
+		ExpiresAt: now.Add(5 * time.Second),
 	}
 	db.GetDB().Create(&indicator)
 
@@ -180,21 +194,16 @@ func handleReadReceipt(client *ws.Client, env *wsEnvelope) error {
 	}
 
 	userID := client.UserID
-
-	var count int64
-	db.GetDB().Model(&models.ChatMember{}).
-		Where("chat_id = ? AND user_id = ?", payload.ChatID, userID).
-		Count(&count)
-	if count == 0 {
-		return errWSNotMember
+	if err := recordReadReceipt(db.GetDB(), payload.ChatID, payload.MessageID, userID); err != nil {
+		switch err {
+		case errReadReceiptNotMember:
+			return errWSNotMember
+		case errReadReceiptNotFound:
+			return errWSInvalidField("messageId (message not found in chat)")
+		default:
+			return fmt.Errorf("record read receipt: %w", err)
+		}
 	}
-
-	receipt := models.ReadReceipt{
-		ID:        generateID(),
-		MessageID: payload.MessageID,
-		UserID:    userID,
-	}
-	db.GetDB().Create(&receipt)
 
 	ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("message:read", map[string]string{
 		"messageId": payload.MessageID,
@@ -284,6 +293,9 @@ func handleOnlineStatus(client *ws.Client, env *wsEnvelope) error {
 	if len(payload.UserIDs) == 0 {
 		return errWSMissingField("userIds")
 	}
+	if len(payload.UserIDs) > 200 {
+		return errWSInvalidField("userIds (max 200)")
+	}
 
 	statuses := make(map[string]bool, len(payload.UserIDs))
 	for _, uid := range payload.UserIDs {
@@ -321,6 +333,9 @@ func handleUserStatus(client *ws.Client, env *wsEnvelope) error {
 			"userId": userID,
 		}), "")
 		return nil
+	}
+	if utf8.RuneCountInString(payload.Text) > 140 {
+		return errWSInvalidField("text (max 140 characters)")
 	}
 
 	database.Model(&models.User{}).Where("id = ?", userID).
@@ -391,14 +406,14 @@ type MediaPayload struct {
 // handleSendMessage sends a message via WS (alternative to HTTP POST).
 func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	var payload struct {
-		ChatID           string           `json:"chatId"`
-		Content          string           `json:"content"`
-		Type             string           `json:"type"`
-		ReplyTo          string           `json:"replyToId"`
-		Media            []MediaPayload   `json:"media"`
-		IsEncrypted      bool             `json:"isEncrypted"`
-		EncryptedContent string           `json:"encryptedContent"`
-		EncryptedIV      string           `json:"encryptedIv"`
+		ChatID           string         `json:"chatId"`
+		Content          string         `json:"content"`
+		Type             string         `json:"type"`
+		ReplyTo          string         `json:"replyToId"`
+		Media            []MediaPayload `json:"media"`
+		IsEncrypted      bool           `json:"isEncrypted"`
+		EncryptedContent string         `json:"encryptedContent"`
+		EncryptedIV      string         `json:"encryptedIv"`
 	}
 	if env.Payload != nil {
 		if err := json.Unmarshal(env.Payload, &payload); err != nil {
@@ -410,6 +425,21 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	}
 	if payload.Content == "" && payload.Type == "" {
 		return errWSMissingField("content")
+	}
+	if len(payload.Media) > 10 {
+		return errWSInvalidField("media (max 10 items)")
+	}
+
+	// Validate content length (HTTP path enforces this; WS must too)
+	payload.Content = strings.TrimSpace(payload.Content)
+	if payload.Type == "" {
+		payload.Type = "text"
+	}
+	if payload.Type == "text" && payload.Content == "" {
+		return errWSMissingField("content")
+	}
+	if utf8.RuneCountInString(payload.Content) > maxMessageContentLength {
+		return &wsError{Code: "too_long", Message: "Message too long (max 10000 characters)"}
 	}
 
 	userID := client.UserID
@@ -559,6 +589,7 @@ func handleFetchFriends(client *ws.Client, env *wsEnvelope) error {
 		Preload("User").
 		Preload("Friend").
 		Where("(user_id = ? OR friend_id = ?) AND status = 'accepted'", userID, userID).
+		Limit(500).
 		Find(&friendships)
 
 	friends := make([]models.User, 0)
@@ -636,6 +667,7 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 		Preload("User").
 		Where("expires_at > ?", time.Now()).
 		Order("created_at DESC").
+		Limit(100).
 		Find(&stories)
 
 	storyMap := make(map[string]*StoryGroupJSON)
@@ -710,7 +742,11 @@ func handlePushSubscribe(client *ws.Client, env *wsEnvelope) error {
 		return errWSMissingField("subscription")
 	}
 
-	log.Printf("[Push] Subscription from user=%s: %s", client.UserID, string(payload.Subscription))
+	sub := string(payload.Subscription)
+	if len(sub) > 500 {
+		sub = sub[:500]
+	}
+	log.Printf("[Push] Subscription from user=%s: %s", client.UserID, sub)
 	return nil
 }
 
@@ -805,21 +841,34 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 	}
 }
 
+func isOriginAllowed(origin string) bool {
+	if origin == "" {
+		return true
+	}
+	// Parse properly so ports are stripped and scheme tricks (e.g. a path or
+	// userinfo smuggling an allowed domain) cannot bypass the check.
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	if host == "" {
+		return false
+	}
+	allowedDomains := []string{"darkheavens.ru", "hakerone.ru", "localhost"}
+	for _, domain := range allowedDomains {
+		if host == domain || strings.HasSuffix(host, "."+domain) {
+			return true
+		}
+	}
+	return false
+}
+
 func HandleWebSocket(c *websocket.Conn) {
 	origin := c.Headers("Origin")
-	if origin != "" {
-		allowed := false
-		allowedDomains := []string{"darkheavens.ru", "hakerone.ru", "localhost"}
-		for _, domain := range allowedDomains {
-			if strings.HasSuffix(origin, domain) {
-				allowed = true
-				break
-			}
-		}
-		if !allowed {
-			c.Close()
-			return
-		}
+	if !isOriginAllowed(origin) {
+		c.Close()
+		return
 	}
 
 	token := c.Query("token")
@@ -840,6 +889,9 @@ func HandleWebSocket(c *websocket.Conn) {
 
 	claims := &middleware.Claims{}
 	t, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
+		}
 		return middleware.JWTSecret, nil
 	})
 	if err != nil || !t.Valid {
@@ -923,4 +975,3 @@ func HandleWebSocket(c *websocket.Conn) {
 		handleWSMessage(client, msg)
 	}
 }
-

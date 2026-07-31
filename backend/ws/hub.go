@@ -214,10 +214,21 @@ func (h *Hub) Broadcast(data []byte) {
 }
 
 // SendToClient sends data to a single specific client (for RPC responses).
+// The lock is held while sending so unregister cannot close the channel
+// concurrently (avoids a "send on closed channel" panic).
 func (h *Hub) SendToClient(client *Client, data []byte) {
-	select {
-	case client.Send <- data:
-	default:
+	if client == nil {
+		return
+	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if clients, ok := h.clients[client.UserID]; ok {
+		if _, exists := clients[client]; exists {
+			select {
+			case client.Send <- data:
+			default:
+			}
+		}
 	}
 }
 

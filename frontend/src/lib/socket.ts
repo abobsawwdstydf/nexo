@@ -343,14 +343,16 @@ export function waitForSocketConnected(timeoutMs = 5000): Promise<void> {
       return;
     }
 
+    let unsub: (() => void) | undefined;
     const timeout = setTimeout(() => {
+      unsub?.();
       reject(new Error('WebSocket connection timeout'));
     }, timeoutMs);
 
-    const unsub = onConnectionStatusChange((status) => {
+    unsub = onConnectionStatusChange((status) => {
       if (status === 'connected') {
         clearTimeout(timeout);
-        unsub();
+        unsub?.();
         resolve();
       }
     });

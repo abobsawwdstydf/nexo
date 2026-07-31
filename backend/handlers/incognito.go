@@ -145,9 +145,18 @@ func generateShortCode() string {
 func generateAlias() string {
 	adjectives := []string{"Таинственный", "Неизвестный", "Скрытный", "Загадочный", "Странник", "Призрак", "Тень", "Фантом"}
 	nouns := []string{"Волк", "Дракон", "Феникс", "Рыцарь", "Маг", "Ворон", "Лис", "Медведь"}
-	ai, _ := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
-	ni, _ := rand.Int(rand.Reader, big.NewInt(int64(len(nouns))))
-	a := adjectives[ai.Int64()]
-	n := nouns[ni.Int64()]
+	ai, err1 := rand.Int(rand.Reader, big.NewInt(int64(len(adjectives))))
+	ni, err2 := rand.Int(rand.Reader, big.NewInt(int64(len(nouns))))
+	var a, n string
+	if err1 != nil {
+		a = adjectives[time.Now().UnixNano()%int64(len(adjectives))]
+	} else {
+		a = adjectives[ai.Int64()]
+	}
+	if err2 != nil {
+		n = nouns[time.Now().UnixNano()/1e6%int64(len(nouns))]
+	} else {
+		n = nouns[ni.Int64()]
+	}
 	return a + " " + n
 }

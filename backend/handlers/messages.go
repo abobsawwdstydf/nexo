@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
@@ -20,23 +20,23 @@ const maxMessageContentLength = 10000
 
 // MessageJSON for safe JSON output
 type MessageJSON struct {
-	ID               string             `json:"id"`
-	ChatID           string             `json:"chatId"`
-	SenderID         string             `json:"senderId"`
-	Content          string             `json:"content"`
-	Type             string             `json:"type"`
-	ReplyToID        string             `json:"replyToId"`
-	ForwardedFromID  string             `json:"forwardedFromId"`
-	IsEdited         bool               `json:"isEdited"`
-	IsDeleted        bool               `json:"isDeleted"`
-	IsEncrypted      bool               `json:"isEncrypted"`
-	EncryptedContent string             `json:"encryptedContent"`
-	EncryptedIV      string             `json:"encryptedIv"`
-	CreatedAt        string             `json:"createdAt"`
-	Sender           SenderJSON         `json:"sender"`
-	ReplyTo          *MessageJSON       `json:"replyTo,omitempty"`
-	Media            []models.Media     `json:"media"`
-	Reactions        []models.Reaction  `json:"reactions"`
+	ID               string            `json:"id"`
+	ChatID           string            `json:"chatId"`
+	SenderID         string            `json:"senderId"`
+	Content          string            `json:"content"`
+	Type             string            `json:"type"`
+	ReplyToID        string            `json:"replyToId"`
+	ForwardedFromID  string            `json:"forwardedFromId"`
+	IsEdited         bool              `json:"isEdited"`
+	IsDeleted        bool              `json:"isDeleted"`
+	IsEncrypted      bool              `json:"isEncrypted"`
+	EncryptedContent string            `json:"encryptedContent"`
+	EncryptedIV      string            `json:"encryptedIv"`
+	CreatedAt        string            `json:"createdAt"`
+	Sender           SenderJSON        `json:"sender"`
+	ReplyTo          *MessageJSON      `json:"replyTo,omitempty"`
+	Media            []models.Media    `json:"media"`
+	Reactions        []models.Reaction `json:"reactions"`
 }
 
 type SenderJSON struct {
@@ -155,44 +155,25 @@ func GetMessages(c *fiber.Ctx) error {
 	var messages []models.Message
 	var total int64
 
-	// Count and fetch in parallel using goroutines
-	countDone := make(chan struct{})
-	fetchDone := make(chan struct{})
+	// Sequential queries: SQLite serializes writes/reads anyway, and parallel
+	// goroutines only add connection contention and lock retries.
+	if err := db.GetDB().Model(&models.Message{}).Where("chat_id = ?", chatID).Count(&total).Error; err != nil {
+		log.Printf("[messages] count failed for chat %s: %v", chatID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load messages"})
+	}
 
-	go func() {
-		defer close(countDone)
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("[messages] panic while counting messages for chat %s: %v", chatID, r)
-			}
-		}()
-		if err := db.GetDB().Model(&models.Message{}).Where("chat_id = ?", chatID).Count(&total).Error; err != nil {
-			log.Printf("[messages] count failed for chat %s: %v", chatID, err)
-		}
-	}()
-
-	go func() {
-		defer close(fetchDone)
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("[messages] panic while fetching messages for chat %s: %v", chatID, r)
-			}
-		}()
-		if err := db.GetDB().
-			Preload("Sender").
-			Preload("Media").
-			Preload("Reactions").
-			Preload("Reactions.User").
-			Where("chat_id = ?", chatID).
-			Order("created_at DESC").
-			Offset(p.Offset).Limit(p.PageSize).
-			Find(&messages).Error; err != nil {
-			log.Printf("[messages] fetch failed for chat %s: %v", chatID, err)
-		}
-	}()
-
-	<-countDone
-	<-fetchDone
+	if err := db.GetDB().
+		Preload("Sender").
+		Preload("Media").
+		Preload("Reactions").
+		Preload("Reactions.User").
+		Where("chat_id = ?", chatID).
+		Order("created_at DESC").
+		Offset(p.Offset).Limit(p.PageSize).
+		Find(&messages).Error; err != nil {
+		log.Printf("[messages] fetch failed for chat %s: %v", chatID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load messages"})
+	}
 
 	return c.JSON(helpers.NewPaginatedResponse(messages, total, p))
 }
@@ -333,16 +314,21 @@ func ReadMessages(c *fiber.Ctx) error {
 	var req struct {
 		MessageID string `json:"messageId"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.BodyParser(&req); err != nil || req.MessageID == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	receipt := models.ReadReceipt{
-		ID:        generateID(),
-		MessageID: req.MessageID,
-		UserID:    userID,
+	if err := recordReadReceipt(db.GetDB(), chatID, req.MessageID, userID); err != nil {
+		switch err {
+		case errReadReceiptNotMember:
+			return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+		case errReadReceiptNotFound:
+			return c.Status(404).JSON(fiber.Map{"error": "Message not found in this chat"})
+		default:
+			log.Printf("[messages] failed to record read receipt: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save read receipt"})
+		}
 	}
-	db.GetDB().Create(&receipt)
 
 	ws.HubInstance.SendToChat(chatID, mustWSMap("message:read", map[string]string{
 		"messageId": req.MessageID,
@@ -356,13 +342,24 @@ func Typing(c *fiber.Ctx) error {
 	chatID := c.Params("id")
 	userID := c.Locals("userId").(string)
 
+	// Throttle DB writes: if a fresh indicator already exists, just broadcast
+	var existing models.TypingIndicator
+	now := time.Now()
+	if err := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&existing).Error; err == nil && existing.ExpiresAt.After(now.Add(3*time.Second)) {
+		ws.HubInstance.SendToChat(chatID, mustWSMap("typing", map[string]string{
+			"chatId": chatID,
+			"userId": userID,
+		}), userID)
+		return c.JSON(fiber.Map{"ok": true})
+	}
+
 	db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).Delete(&models.TypingIndicator{})
 
 	indicator := models.TypingIndicator{
 		ID:        generateID(),
 		ChatID:    chatID,
 		UserID:    userID,
-		ExpiresAt: time.Now().Add(5 * time.Second),
+		ExpiresAt: now.Add(5 * time.Second),
 	}
 	db.GetDB().Create(&indicator)
 
@@ -376,9 +373,12 @@ func Typing(c *fiber.Ctx) error {
 
 func SearchMessages(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
-	query := c.Query("q")
+	query := strings.TrimSpace(c.Query("q"))
 	if len(query) < 2 {
 		return c.Status(400).JSON(fiber.Map{"error": "Query must be at least 2 characters"})
+	}
+	if utf8.RuneCountInString(query) > 100 {
+		query = string([]rune(query)[:100])
 	}
 
 	page, _ := strconv.Atoi(c.Query("page", "1"))
@@ -405,12 +405,13 @@ func SearchMessages(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"items": []models.Message{}, "total": 0, "page": page, "pageSize": pageSize})
 	}
 
-	// SECURITY FIX: Escape both % and _ LIKE wildcards to prevent data leak
+	// SECURITY FIX: Escape % and _ LIKE wildcards to prevent pattern injection.
+	// The ESCAPE clause is mandatory — without it SQLite treats backslash literally.
 	likeQuery := "%" + strings.ReplaceAll(strings.ReplaceAll(query, "%", "\\%"), "_", "\\_") + "%"
 	q := db.GetDB().
 		Preload("Sender").
 		Preload("Chat").
-		Where("chat_id IN ? AND is_deleted = false AND content LIKE ?", memberChatIDs, likeQuery)
+		Where("chat_id IN ? AND is_deleted = false AND content LIKE ? ESCAPE '\\'", memberChatIDs, likeQuery)
 
 	if msgType != "" {
 		q = q.Where("type = ?", msgType)
@@ -440,6 +441,16 @@ func SearchMessages(c *fiber.Ctx) error {
 		ResultCount: int(total),
 	}
 	db.GetDB().Create(&history)
+
+	// Cap search history at 200 entries per user (unbounded growth otherwise)
+	var historyCount int64
+	db.GetDB().Model(&models.SearchHistory{}).Where("user_id = ?", userID).Count(&historyCount)
+	if historyCount > 200 {
+		db.GetDB().Exec(
+			"DELETE FROM search_histories WHERE id IN (SELECT id FROM search_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET 200)",
+			userID,
+		)
+	}
 
 	return c.JSON(fiber.Map{
 		"items":    messages,

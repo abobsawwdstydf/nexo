@@ -1,5 +1,5 @@
 import type { User, Chat, SmartFolder, StoryGroup } from '../types';
-import { ApiClient, getApiBase } from './core';
+import { ApiClient } from './core';
 
 declare module './core' {
   interface ApiClient {
@@ -69,27 +69,16 @@ export function installAuth(api: ApiClient): void {
     if (data.bio) formData.append('bio', data.bio);
     if (data.avatar) formData.append('avatar', data.avatar);
 
-    const response = await fetch(`${getApiBase()}/auth/register`, {
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Ошибка сервера' }));
-      throw new Error(error.error || 'Ошибка регистрации');
-    }
-
-    const result = await response.json();
-    if (result.csrfToken) {
-      api.csrfToken = result.csrfToken;
-    }
-    return result as {
+    return api.request<{
       accessToken?: string;
       refreshToken?: string;
       csrfToken?: string;
       user: User;
-    };
+    }>('/auth/register', {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    });
   };
 
   api.checkUsername = async (username: string) => {

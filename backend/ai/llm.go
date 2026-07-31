@@ -1,4 +1,4 @@
-﻿package ai
+package ai
 
 import (
 	"bytes"
@@ -25,6 +25,20 @@ type proxyResponse struct {
 	Text     string `json:"text"`
 	Provider string `json:"provider"`
 	Error    string `json:"error"`
+}
+
+const maxProxyResponseBytes int64 = 2 * 1024 * 1024
+
+func readBoundedResponse(body io.Reader, limit int64) ([]byte, error) {
+	limited := io.LimitReader(body, limit+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("response exceeds %d bytes", limit)
+	}
+	return data, nil
 }
 
 // ─── LLM Client (uses Nexo AI Proxy) ──────────────────────────────────
@@ -85,7 +99,7 @@ func (c *LLMClient) chat(messages []proxyMessage) (string, string, error) {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := readBoundedResponse(resp.Body, maxProxyResponseBytes)
 	if err != nil {
 		return "", "", fmt.Errorf("read response: %w", err)
 	}

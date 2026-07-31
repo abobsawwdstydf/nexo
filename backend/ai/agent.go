@@ -46,6 +46,20 @@ func (tm *TaskManager) CreateTask(id, userID, chatID, query, context string) *Ta
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
+	// Opportunistic cleanup: drop stale completed/failed tasks when the map
+	// grows (prevents unbounded memory growth on a long-lived server)
+	if len(tm.tasks) > 500 {
+		now := time.Now()
+		for tid, t := range tm.tasks {
+			if (t.Status == TaskCompleted || t.Status == TaskFailed) && now.Sub(t.UpdatedAt) > time.Hour {
+				delete(tm.tasks, tid)
+				if len(tm.tasks) <= 400 {
+					break
+				}
+			}
+		}
+	}
+
 	task := &Task{
 		ID:        id,
 		UserID:    userID,

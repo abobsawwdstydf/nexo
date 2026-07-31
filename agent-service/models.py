@@ -1,11 +1,15 @@
 ﻿from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class TaskState(str, Enum):
@@ -17,8 +21,8 @@ class TaskState(str, Enum):
 
 class BrowseRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=2000, description="Search query or URL to browse")
-    chat_id: str = Field(..., min_length=1, description="Chat identifier")
-    user_id: str = Field(..., min_length=1, description="User identifier")
+    chat_id: str = Field(..., min_length=1, max_length=100, description="Chat identifier")
+    user_id: str = Field(..., min_length=1, max_length=100, description="User identifier")
     context: Optional[str] = Field(None, max_length=10000, description="Additional context for the request")
 
 
@@ -40,7 +44,7 @@ class PageResult(BaseModel):
     content: str = ""
     metadata: dict = Field(default_factory=dict)
     screenshot_path: Optional[str] = None
-    fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    fetched_at: datetime = Field(default_factory=_utcnow)
 
 
 class BrowseResult(BaseModel):
@@ -54,7 +58,7 @@ class BrowseResult(BaseModel):
     summary: Optional[str] = None
     analysis: Optional[str] = None
     error: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
     completed_at: Optional[datetime] = None
 
 
