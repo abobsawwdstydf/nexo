@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -1366,7 +1367,11 @@ func triggerWebhooks(userID string, event string, payload interface{}) {
 			continue
 		}
 
-		payloadJSON, _ := json.Marshal(payload)
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			log.Printf("[webhooks] marshal payload for event %s: %v", event, err)
+			continue
+		}
 		delivery := models.WebhookDelivery{
 			ID:        generateID(),
 			WebhookID: wh.ID,
@@ -1375,7 +1380,12 @@ func triggerWebhooks(userID string, event string, payload interface{}) {
 		}
 
 		// Fire HTTP request (non-blocking)
-		go func(url string) {
+		go func(url string, delivery models.WebhookDelivery, payloadJSON []byte) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[webhooks] panic delivering to %s: %v", url, r)
+				}
+			}()
 			client := &http.Client{Timeout: 10 * time.Second}
 			resp, err := client.Post(url, "application/json",
 				strings.NewReader(string(payloadJSON)))
@@ -1386,10 +1396,16 @@ func triggerWebhooks(userID string, event string, payload interface{}) {
 			} else {
 				delivery.StatusCode = resp.StatusCode
 				delivery.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
+				body, readErr := io.ReadAll(resp.Body)
 				resp.Body.Close()
+				if readErr == nil && len(body) > 0 {
+					delivery.ResponseBody = string(body)
+				}
 			}
-			db.GetDB().Create(&delivery)
-		}(wh.URL)
+			if err := db.GetDB().Create(&delivery).Error; err != nil {
+				log.Printf("[webhooks] failed to save delivery for %s: %v", url, err)
+			}
+		}(wh.URL, delivery, payloadJSON)
 	}
 }
 

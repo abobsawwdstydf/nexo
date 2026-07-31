@@ -366,12 +366,10 @@ func (kv *LocalKV) Get(key string) (string, error) {
 	// Check expiration via metadata file
 	meta, err := os.ReadFile(kv.filePath(key) + ".meta")
 	if err == nil {
-		var expiry time.Time
-		if _, err := fmt.Sscanf(string(meta), "%s", &expiry); err == nil {
-			if time.Now().After(expiry) {
-				kv.Delete(key)
-				return "", nil
-			}
+		expiry, parseErr := time.Parse(time.RFC3339, strings.TrimSpace(string(meta)))
+		if parseErr == nil && time.Now().After(expiry) {
+			kv.Delete(key)
+			return "", nil
 		}
 	}
 

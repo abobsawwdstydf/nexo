@@ -102,7 +102,12 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
   };
 
   useEffect(() => {
-    fetchData();
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await fetchData();
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Search friends by query
@@ -119,19 +124,22 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
       setAddResults([]);
       return;
     }
+    let cancelled = false;
     const t = setTimeout(async () => {
       setAddLoading(true);
       try {
         const results = await api.searchUsers(addQuery);
+        if (cancelled) return;
         setAddResults(Array.isArray(results) ? results : []);
         setAddError('');
       } catch {
-        setAddError('РћС€РёР±РєР° РїРѕРёСЃРєР°');
+        if (cancelled) return;
+        setAddError('Ошибка поиска');
       } finally {
-        setAddLoading(false);
+        if (!cancelled) setAddLoading(false);
       }
     }, 400);
-    return () => clearTimeout(t);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [addQuery]);
 
   const handleSendRequest = async (userId: string) => {
@@ -142,7 +150,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
       setShowAddFriend(false);
       fetchData();
     } catch {
-      setAddError('РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°СЏРІРєСѓ');
+      setAddError('Не удалось отправить заявку');
     }
   };
 

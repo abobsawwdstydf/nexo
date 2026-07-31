@@ -288,17 +288,8 @@ function setupWebSocketHandlers() {
       }
 
       // ─── Event handling (existing behavior) ─────────────────────────
-      const state = loadReconnectState() || { lastEventTimestamp: Date.now(), missedEvents: [] };
-      state.lastEventTimestamp = Date.now();
-      if (data.type && !state.missedEvents.includes(data.type)) {
-        state.missedEvents.push(data.type);
-        if (state.missedEvents.length > 50) {
-          state.missedEvents = state.missedEvents.slice(-50);
-        }
-      }
-      saveReconnectState(state);
-      
-      // Emit event to listeners
+      // Emit event to listeners (reconnect state is tracked on close only,
+      // to avoid a JSON.parse + localStorage write on every message)
       if (data.type) {
         emitEvent(data.type, data);
       }

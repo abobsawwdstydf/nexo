@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu } from 'iconsax-react';
 import { useAuthStore } from '../stores/authStore';
@@ -17,6 +17,7 @@ import { toast } from '../lib/toast';
 import { Confetti } from '../components/Confetti';
 import { CallOverlay } from '../components/CallOverlay';
 import { useCallContext } from '../lib/callContext';
+import { getSocket } from '../lib/socket';
 import { getNotesMessages, NOTES_CHAT_ID } from '../lib/api/noteChat';
 
 const FONT = "'JF Dot Shinonome Gothic 14', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -105,31 +106,34 @@ export default function MessengerPage() {
     }
   }, [loading, chats.length, firstLoad]);
 
-  // Socket listener for incoming messages → toast notification
-  useEffect(() => {
-    let cancelled = false;
-    async function initSocket() {
-      try {
-        const { getSocket } = await import('../lib/socket');
-        const socket = getSocket();
-        if (!socket?.connected) return;
+  // Socket listener for incoming messages → toast notification.
+  // Registered once on mount; reads latest chat state via refs so the
+  // listener is never re-registered (previously leaked a handler per re-render).
+  const selectedChatIdRef = useRef(selectedChatId);
+  selectedChatIdRef.current = selectedChatId;
+  const chatsRef = useRef(chats);
+  chatsRef.current = chats;
 
-        socket.on('message:new', (msg: Message) => {
-          if (cancelled) return;
-          // Show toast only if this chat is NOT currently selected
-          if (msg.chatId !== selectedChatId) {
-            const chat = chats.find(c => c.id === msg.chatId);
-            const name = chat?.name || msg.sender.displayName || msg.sender.username || 'Новое сообщение';
-            toast.info(`✉️ ${name}`, msg.content || '');
-          }
-          // Trigger confetti on first received message
-          setConfettiTrigger(t => t + 1);
-        });
-      } catch {}
-    }
-    initSocket();
-    return () => { cancelled = true; };
-  }, [selectedChatId, chats]);
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket?.connected) return;
+
+    const onMessage = (msg: Message) => {
+      // Show toast only if this chat is NOT currently selected
+      if (msg.chatId !== selectedChatIdRef.current) {
+        const chat = chatsRef.current.find(c => c.id === msg.chatId);
+        const name = chat?.name || msg.sender?.displayName || msg.sender?.username || 'Новое сообщение';
+        toast.info(`✉️ ${name}`, msg.content || '');
+      }
+      // Trigger confetti on first received message
+      setConfettiTrigger(t => t + 1);
+    };
+
+    socket.on('message:new', onMessage);
+    return () => {
+      socket.off('message:new', onMessage);
+    };
+  }, []);
 
   // ─── Handlers ─────────────────────────────────────────────────────────
   const handleSelectChat = useCallback((chatId: string) => {

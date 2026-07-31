@@ -55,6 +55,7 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const callListenersRef = useRef<{ event: string; handler: (data: any) => void }[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const iceConfigRef = useRef<RTCConfiguration>({
     iceServers: [
@@ -177,24 +178,33 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
 
       const socket = getSocket();
       if (socket) {
-        socket.on('call:answer', async (data: any) => {
+        const onAnswer = async (data: any) => {
           if (data.answer && peerRef.current) {
             await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
           }
-        });
+        };
 
-        socket.on('call:ice-candidate', async (data: any) => {
+        const onIceCandidate = async (data: any) => {
           if (data.candidate && peerRef.current) {
             try {
               await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
             } catch {}
           }
-        });
+        };
 
-        socket.on('call:ended', () => {
+        const onEnded = () => {
           cleanupCall();
           setCallState('ended');
-        });
+        };
+
+        socket.on('call:answer', onAnswer);
+        socket.on('call:ice-candidate', onIceCandidate);
+        socket.on('call:ended', onEnded);
+        callListenersRef.current = [
+          { event: 'call:answer', handler: onAnswer },
+          { event: 'call:ice-candidate', handler: onIceCandidate },
+          { event: 'call:ended', handler: onEnded },
+        ];
       }
     } catch (err) {
       console.error('[Call] Failed to create offer:', err);
@@ -226,6 +236,10 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
 
     const socket = getSocket();
     if (socket) {
+      for (const { event, handler } of callListenersRef.current) {
+        socket.off(event, handler);
+      }
+      callListenersRef.current = [];
       socket.emit('call:end', { targetUserId: target?.id, chatId });
     }
   }, [target, chatId]);
@@ -278,12 +292,19 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
         const videoStream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
         });
+        // The call may have been cleaned up while awaiting permission.
+        const stream = localStreamRef.current;
+        const pc = peerRef.current;
+        if (!stream || !pc) {
+          videoStream.getTracks().forEach(t => t.stop());
+          return;
+        }
         videoStream.getVideoTracks().forEach(track => {
-          localStreamRef.current?.addTrack(track);
-          peerRef.current?.addTrack(track, localStreamRef.current!);
+          stream.addTrack(track);
+          pc.addTrack(track, stream);
         });
         if (localVideoRef.current) {
-          localVideoRef.current.srcObject = localStreamRef.current;
+          localVideoRef.current.srcObject = stream;
         }
         setVideoOn(true);
       } catch {}

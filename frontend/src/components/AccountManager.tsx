@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -71,11 +71,38 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
   const [loading, setLoading] = useState(false);
   const [codeExpiry, setCodeExpiry] = useState<number>(0);
   const [syncing, setSyncing] = useState(false);
+  const codeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setAccounts(loadAccounts());
-    // Start cross-domain sync
-    startCrossDomainSync();
+
+    // Cross-domain sync via BroadcastChannel + localStorage events
+    let channel: BroadcastChannel | null = null;
+    try {
+      // Listen for storage changes from other tabs/domains
+      window.addEventListener('storage', handleStorageChange);
+
+      // Also try BroadcastChannel for same-origin tabs
+      if ('BroadcastChannel' in window) {
+        channel = new BroadcastChannel('nexo_accounts_sync');
+        channel.onmessage = (event) => {
+          if (event.data.type === 'ACCOUNTS_UPDATED') {
+            setAccounts(loadAccounts());
+          }
+        };
+      }
+    } catch (e) {
+      console.error('Cross-domain sync error:', e);
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (channel) channel.close();
+      if (codeTimerRef.current) {
+        clearInterval(codeTimerRef.current);
+        codeTimerRef.current = null;
+      }
+    };
   }, []);
 
   // Save current account to accounts list
@@ -108,26 +135,6 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
       });
     }
   }, [user]);
-
-  // Cross-domain sync via BroadcastChannel + localStorage events
-  const startCrossDomainSync = () => {
-    try {
-      // Listen for storage changes from other tabs/domains
-      window.addEventListener('storage', handleStorageChange);
-      
-      // Also try BroadcastChannel for same-origin tabs
-      if ('BroadcastChannel' in window) {
-        const channel = new BroadcastChannel('nexo_accounts_sync');
-        channel.onmessage = (event) => {
-          if (event.data.type === 'ACCOUNTS_UPDATED') {
-            setAccounts(loadAccounts());
-          }
-        };
-      }
-    } catch (e) {
-      console.error('Cross-domain sync error:', e);
-    }
-  };
 
   const handleStorageChange = (event: StorageEvent) => {
     if (event.key === ACCOUNTS_STORAGE_KEY) {
@@ -171,10 +178,12 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
       toast.success('Код отправлен на email');
       
       // Start countdown
-      const interval = setInterval(() => {
+      if (codeTimerRef.current) clearInterval(codeTimerRef.current);
+      codeTimerRef.current = setInterval(() => {
         setCodeExpiry(prev => {
           if (prev <= 1) {
-            clearInterval(interval);
+            if (codeTimerRef.current) clearInterval(codeTimerRef.current);
+            codeTimerRef.current = null;
             return 0;
           }
           return prev - 1;

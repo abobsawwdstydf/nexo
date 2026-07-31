@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/smtp"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -245,7 +246,13 @@ func LoginConfirm(c *fiber.Ctx) error {
 func sendLoginCodeEmail(to, code string) {
 	host, port, username, password, from := getSMTPConfig()
 	if username == "" || password == "" {
-		log.Printf("[EMAIL] SMTP not configured, login code for %s: %s", to, code)
+		// Dev fallback: only reveal the code when explicitly enabled. Logging
+		// OTPs by default would leak login codes to anyone with log access.
+		if os.Getenv("NEXO_DEV_LOG_CODES") == "true" {
+			log.Printf("[EMAIL] SMTP not configured, login code for %s: %s", to, code)
+		} else {
+			log.Printf("[EMAIL] SMTP not configured, cannot deliver login code to %s", to)
+		}
 		return
 	}
 

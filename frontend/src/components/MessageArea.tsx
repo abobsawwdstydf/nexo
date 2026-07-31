@@ -144,6 +144,18 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Stop playback and release the audio element when the player unmounts.
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   const togglePlay = () => {
     if (!audioRef.current) {
       audioRef.current = new Audio(decryptedUrl || normalizeMediaUrl(url));
@@ -256,7 +268,7 @@ function ImageGallery({ media, isOwn }: { media: Array<{ url: string; thumbnail?
       <div className={`flex gap-1 ${media.length === 1 ? '' : 'grid grid-cols-2 gap-1'}`}>
         {media.slice(0, 4).map((item, i) => (
           <button
-            key={i}
+            key={item.url}
             onClick={() => setSelectedImage(item.url)}
             className="relative overflow-hidden rounded-xl group/img"
           >
@@ -314,14 +326,14 @@ const MessageBubble = memo(function MessageBubble({
   isChannel,
   onReply,
   onReact,
-  decryptedMediaUrls,
+  decryptedMediaUrl,
 }: {
   message: Message;
   isOwn: boolean;
   isChannel?: boolean;
-  onReply?: () => void;
-  onReact?: () => void;
-  decryptedMediaUrls?: Record<string, string>;
+  onReply?: (message: Message) => void;
+  onReact?: (messageId: string) => void;
+  decryptedMediaUrl?: string;
 }) {
   const time = formatTime(message.createdAt);
   const showSender = !isOwn && message.sender && (isChannel || message.sender.displayName);
@@ -346,7 +358,7 @@ const MessageBubble = memo(function MessageBubble({
             `}
           >
             <p className="font-medium text-white/60 text-[10px]">
-              {message.replyTo.sender.displayName}
+              {message.replyTo.sender?.displayName || ''}
             </p>
             <p className="text-white/40 truncate">{message.replyTo.content}</p>
           </div>
@@ -366,7 +378,7 @@ const MessageBubble = memo(function MessageBubble({
             <VideoNotePlayer
               url={message.videoUrl || message.media?.[0]?.url || ''}
               thumbnail={message.thumbnail || message.media?.[0]?.thumbnail}
-              decryptedUrl={decryptedMediaUrls?.[message.id]}
+              decryptedUrl={decryptedMediaUrl}
             />
           </div>
         )}
@@ -397,7 +409,7 @@ const MessageBubble = memo(function MessageBubble({
           {/* Voice Message */}
           {hasVoice && hasMedia && (
             <div className="mb-1">
-              <VoiceMessagePlayer url={message.media[0].url} isOwn={isOwn} decryptedUrl={decryptedMediaUrls?.[message.id]} />
+              <VoiceMessagePlayer url={message.media[0].url} isOwn={isOwn} decryptedUrl={decryptedMediaUrl} />
             </div>
           )}
 
@@ -408,8 +420,8 @@ const MessageBubble = memo(function MessageBubble({
                 {renderTextWithLinks(message.content, isOwn && !isChannel)}
               </p>
               {/* Link Previews */}
-              {extractUrls(message.content).slice(0, 2).map((url, i) => (
-                <LinkPreview key={i} url={url} isOwn={isOwn && !isChannel} />
+              {extractUrls(message.content).slice(0, 2).map((url) => (
+                <LinkPreview key={url} url={url} isOwn={isOwn && !isChannel} />
               ))}
             </div>
           )}
@@ -436,10 +448,10 @@ const MessageBubble = memo(function MessageBubble({
         {/* Reactions */}
         {message.reactions && message.reactions.length > 0 && (
           <div className={`flex flex-wrap gap-1 mt-0.5 ${isOwn && !isChannel ? 'justify-end' : 'justify-start'}`}>
-            {message.reactions.map((r, i) => (
+            {message.reactions.map((r) => (
               <button
-                key={i}
-                onClick={() => onReact?.()}
+                key={r.id}
+                onClick={() => onReact?.(message.id)}
                 className="px-1.5 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.06] text-xs hover:bg-white/[0.1] transition-colors"
               >
                 {r.emoji}
@@ -451,14 +463,14 @@ const MessageBubble = memo(function MessageBubble({
         {/* Hover actions */}
         <div className={`absolute top-0 ${isOwn && !isChannel ? 'left-0 -translate-x-full pl-1' : 'right-0 translate-x-full pr-1'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5`}>
           <button
-            onClick={onReply}
+            onClick={() => onReply?.(message)}
             className="p-1 rounded-lg bg-black/40 border border-white/[0.06] hover:bg-white/[0.1] transition-colors"
             title="Ответить"
           >
             <Reply size={12} className="text-white/50" />
           </button>
           <button
-            onClick={onReact}
+            onClick={() => onReact?.(message.id)}
             className="p-1 rounded-lg bg-black/40 border border-white/[0.06] hover:bg-white/[0.1] transition-colors"
             title="Реакция"
           >
@@ -738,9 +750,11 @@ function MessageInput({
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileAllInputRef = useRef<HTMLInputElement>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Draft: restore saved text
   useEffect(() => {
@@ -767,16 +781,40 @@ function MessageInput({
       .finally(() => clearTimeout(timeout));
   }, []);
 
-  // Draft: save on change
+  // Draft: save on change (debounced to avoid a localStorage write per keystroke)
   useEffect(() => {
-    try {
-      if (text.trim()) {
-        localStorage.setItem(`nexo_draft_${chatId}`, text);
-      } else {
-        localStorage.removeItem(`nexo_draft_${chatId}`);
-      }
-    } catch {}
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      try {
+        if (text.trim()) {
+          localStorage.setItem(`nexo_draft_${chatId}`, text);
+        } else {
+          localStorage.removeItem(`nexo_draft_${chatId}`);
+        }
+      } catch {}
+    }, 300);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
   }, [text, chatId]);
+
+  // Clean up any in-progress recording (camera/mic stream, timer) on unmount.
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        chunksRef.current = [];
+        mediaRecorderRef.current.stop();
+      }
+      if (recordTimerRef.current) {
+        clearInterval(recordTimerRef.current);
+        recordTimerRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -946,6 +984,7 @@ function MessageInput({
           video: { width: 360, height: 360, facingMode: 'user' },
           audio: true
         });
+        streamRef.current = stream;
 
         if (videoPreviewRef.current) {
           videoPreviewRef.current.srcObject = stream;
@@ -960,6 +999,7 @@ function MessageInput({
 
         recorder.onstop = async () => {
           stream.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
           if (chunksRef.current.length === 0) return;
 
           const blob = new Blob(chunksRef.current, { type: 'video/webm' });
@@ -1004,6 +1044,7 @@ function MessageInput({
       } else {
         // Voice recording
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
         const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
         chunksRef.current = [];
 
@@ -1013,6 +1054,7 @@ function MessageInput({
 
         recorder.onstop = async () => {
           stream.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
           if (chunksRef.current.length === 0) return;
 
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
@@ -1795,20 +1837,23 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
     e2eReadyRef.current = e2eReady;
   }, [e2eReady]);
 
-  // Decrypt media for all encrypted media messages
+  // Decrypt media for encrypted media messages (only process newly added messages)
+  const processedMediaIdsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (!e2eReady) return;
     for (const msg of messages) {
-      if (msg.isEncrypted && msg.media?.[0]?.url && msg.encryptedContent) {
+      if (msg.isEncrypted && msg.media?.[0]?.url && msg.encryptedContent && !processedMediaIdsRef.current.has(msg.id)) {
+        processedMediaIdsRef.current.add(msg.id);
         decryptMessageMedia(msg);
       }
     }
   }, [messages, e2eReady, decryptMessageMedia]);
 
-  // Auto-scroll
+  // Auto-scroll (instant for incoming messages; smooth is only used by the "jump to bottom" button)
   useEffect(() => {
     if (autoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
   }, [messages, autoScroll]);
 
@@ -2042,6 +2087,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
       return;
     }
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
@@ -2052,9 +2098,11 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
           },
         });
         const data = await response.json();
+        if (cancelled) return;
         const results = data?.items || data || [];
         if (e2eReadyRef.current) {
           const decrypted = await decryptLoadedMessages(results);
+          if (cancelled) return;
           setSearchResults(decrypted);
         } else {
           setSearchResults(results);
@@ -2062,12 +2110,12 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
       } catch (err) {
         console.error('[Search] Failed:', err);
       } finally {
-        setSearching(false);
+        if (!cancelled) setSearching(false);
       }
     }, 400);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery, searchMode, chat.id]);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [searchQuery, searchMode, chat.id, decryptLoadedMessages]);
 
   const handleForward = useCallback(async (targetChatId: string) => {
     if (!forwardingMsg) return;
@@ -2084,6 +2132,18 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
     setShowForward(null);
     setForwardingMsg(null);
   }, [forwardingMsg, chat.id]);
+
+  const handleReplyTo = useCallback((msg: Message) => {
+    setReplyTo({
+      id: msg.id,
+      content: msg.content || '',
+      sender: msg.sender?.displayName || msg.sender?.username || '',
+    });
+  }, []);
+
+  const handleToggleEmojiPicker = useCallback((msgId: string) => {
+    setShowEmojiPicker(prev => (prev === msgId ? null : msgId));
+  }, []);
 
   return (
     <ChatWallpaper chatId={chat.id}>
@@ -2145,7 +2205,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
                       >
                         <Search size={10} className="text-white/20 mt-1 flex-shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-[10px] text-white/40">{msg.sender.displayName}</p>
+                          <p className="text-[10px] text-white/40">{msg.sender?.displayName || msg.sender?.username || 'Пользователь'}</p>
                           <p className="text-xs text-white/50 truncate">{msg.content}</p>
                         </div>
                       </button>
@@ -2198,15 +2258,9 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
                       message={msg}
                       isOwn={msg.senderId === user?.id}
                       isChannel={isChannel}
-                      onReply={() => setReplyTo({
-                        id: msg.id,
-                        content: msg.content || '',
-                        sender: msg.sender.displayName || msg.sender.username,
-                      })}
-                      onReact={() => setShowEmojiPicker(
-                        showEmojiPicker === msg.id ? null : msg.id
-                      )}
-                      decryptedMediaUrls={decryptedMediaUrls}
+                      onReply={handleReplyTo}
+                      onReact={handleToggleEmojiPicker}
+                      decryptedMediaUrl={decryptedMediaUrls[msg.id]}
                     />
                     {/* Emoji picker for this message */}
                     <AnimatePresence>

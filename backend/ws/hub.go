@@ -29,6 +29,7 @@ type Hub struct {
 	register    chan *Client
 	unregister  chan *Client
 	stop        chan struct{}
+	stopOnce    sync.Once
 	Metrics     *HubMetrics
 }
 
@@ -56,12 +57,13 @@ func (h *Hub) Run() {
 				h.clients[client.UserID] = make(map[*Client]bool)
 			}
 			h.clients[client.UserID][client] = true
+			connCount := h.getUserCountLocked(client.UserID)
 			h.Metrics.mu.Lock()
 			h.Metrics.TotalConnections++
 			h.Metrics.CurrentConnections = h.totalConnectionsLocked()
 			h.Metrics.mu.Unlock()
 			h.mu.Unlock()
-			log.Printf("WS: user %s connected (%d connections)", client.UserID, h.getUserCount(client.UserID))
+			log.Printf("WS: user %s connected (%d connections)", client.UserID, connCount)
 
 		case client := <-h.unregister:
 			h.mu.Lock()
@@ -89,17 +91,25 @@ func (h *Hub) Run() {
 	}
 }
 
-// Stop signals the hub goroutine to exit
+// Stop signals the hub goroutine to exit. Safe to call multiple times.
 func (h *Hub) Stop() {
-	close(h.stop)
+	h.stopOnce.Do(func() {
+		close(h.stop)
+	})
 }
 
 func (h *Hub) RegisterClient(client *Client) {
-	h.register <- client
+	select {
+	case h.register <- client:
+	case <-h.stop:
+	}
 }
 
 func (h *Hub) UnregisterClient(client *Client) {
-	h.unregister <- client
+	select {
+	case h.unregister <- client:
+	case <-h.stop:
+	}
 }
 
 func (h *Hub) SendToUser(userID string, data []byte) {
@@ -178,7 +188,9 @@ func (h *Hub) GetOnlineUsers() []string {
 	return users
 }
 
-func (h *Hub) getUserCount(userID string) int {
+// getUserCountLocked returns the number of connections for a user.
+// Caller must hold h.mu.
+func (h *Hub) getUserCountLocked(userID string) int {
 	if clients, ok := h.clients[userID]; ok {
 		return len(clients)
 	}

@@ -50,6 +50,14 @@ func wsCheckRateLimit(userID string) bool {
 	entry, exists := wsRateLimit[userID]
 
 	if !exists || now.Sub(entry.WindowStart) > wsRateLimitWindow {
+		// Opportunistic cleanup: drop stale entries to prevent unbounded growth
+		if len(wsRateLimit) > 1000 {
+			for uid, e := range wsRateLimit {
+				if now.Sub(e.WindowStart) > wsRateLimitWindow {
+					delete(wsRateLimit, uid)
+				}
+			}
+		}
 		wsRateLimit[userID] = &wsRateEntry{Count: 1, WindowStart: now}
 		return true
 	}

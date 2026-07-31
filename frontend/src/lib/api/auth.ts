@@ -15,8 +15,6 @@ declare module './core' {
       avatar?: File;
     }): Promise<{ accessToken?: string; refreshToken?: string; csrfToken?: string; user: User }>;
     checkUsername(username: string): Promise<{ available: boolean; reason?: string }>;
-    checkEmail(email: string): Promise<{ available: boolean; message?: string }>;
-    getMe(): Promise<{ user: User; accessToken?: string; csrfToken?: string }>;
     getInit(): Promise<{
       user: User;
       chats: Chat[];
@@ -96,14 +94,6 @@ export function installAuth(api: ApiClient): void {
 
   api.checkUsername = async (username: string) => {
     return api.request<{ available: boolean; reason?: string }>(`/auth/check-username?username=${encodeURIComponent(username)}`);
-  };
-
-  api.checkEmail = async (email: string) => {
-    return api.request<{ available: boolean; message?: string }>(`/auth/check-email?email=${encodeURIComponent(email)}`);
-  };
-
-  api.getMe = async () => {
-    return api.request<{ user: User; accessToken?: string; csrfToken?: string }>('/users/me');
   };
 
   api.getInit = async () => {

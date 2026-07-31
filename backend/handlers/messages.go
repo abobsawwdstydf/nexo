@@ -2,6 +2,7 @@
 
 import (
 	"encoding/json"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -159,12 +160,25 @@ func GetMessages(c *fiber.Ctx) error {
 	fetchDone := make(chan struct{})
 
 	go func() {
-		db.GetDB().Model(&models.Message{}).Where("chat_id = ?", chatID).Count(&total)
-		close(countDone)
+		defer close(countDone)
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[messages] panic while counting messages for chat %s: %v", chatID, r)
+			}
+		}()
+		if err := db.GetDB().Model(&models.Message{}).Where("chat_id = ?", chatID).Count(&total).Error; err != nil {
+			log.Printf("[messages] count failed for chat %s: %v", chatID, err)
+		}
 	}()
 
 	go func() {
-		db.GetDB().
+		defer close(fetchDone)
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[messages] panic while fetching messages for chat %s: %v", chatID, r)
+			}
+		}()
+		if err := db.GetDB().
 			Preload("Sender").
 			Preload("Media").
 			Preload("Reactions").
@@ -172,8 +186,9 @@ func GetMessages(c *fiber.Ctx) error {
 			Where("chat_id = ?", chatID).
 			Order("created_at DESC").
 			Offset(p.Offset).Limit(p.PageSize).
-			Find(&messages)
-		close(fetchDone)
+			Find(&messages).Error; err != nil {
+			log.Printf("[messages] fetch failed for chat %s: %v", chatID, err)
+		}
 	}()
 
 	<-countDone
