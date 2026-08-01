@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/net/idna"
 	"github.com/joho/godotenv"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -159,6 +160,11 @@ func main() {
 			}
 			trimmed := strings.TrimPrefix(origin, "https://")
 			trimmed = strings.TrimPrefix(trimmed, "http://")
+			trimmed = strings.TrimSuffix(trimmed, "/")
+			// Normalize IDN (Unicode) origins to punycode, e.g. нексо.hakerone.ru -> xn--e1akhgo.hakerone.ru
+			if ascii, err := idna.ToASCII(strings.ToLower(trimmed)); err == nil {
+				trimmed = ascii
+			}
 			for domain := range allowedDomains {
 				if trimmed == domain {
 					return true
