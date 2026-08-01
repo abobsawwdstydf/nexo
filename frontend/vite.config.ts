@@ -1,13 +1,33 @@
 import { defineConfig, loadEnv } from 'vite';
+import { execSync } from 'node:child_process';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function gitBuildInfo() {
+  try {
+    const commit = execSync('git rev-parse --short HEAD', { cwd: process.cwd() }).toString().trim();
+    return {
+      version: commit,
+      commit,
+      buildTime: new Date().toISOString(),
+    };
+  } catch {
+    return { version: 'dev', commit: 'dev', buildTime: '' };
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const backendUrl = env.VITE_API_URL || 'https://neexxoo.hakerone.ru';
+  const build = gitBuildInfo();
 
   return {
+  define: {
+    __APP_VERSION__: JSON.stringify(build.version),
+    __GIT_COMMIT__: JSON.stringify(build.commit),
+    __BUILD_TIME__: JSON.stringify(build.buildTime),
+  },
   plugins: [
     react(), 
     tailwindcss(),

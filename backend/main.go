@@ -51,6 +51,26 @@ var (
 	metricsStartTime     = time.Now()
 )
 
+// Build info — задаётся через -ldflags "-X main.buildCommit=..." либо env
+// APP_VERSION / GIT_COMMIT / BUILD_TIME. По нему в UI видно, новый ли релиз.
+var (
+	buildVersion = "dev"
+	buildCommit  = "unknown"
+	buildTime    = ""
+)
+
+func init() {
+	if v := os.Getenv("APP_VERSION"); v != "" {
+		buildVersion = v
+	}
+	if c := os.Getenv("GIT_COMMIT"); c != "" {
+		buildCommit = c
+	}
+	if t := os.Getenv("BUILD_TIME"); t != "" {
+		buildTime = t
+	}
+}
+
 func metricsMiddleware(c *fiber.Ctx) error {
 	httpRequestsTotal.Add(1)
 	httpRequestsInFlight.Add(1)
@@ -196,7 +216,17 @@ func main() {
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok", "engine": "go", "version": "2.0.0"})
+		return c.JSON(fiber.Map{"status": "ok", "engine": "go", "version": "2.0.0", "commit": buildCommit})
+	})
+
+	// Version info (public) — идентификатор релиза для фронта
+	app.Get("/api/version", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"app":       "nexo-backend",
+			"version":   buildVersion,
+			"commit":    buildCommit,
+			"buildTime": buildTime,
+		})
 	})
 
 	// CSRF token endpoint

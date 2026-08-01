@@ -32,6 +32,7 @@ import type { User as UserType } from '../lib/types';
 import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotification } from '../lib/notifications';
 import { api } from '../lib/api';
 import { toast } from '../lib/toast';
+import { BUILD_COMMIT, BUILD_TIME, getBackendVersion, type BackendVersion } from '../lib/version';
 
 type SettingsTab = 'general' | 'notifications' | 'appearance' | 'privacy' | 'profile' | 'premium';
 
@@ -58,6 +59,45 @@ function GeneralSettings() {
       <SettingRow icon={Smartphone} label="Аппаратное ускорение" value="Вкл" toggle />
       <SettingRow icon={Volume2} label="Звуки в приложении" value="Вкл" toggle />
       <SettingRow icon={Vibrate} label="Вибрация" value="Вкл" toggle />
+
+      <div className="h-px bg-white/[0.04] my-3 mx-1" />
+      <VersionInfo />
+    </div>
+  );
+}
+
+function VersionInfo() {
+  const [backend, setBackend] = useState<BackendVersion | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getBackendVersion().then(v => {
+      if (mounted) setBackend(v);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const buildDate = BUILD_TIME ? new Date(BUILD_TIME).toLocaleString('ru-RU') : '—';
+
+  return (
+    <div className="px-1 pb-1">
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Версия</h3>
+      <div className="space-y-1.5 px-1">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/60">Приложение</span>
+          <span className="text-xs text-white/40 font-mono">build-{BUILD_COMMIT}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/60">Сборка</span>
+          <span className="text-xs text-white/30">{buildDate}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/60">Сервер</span>
+          <span className="text-xs text-white/40 font-mono">
+            {backend ? `build-${backend.commit}` : 'недоступен'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
