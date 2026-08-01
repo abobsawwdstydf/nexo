@@ -8,9 +8,6 @@ import { installAI } from './ai';
 import { installFeatures } from './features';
 import { installRealtime } from './realtime';
 
-// Re-export getApiBase for consumers that need the raw base URL
-export { getApiBase } from './core';
-
 const api = new ApiClient();
 
 // Install all domain methods onto the singleton

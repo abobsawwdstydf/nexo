@@ -56,18 +56,6 @@ export function wsRequest<T = any>(type: string, payload?: Record<string, any>, 
   });
 }
 
-/**
- * Fire-and-forget: send a message without waiting for a response.
- */
-export function wsEmit(type: string, data?: Record<string, any>) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-  // Wrap data in payload to avoid "type" field collision with the event name.
-  try {
-    ws.send(JSON.stringify({ type, payload: data || {} }));
-  } catch { /* ws send failed */ }
-}
-
 // ─── Existing socket infrastructure ───────────────────────────────────────────
 
 function loadReconnectState(): ReconnectState | null {
@@ -140,14 +128,14 @@ function emitStatus(status: ConnectionStatusType) {
   statusListeners.forEach(fn => fn(status));
 }
 
-export function getConnectionStatus(): ConnectionStatusType {
+function getConnectionStatus(): ConnectionStatusType {
   if (!ws) return 'idle';
   if (ws.readyState === WebSocket.OPEN) return 'connected';
   if (isReconnecting) return 'reconnecting';
   return 'connecting';
 }
 
-export function onConnectionStatusChange(cb: (status: ConnectionStatusType) => void): () => void {
+function onConnectionStatusChange(cb: (status: ConnectionStatusType) => void): () => void {
   statusListeners.push(cb);
   return () => {
     statusListeners = statusListeners.filter(fn => fn !== cb);
@@ -367,18 +355,6 @@ export function disconnectSocket() {
     socket = null;
     emitStatus('idle');
   }
-}
-
-export function getConnectionState(): {
-  connected: boolean;
-  reconnecting: boolean;
-  attempt: number;
-} {
-  return {
-    connected: ws?.readyState === WebSocket.OPEN,
-    reconnecting: isReconnecting,
-    attempt: connectAttempts,
-  };
 }
 
 export { socket };

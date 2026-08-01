@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,9 +38,9 @@ func generateCode() string {
 	n, err := rand.Int(rand.Reader, big.NewInt(900000))
 	if err != nil {
 		// Fallback: time-based code (never blocks on RNG failure)
-		return fmt.Sprintf("%d", 100000+time.Now().UnixNano()%900000)
+		return strconv.FormatInt(100000+time.Now().UnixNano()%900000, 10)
 	}
-	return fmt.Sprintf("%d", n.Int64()+100000)
+	return strconv.FormatInt(n.Int64()+100000, 10)
 }
 
 func CheckBotStatus(c *fiber.Ctx) error {

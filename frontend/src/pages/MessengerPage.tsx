@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu } from 'iconsax-react';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
 import { api } from '../lib/api';

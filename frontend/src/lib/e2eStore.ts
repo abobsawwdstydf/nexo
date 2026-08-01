@@ -48,16 +48,3 @@ export async function tryInitE2EForChat(
     return status;
   }
 }
-
-export function getE2EStatus(chatId: string): E2EChatStatus {
-  return e2eChatStatus.get(chatId) || { isE2E: false, isReady: false, keyFingerprint: null };
-}
-
-export function isE2EChat(chatId: string): boolean {
-  return getE2EStatus(chatId).isE2E && getE2EStatus(chatId).isReady;
-}
-
-export function closeE2ESession(chatId: string): void {
-  e2eManager.closeSession(chatId);
-  e2eChatStatus.delete(chatId);
-}

@@ -426,28 +426,32 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
   // Focus email input when login-email appears
   useEffect(() => {
     if (screen === 'login-email' && loginEmailLabel.phase === 'done') {
-      setTimeout(() => emailInputRef.current?.focus(), 100);
+      const t = setTimeout(() => emailInputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [screen, loginEmailLabel.phase]);
 
   // Focus name input when reg-name appears
   useEffect(() => {
     if (screen === 'reg-name' && regNameLabel.phase === 'done') {
-      setTimeout(() => nameInputRef.current?.focus(), 100);
+      const t = setTimeout(() => nameInputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [screen, regNameLabel.phase]);
 
   // Focus username input
   useEffect(() => {
     if (screen === 'reg-username' && regUsernameLabel.phase === 'done') {
-      setTimeout(() => usernameInputRef.current?.focus(), 100);
+      const t = setTimeout(() => usernameInputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [screen, regUsernameLabel.phase]);
 
   // Focus reg email input
   useEffect(() => {
     if (screen === 'reg-email' && regEmailLabel.phase === 'done') {
-      setTimeout(() => regEmailInputRef.current?.focus(), 100);
+      const t = setTimeout(() => regEmailInputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [screen, regEmailLabel.phase]);
 

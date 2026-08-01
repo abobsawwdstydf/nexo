@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Shield, AlertTriangle } from 'lucide-react';
+import { ExternalLink, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface LinkMeta {

@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -130,7 +131,7 @@ func GenerateCaptcha(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "Server busy"})
 	}
 	captchaStore[id] = &captchaEntry{
-		Answer:    fmt.Sprintf("%d", answer),
+		Answer:    strconv.FormatInt(answer, 10),
 		ExpiresAt: time.Now().Add(5 * time.Minute),
 	}
 	captchaMu.Unlock()

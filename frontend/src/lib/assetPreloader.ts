@@ -194,24 +194,3 @@ export function scheduleAssetPrewarm(): void {
     } catch {}
   });
 }
-
-export function isImageCached(url: string): Promise<boolean> {
-  return openCache().then(async cache => {
-    if (!cache) return false;
-    return isAlreadyCached(cache, url);
-  });
-}
-
-export async function preloadImageInstant(url: string): Promise<boolean> {
-  const cache = await openCache();
-  if (!cache) return false;
-  if (await isAlreadyCached(cache, url)) return true;
-  const res = await fetchWithTimeout(url, 6000);
-  if (!res) return false;
-  try {
-    await cache.put(url, res);
-    return true;
-  } catch {
-    return false;
-  }
-}

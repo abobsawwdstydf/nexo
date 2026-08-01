@@ -16,7 +16,9 @@ import (
 const uploadDir = "../uploads"
 
 func UploadFile(c *fiber.Ctx) error {
-	_ = c.Locals("userId").(string) // auth check
+	if id, ok := c.Locals("userId").(string); !ok || id == "" {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
 
 	file, err := c.FormFile("file")
 	if err != nil {

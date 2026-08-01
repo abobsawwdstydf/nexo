@@ -24,7 +24,6 @@ import {
   Radio,
   Loader,
   Crown,
-  Star,
   Download,
   Trash2,
   AlertTriangle,

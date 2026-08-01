@@ -5,7 +5,6 @@ import {
   X,
   Users,
   UserPlus,
-  UserCheck,
   UserX,
   Clock,
   MessageCircle,
@@ -13,6 +12,7 @@ import {
   Ban,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { UserAvatar, OnlineDot } from './UserAvatar';
 import type { FriendWithId, FriendRequest } from '../lib/types';
 
 type Tab = 'online' | 'all' | 'pending' | 'blocked';
@@ -20,47 +20,6 @@ type Tab = 'online' | 'all' | 'pending' | 'blocked';
 interface FriendsPanelProps {
   onClose: () => void;
   onStartChat: (userId: string) => void;
-}
-
-function FriendAvatar({
-  user,
-  size = 'md',
-}: {
-  user: { avatar: string | null; displayName: string };
-  size?: 'sm' | 'md';
-}) {
-  const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
-
-  if (user.avatar) {
-    return (
-      <img
-        src={user.avatar}
-        alt={user.displayName}
-        className={`${sizeClass} rounded-xl object-cover flex-shrink-0`}
-      />
-    );
-  }
-
-  const initials = user.displayName
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
-  return (
-    <div
-      className={`${sizeClass} rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0`}
-    >
-      <span className="text-xs font-medium text-white/50">{initials}</span>
-    </div>
-  );
-}
-
-function OnlineDot() {
-  return (
-    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400/80 border-2 border-[#0a0a0f]" />
-  );
 }
 
 export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps) {
@@ -208,7 +167,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
             className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-all duration-200 hover:border-white/[0.06] border border-transparent"
           >
             <div className="relative flex-shrink-0">
-              <FriendAvatar user={friend} size="md" />
+              <UserAvatar user={friend} size="md" />
               {friend.isOnline && <OnlineDot />}
             </div>
             <div className="flex-1 min-w-0">
@@ -264,7 +223,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors"
           >
-            <FriendAvatar user={req.sender} size="md" />
+            <UserAvatar user={req.sender} size="md" />
             <div className="flex-1 min-w-0">
               <span className="text-sm font-medium text-white/80 truncate block">
                 {req.sender.displayName}
@@ -358,7 +317,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
                       className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-white/[0.04]"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <FriendAvatar user={u} size="sm" />
+                        <UserAvatar user={u} size="sm" />
                         <div className="min-w-0">
                           <p className="text-xs text-white/70 truncate">{u.displayName}</p>
                           <p className="text-[10px] text-white/30 truncate">@{u.username}</p>

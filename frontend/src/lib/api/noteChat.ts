@@ -28,8 +28,4 @@ export function deleteNotesMessage(messageId: string) {
   localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
 }
 
-export function clearAllNotes() {
-  localStorage.removeItem(NOTES_KEY);
-}
-
 export const NOTES_CHAT_ID = CHAT_ID;

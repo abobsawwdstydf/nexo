@@ -461,8 +461,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 				elapsed := time.Since(lastMsg.CreatedAt).Seconds()
 				if elapsed < float64(chat.SlowModeInterval) {
 					remaining := float64(chat.SlowModeInterval) - elapsed
-					wsResponse(client, env.ID, &wsError{Code: "slow_mode", Message: "Slow mode: wait " + strconv.FormatFloat(remaining, 'f', 0, 64) + "s"})
-					return nil
+					return &wsError{Code: "slow_mode", Message: "Slow mode: wait " + strconv.FormatFloat(remaining, 'f', 0, 64) + "s"}
 				}
 			}
 		}
@@ -953,6 +952,9 @@ func HandleWebSocket(c *websocket.Conn) {
 	go func() {
 		for message := range client.Send {
 			if err := c.WriteMessage(websocket.TextMessage, message); err != nil {
+				// Closing the connection unblocks the read loop below,
+				// triggering the deferred cleanup in the handler.
+				c.Close()
 				return
 			}
 		}
@@ -968,6 +970,10 @@ func HandleWebSocket(c *websocket.Conn) {
 		// Rate limit: reject if user exceeds max messages per second
 		if !wsCheckRateLimit(userID) {
 			log.Printf("WS rate limited: user=%s", userID)
+			var rateEnv wsEnvelope
+			if err := json.Unmarshal(msg, &rateEnv); err == nil {
+				wsResponse(client, rateEnv.ID, errWSRateLimited)
+			}
 			continue
 		}
 

@@ -1,24 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   User,
-  Plus,
-  Trash2,
-  RefreshCw,
-  X,
   Mail,
   Lock,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 import {
   UserCirlceAdd,
   Add,
   Trash,
   Refresh,
-  Check,
   CloseCircle,
-  Security,
   Global,
 } from 'iconsax-react';
 import { useAuthStore } from '../stores/authStore';

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, ShieldCheck, ShieldAlert, Fingerprint, Key, Lock, Copy, Check, Info, X } from 'lucide-react';
+import { Shield, ShieldCheck, ShieldAlert, Fingerprint, Lock, Copy, Check, Info } from 'lucide-react';
 
 interface EncryptionBadgeProps {
   chatId: string;

@@ -15,6 +15,13 @@ const AuthPage = lazy(() => import('./pages/AuthPage'));
 const MessengerPage = lazy(() => import('./pages/MessengerPage'));
 const LegalPages = lazy(() => import('./pages/LegalPages'));
 
+// Module-level fallback keeps a stable component identity across re-renders
+const LoadingFallback = () => (
+  <div className="h-full w-full flex items-center justify-center">
+    <div className="skeleton skeleton-bubble w-20 h-20 rounded-full" />
+  </div>
+);
+
 export default function App() {
   const { user, checkAuth } = useAuthStore();
   const { status: beta, fetch: fetchBeta } = useBetaStore();
@@ -31,13 +38,6 @@ export default function App() {
     setLegalTab(tab);
     setShowLegal(true);
   };
-
-  // Loading fallback
-  const LoadingFallback = () => (
-    <div className="h-full w-full flex items-center justify-center">
-      <div className="skeleton skeleton-bubble w-20 h-20 rounded-full" />
-    </div>
-  );
 
   // Beta ended — block everything
   if (beta?.ended) {

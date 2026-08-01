@@ -12,7 +12,6 @@ import {
   X,
   Maximize2,
   Minimize2,
-  Users,
   Bluetooth,
   Copy,
   Check,

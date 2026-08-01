@@ -36,40 +36,6 @@ function playClick() {
   } catch {}
 }
 
-let enabled = true;
-
-export function setClickSoundEnabled(v: boolean) {
-  enabled = v;
-}
-
-export function isClickSoundEnabled(): boolean {
-  return enabled;
-}
-
-export function clickSound() {
-  if (!enabled) return;
-  playClick();
-}
-
-/**
- * Hook that returns a click sound function for use in onClick handlers.
- * Usage: const click = useClickSound(); <button onClick={() => { click(); handleStuff(); }} />
- */
-export function useClickSound(): () => void {
-  return clickSound;
-}
-
-/**
- * Wraps an onClick handler with a click sound.
- * Usage: <button onClick={withClick(handleClick)} />
- */
-export function withClick<T extends (...args: any[]) => void>(fn: T): T {
-  return ((...args: any[]) => {
-    clickSound();
-    return fn(...args);
-  }) as T;
-}
-
 /**
  * AudioClickWrapper — wraps children so all child buttons play a click sound.
  * Uses event delegation on mousedown for performance.

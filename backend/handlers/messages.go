@@ -132,7 +132,9 @@ func SendMessage(c *fiber.Ctx) error {
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now)
 
 	// Fetch with preload in single query
-	db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msg.ID)
+	if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msg.ID).Error; err != nil {
+		log.Printf("failed to preload sent message %s: %v", msg.ID, err)
+	}
 
 	msgJSON := messageToJSON(msg)
 

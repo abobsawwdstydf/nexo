@@ -117,7 +117,6 @@ type YooKassaGetPaymentResponse struct {
 
 var (
 	webhookProcessing sync.Map // map[string]*webhookEntry — вже оброблені payment ID
-	webhookMu         sync.Mutex
 )
 
 func isWebhookProcessed(paymentID string) bool {
@@ -357,7 +356,11 @@ func CreatePayment(c *fiber.Ctx) error {
 		ykReq.Metadata["gift_to_user_id"] = req.GiftToUserID
 	}
 
-	body, _ := json.Marshal(ykReq)
+	body, err := json.Marshal(ykReq)
+	if err != nil {
+		log.Printf("[YOOKASSA] Failed to marshal payment request: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create payment request"})
+	}
 	httpReq, err := http.NewRequest("POST", "https://api.yookassa.ru/v3/payments", bytes.NewReader(body))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create payment request"})

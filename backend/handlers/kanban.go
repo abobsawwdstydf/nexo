@@ -153,6 +153,9 @@ func DeleteKanbanTask(c *fiber.Ctx) error {
 // PUT /kanban/:boardId/reorder
 func ReorderKanbanBoard(c *fiber.Ctx) error {
 	boardID := c.Params("boardId")
+	if boardID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
 
 	var req struct {
 		Tasks []struct {
@@ -166,12 +169,13 @@ func ReorderKanbanBoard(c *fiber.Ctx) error {
 	}
 
 	for _, t := range req.Tasks {
-		db.GetDB().Model(&models.KanbanTask{}).Where("id = ?", t.ID).Updates(map[string]interface{}{
-			"column_id": t.ColumnID,
-			"order":     t.Order,
-		})
+		db.GetDB().Model(&models.KanbanTask{}).
+			Where("id = ? AND board_id = ?", t.ID, boardID).
+			Updates(map[string]interface{}{
+				"column_id": t.ColumnID,
+				"order":     t.Order,
+			})
 	}
 
-	_ = boardID
 	return c.JSON(fiber.Map{"success": true})
 }

@@ -107,6 +107,38 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatDuration(totalSec: number): string {
+  const m = Math.floor(totalSec / 60);
+  const s = Math.floor(totalSec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/** Uploads a recorded voice/video blob, optionally E2E-encrypting it first. */
+async function uploadRecordedMedia(
+  type: 'voice' | 'video',
+  blob: Blob,
+  e2eReady: boolean | undefined,
+  chatId: string
+): Promise<{ media: unknown[]; isEncrypted?: boolean; encryptedContent?: string }> {
+  let uploadBlob = blob;
+  let encMime = '';
+  if (e2eReady) {
+    const encBlob = await e2eManager.encryptChatMedia(chatId, blob);
+    if (encBlob) {
+      uploadBlob = encBlob;
+      encMime = type === 'voice' ? 'audio/webm' : 'video/webm';
+    }
+  }
+  const file = new File([uploadBlob], `${type}_${Date.now()}.webm`, { type: type === 'voice' ? 'audio/webm' : 'video/webm' });
+  const media = await api.uploadFile(file);
+  const result: { media: unknown[]; isEncrypted?: boolean; encryptedContent?: string } = { media: [media] };
+  if (encMime) {
+    result.isEncrypted = true;
+    result.encryptedContent = encMime;
+  }
+  return result;
+}
+
 function shouldShowDateSeparator(messages: Message[], index: number): boolean {
   if (index === 0) return true;
   const curr = new Date(messages[index].createdAt);
@@ -160,12 +192,6 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
     setPlaying(!playing);
   };
 
-  const formatDur = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
   return (
     <div className="flex items-center gap-2 min-w-[200px]">
       <button
@@ -184,8 +210,8 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
           />
         </div>
         <div className="flex justify-between mt-0.5">
-          <span className="text-[9px] text-white/40">{formatDur(duration * (progress / 100))}</span>
-          <span className="text-[9px] text-white/40">{formatDur(duration)}</span>
+          <span className="text-[9px] text-white/40">{formatDuration(duration * (progress / 100))}</span>
+          <span className="text-[9px] text-white/40">{formatDuration(duration)}</span>
         </div>
       </div>
     </div>
@@ -891,13 +917,7 @@ function MessageInput({
     if (gifSearchRef.current) clearTimeout(gifSearchRef.current);
   }, []);
 
-  useEffect(() => {
-    if (showEmojiPanel && emojiTab === 'gif' && gifs.length === 0 && !gifQuery) {
-      loadTrendingGifs();
-    }
-  }, [showEmojiPanel, emojiTab]);
-
-  const loadTrendingGifs = async () => {
+  const loadTrendingGifs = useCallback(async () => {
     setGifLoading(true);
     try {
       const data = await api.getTrendingGifs(30);
@@ -907,9 +927,9 @@ function MessageInput({
     } finally {
       setGifLoading(false);
     }
-  };
+  }, []);
 
-  const searchGifs = async (query: string) => {
+  const searchGifs = useCallback(async (query: string) => {
     if (!query.trim()) { loadTrendingGifs(); return; }
     setGifLoading(true);
     try {
@@ -920,7 +940,13 @@ function MessageInput({
     } finally {
       setGifLoading(false);
     }
-  };
+  }, [loadTrendingGifs]);
+
+  useEffect(() => {
+    if (showEmojiPanel && emojiTab === 'gif' && gifs.length === 0 && !gifQuery) {
+      loadTrendingGifs();
+    }
+  }, [showEmojiPanel, emojiTab, gifs.length, gifQuery, loadTrendingGifs]);
 
   const handleGifSelect = async (gif: any) => {
     try {
@@ -942,7 +968,7 @@ function MessageInput({
     setGifQuery(value);
     if (gifSearchRef.current) clearTimeout(gifSearchRef.current);
     gifSearchRef.current = setTimeout(() => searchGifs(value), 500);
-  }, []);
+  }, [searchGifs]);
 
   const sendImages = async () => {
     if (selectedFiles.length === 0) return;
@@ -991,23 +1017,8 @@ function MessageInput({
           const blob = new Blob(chunksRef.current, { type: 'video/webm' });
 
           try {
-            let uploadBlob = blob;
-            let encMime = '';
-            if (e2eReady) {
-              const encBlob = await e2eManager.encryptChatMedia(chatId, blob);
-              if (encBlob) {
-                uploadBlob = encBlob;
-                encMime = 'video/webm';
-              }
-            }
-            const file = new File([uploadBlob], `video_note_${Date.now()}.webm`, { type: 'video/webm' });
-            const media = await api.uploadFile(file);
-            const opts: any = { replyToId: replyTo?.id, media: [media] };
-            if (encMime) {
-              opts.isEncrypted = true;
-              opts.encryptedContent = encMime;
-            }
-            onSend('📹 Видеокружок', opts);
+            const media = await uploadRecordedMedia('video', blob, e2eReady, chatId);
+            onSend('📹 Видеокружок', { replyToId: replyTo?.id, ...media });
           } catch (err) {
             console.error('[VideoNote] Failed to upload:', err);
             setRecordingError('Ошибка отправки');
@@ -1046,23 +1057,8 @@ function MessageInput({
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
 
           try {
-            let uploadBlob = blob;
-            let encMime = '';
-            if (e2eReady) {
-              const encBlob = await e2eManager.encryptChatMedia(chatId, blob);
-              if (encBlob) {
-                uploadBlob = encBlob;
-                encMime = 'audio/webm';
-              }
-            }
-            const file = new File([uploadBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
-            const media = await api.uploadFile(file);
-            const opts: any = { replyToId: replyTo?.id, media: [media] };
-            if (encMime) {
-              opts.isEncrypted = true;
-              opts.encryptedContent = encMime;
-            }
-            onSend('🎤 Голосовое сообщение', opts);
+            const media = await uploadRecordedMedia('voice', blob, e2eReady, chatId);
+            onSend('🎤 Голосовое сообщение', { replyToId: replyTo?.id, ...media });
           } catch (err) {
             console.error('[Voice] Failed to upload:', err);
             setRecordingError('Ошибка отправки');
@@ -1105,12 +1101,6 @@ function MessageInput({
       clearInterval(recordTimerRef.current);
       recordTimerRef.current = null;
     }
-  };
-
-  const formatDuration = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const toggleRecType = () => {
@@ -1526,15 +1516,6 @@ function MessageInput({
         onChange={handleFileAllSelect}
       />
     </div>
-  );
-}
-
-function AttachItem({ icon: Icon, label }: { icon: typeof Image; label: string }) {
-  return (
-    <button className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors">
-      <Icon size={14} />
-      {label}
-    </button>
   );
 }
 
