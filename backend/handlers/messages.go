@@ -140,6 +140,7 @@ func SendMessage(c *fiber.Ctx) error {
 
 	ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 
+	msg.Sender = sanitizeUser(msg.Sender)
 	return c.Status(201).JSON(msg)
 }
 
@@ -177,6 +178,7 @@ func GetMessages(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load messages"})
 	}
 
+	sanitizeMessages(messages)
 	return c.JSON(helpers.NewPaginatedResponse(messages, total, p))
 }
 
@@ -221,6 +223,7 @@ func EditMessage(c *fiber.Ctx) error {
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(msg.ChatID, mustWSMsg("message:edited", "message", json.RawMessage(msgJSON)), "")
 
+	msg.Sender = sanitizeUser(msg.Sender)
 	return c.JSON(msg)
 }
 
@@ -433,6 +436,7 @@ func SearchMessages(c *fiber.Ctx) error {
 
 	var messages []models.Message
 	q.Offset(offset).Limit(pageSize).Find(&messages)
+	sanitizeMessages(messages)
 
 	// Save search history
 	history := models.SearchHistory{

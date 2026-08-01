@@ -75,6 +75,9 @@ func GetInit(c *fiber.Ctx) error {
 			Order("updated_at DESC").
 			Limit(50).
 			Find(&chats)
+		for i := range chats {
+			sanitizeChatMembers(chats[i].Members)
+		}
 	}
 
 	// 3. User settings (already in user model, just format)

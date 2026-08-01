@@ -572,6 +572,7 @@ func handleFetchMessages(client *ws.Client, env *wsEnvelope) error {
 	if hasMore {
 		messages = messages[:payload.Limit]
 	}
+	sanitizeMessages(messages)
 
 	return &wsDataResponse{Data: map[string]interface{}{
 		"messages": messages,
@@ -594,9 +595,9 @@ func handleFetchFriends(client *ws.Client, env *wsEnvelope) error {
 	friends := make([]models.User, 0)
 	for _, f := range friendships {
 		if f.UserID == userID {
-			friends = append(friends, f.Friend)
+			friends = append(friends, sanitizeUser(f.Friend))
 		} else {
-			friends = append(friends, f.User)
+			friends = append(friends, sanitizeUser(f.User))
 		}
 	}
 
@@ -613,6 +614,10 @@ func handleFetchFriendRequests(client *ws.Client, _ *wsEnvelope) error {
 		Where("friend_id = ? AND status = 'pending'", userID).
 		Order("created_at DESC").
 		Find(&friendships)
+
+	for i := range friendships {
+		friendships[i].User = sanitizeUser(friendships[i].User)
+	}
 
 	return &wsDataResponse{Data: map[string]interface{}{"requests": friendships}}
 }
@@ -645,6 +650,9 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 			Order("updated_at DESC").
 			Limit(50).
 			Find(&chats)
+		for i := range chats {
+			sanitizeChatMembers(chats[i].Members)
+		}
 	}
 
 	// 3. Settings

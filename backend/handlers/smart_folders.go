@@ -219,6 +219,9 @@ func GetSmartFolderChats(c *fiber.Ctx) error {
 
 	var chats []models.Chat
 	query.Order("updated_at DESC").Find(&chats)
+	for i := range chats {
+		sanitizeChatMembers(chats[i].Members)
+	}
 
 	return c.JSON(fiber.Map{"items": chats, "total": len(chats)})
 }

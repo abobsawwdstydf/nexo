@@ -194,6 +194,7 @@ func CreateChat(c *fiber.Ctx) error {
 	}
 
 	db.GetDB().Preload("Members").Preload("Members.User").First(&chat, "id = ?", chat.ID)
+	sanitizeChatMembers(chat.Members)
 
 	wsHub := ws.HubInstance
 	for _, mid := range req.MemberIDs {
@@ -237,6 +238,10 @@ func GetChats(c *fiber.Ctx) error {
 	var total int64
 	db.GetDB().Model(&models.Chat{}).Where("id IN ?", memberChatIDs).Count(&total)
 
+	for i := range chats {
+		sanitizeChatMembers(chats[i].Members)
+	}
+
 	return c.JSON(fiber.Map{
 		"items":    chats,
 		"total":    total,
@@ -267,6 +272,7 @@ func GetChat(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
 	}
 
+	sanitizeChatMembers(chat.Members)
 	return c.JSON(chat)
 }
 
@@ -393,6 +399,7 @@ func GetOrCreateFavorites(c *fiber.Ctx) error {
 			First(&chat, "id = ?", favChatIDs[0]).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to load favorites chat"})
 		}
+		sanitizeChatMembers(chat.Members)
 		return c.JSON(chat)
 	}
 
@@ -426,6 +433,7 @@ func GetOrCreateFavorites(c *fiber.Ctx) error {
 			return db.Preload("User")
 		}).
 		First(&chat, "id = ?", chat.ID)
+	sanitizeChatMembers(chat.Members)
 
 	return c.Status(201).JSON(chat)
 }

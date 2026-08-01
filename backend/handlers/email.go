@@ -147,7 +147,8 @@ func ConfirmEmailCode(c *fiber.Ctx) error {
 func sendVerificationEmail(to, code string) {
 	host, port, username, password, from := getSMTPConfig()
 	if username == "" || password == "" {
-		log.Printf("[EMAIL] SMTP not configured, code for %s: %s", to, code)
+		// Код НЕ пишем в логи: это одноразовый секрет, утекающий в логи = утечка.
+		log.Printf("[EMAIL] SMTP not configured, verification email to %s skipped", to)
 		return
 	}
 

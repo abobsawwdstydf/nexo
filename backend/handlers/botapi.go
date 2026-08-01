@@ -430,6 +430,7 @@ func BotGetUpdates(c *fiber.Ctx) error {
 		Order("created_at ASC").
 		Offset(offset).Limit(limit).
 		Find(&messages)
+	sanitizeMessages(messages)
 
 	return c.JSON(messages)
 }

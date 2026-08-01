@@ -472,8 +472,10 @@ func SecurityHeaders() fiber.Handler {
 		// Referrer Policy
 		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 
-		// Permissions Policy
-		c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()")
+		// Permissions Policy: разрешаем микрофон/камеру/геолокацию для самого
+		// приложения (голосовые, видео, кружки, созвоны, геометки), всё
+		// остальное (платежи, USB, датчики) запрещено.
+		c.Set("Permissions-Policy", "camera=(self), microphone=(self), geolocation=(self), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()")
 
 		// Strict-Transport-Security (HSTS)
 		c.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")

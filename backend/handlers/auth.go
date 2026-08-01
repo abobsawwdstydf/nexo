@@ -507,7 +507,7 @@ func GetUser(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	return c.JSON(user)
+	return c.JSON(sanitizeUser(user))
 }
 
 func UpdateProfile(c *fiber.Ctx) error {
