@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"nexo/beta"
 	"nexo/db"
 	"nexo/models"
 )
@@ -47,6 +48,11 @@ func SendEmailCode(c *fiber.Ctx) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" || !strings.Contains(req.Email, "@") {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid email"})
+	}
+
+	// До старта беты отправка кодов закрыта, кроме аккаунта раннего доступа
+	if !BetaAccessAllowed(req.Email) {
+		return c.Status(403).JSON(fiber.Map{"error": "beta_not_started", "message": beta.StartMessage})
 	}
 
 	// Check if email is already registered — reject before sending code
@@ -107,6 +113,11 @@ func ConfirmEmailCode(c *fiber.Ctx) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" || req.Code == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Email and code required"})
+	}
+
+	// До старта беты подтверждение закрыто, кроме аккаунта раннего доступа
+	if !BetaAccessAllowed(req.Email) {
+		return c.Status(403).JSON(fiber.Map{"error": "beta_not_started", "message": beta.StartMessage})
 	}
 
 	var verification models.EmailVerification

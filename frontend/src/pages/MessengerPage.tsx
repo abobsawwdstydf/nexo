@@ -19,7 +19,7 @@ import { useCallContext } from '../lib/callContext';
 import { getSocket } from '../lib/socket';
 import { getNotesMessages, NOTES_CHAT_ID } from '../lib/api/noteChat';
 
-const FONT = "'JF Dot Shinonome Gothic 14', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
 function MessengerBackground() {
   return (

@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 
 interface BetaStatus {
   active: boolean;
+  started: boolean;
   ended: boolean;
   startTime: string;
   endTime: string;

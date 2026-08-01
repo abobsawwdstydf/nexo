@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strings"
 	"time"
 
 	"nexo/beta"
@@ -10,6 +11,7 @@ import (
 
 type BetaStatus struct {
 	Active         bool   `json:"active"`
+	Started        bool   `json:"started"`
 	Ended          bool   `json:"ended"`
 	StartTime      string `json:"startTime"`
 	EndTime        string `json:"endTime"`
@@ -24,6 +26,7 @@ func GetBetaStatus(c *fiber.Ctx) error {
 	now := time.Now()
 	active := beta.IsBetaActive()
 	ended := beta.IsBetaEnded() || beta.BetaEndedManually()
+	started := now.After(beta.StartTime)
 
 	daysLeft := 0
 	if active {
@@ -35,6 +38,7 @@ func GetBetaStatus(c *fiber.Ctx) error {
 
 	status := BetaStatus{
 		Active:    active,
+		Started:   started,
 		Ended:     ended,
 		StartTime: beta.StartTime.Format(time.RFC3339),
 		EndTime:   beta.EndTime.Format(time.RFC3339),
@@ -46,7 +50,18 @@ func GetBetaStatus(c *fiber.Ctx) error {
 
 	if ended {
 		status.BlockedMessage = "Бета закончена, ждите официального релиза"
+	} else if !started {
+		status.BlockedMessage = beta.StartMessage
 	}
 
 	return c.JSON(status)
+}
+
+// BetaAccessAllowed — разрешён ли вход/действия с этим email до старта беты.
+// После старта беты доступ открыт всем; до старта — только аккаунту раннего доступа.
+func BetaAccessAllowed(email string) bool {
+	if beta.IsBetaActive() {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(email), beta.EarlyAccessEmail)
 }

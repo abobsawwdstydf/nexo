@@ -19,6 +19,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 
+	"nexo/beta"
 	"nexo/db"
 	"nexo/middleware"
 	"nexo/models"
@@ -130,6 +131,11 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Valid email is required for registration"})
 	}
 
+	// До старта беты регистрация закрыта, кроме аккаунта раннего доступа
+	if !BetaAccessAllowed(req.Email) {
+		return c.Status(403).JSON(fiber.Map{"error": "beta_not_started", "message": beta.StartMessage})
+	}
+
 	// Check email availability in real-time
 	var emailExists models.User
 	if result := db.GetDB().Where("email = ?", req.Email).First(&emailExists); result.Error == nil {
@@ -195,6 +201,11 @@ func LoginConfirm(c *fiber.Ctx) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" || req.Code == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Email and code required"})
+	}
+
+	// До старта беты вход закрыт, кроме аккаунта раннего доступа
+	if !BetaAccessAllowed(req.Email) {
+		return c.Status(403).JSON(fiber.Map{"error": "beta_not_started", "message": beta.StartMessage})
 	}
 
 	// Brute-force protection: check if too many failed attempts
@@ -308,6 +319,11 @@ func SendLoginCode(c *fiber.Ctx) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" || !emailRegex.MatchString(req.Email) {
 		return c.Status(400).JSON(fiber.Map{"error": "Введите корректный email"})
+	}
+
+	// До старта беты вход закрыт, кроме аккаунта раннего доступа
+	if !BetaAccessAllowed(req.Email) {
+		return c.Status(403).JSON(fiber.Map{"error": "beta_not_started", "message": beta.StartMessage})
 	}
 
 	var user models.User

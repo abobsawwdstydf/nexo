@@ -242,9 +242,12 @@ export function ChatList({
     <>
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-            <MessageCircle size={18} className="text-white/70" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Нексо"
+            className="w-8 h-8 rounded-xl object-cover bg-white/[0.06]"
+            draggable={false}
+          />
           <div>
             <h1 className="text-sm font-semibold text-white/90 font-display tracking-wide">
               Нексо

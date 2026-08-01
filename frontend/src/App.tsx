@@ -9,6 +9,7 @@ import { ToastContainer } from './components/ToastContainer';
 import { CallProvider } from './lib/callContext';
 import { BetaBanner } from './components/BetaBanner';
 import { BetaEnded } from './components/BetaEnded';
+import { BetaNotStarted } from './components/BetaNotStarted';
 
 // Lazy load heavy pages for better initial load
 const AuthPage = lazy(() => import('./pages/AuthPage'));
@@ -27,6 +28,7 @@ export default function App() {
   const { status: beta, fetch: fetchBeta } = useBetaStore();
   const [showLegal, setShowLegal] = useState(false);
   const [legalTab, setLegalTab] = useState<'privacy' | 'terms' | 'cookies'>('privacy');
+  const [teamLogin, setTeamLogin] = useState(false);
 
   // Auth + beta check on mount
   useEffect(() => {
@@ -47,6 +49,21 @@ export default function App() {
           <div className="h-full w-full flex flex-col relative">
             <BetaEnded />
           </div>
+        </AudioClickWrapper>
+      </ErrorBoundary>
+    );
+  }
+
+  // Beta not started yet — only the early-access account can use the app
+  if (beta && !beta.active && !beta.ended && !user && !teamLogin) {
+    return (
+      <ErrorBoundary>
+        <AudioClickWrapper>
+          <BetaNotStarted
+            startTime={beta.startTime}
+            message={beta.blockedMessage}
+            onTeamLogin={() => setTeamLogin(true)}
+          />
         </AudioClickWrapper>
       </ErrorBoundary>
     );
