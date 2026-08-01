@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react';
+import { AnimatedOtpInput } from '../components/AnimatedOtpInput';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DESIGN TOKENS
@@ -231,104 +232,17 @@ const EMAIL_PROVIDERS = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
-// OTP INPUT COMPONENT
+// OTP INPUT THEME (AnimatedOtpInput)
 // ═══════════════════════════════════════════════════════════════════════════
-function OtpInput({
-  length = 6,
-  value,
-  onChange,
-  onComplete,
-  error,
-  success,
-  muted,
-}: {
-  length?: number;
-  value: string;
-  onChange: (v: string) => void;
-  onComplete: (v: string) => void;
-  error?: boolean;
-  success?: boolean;
-  muted: boolean;
-}) {
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  useEffect(() => {
-    if (value.length === length) {
-      onComplete(value);
-    }
-  }, [value, length, onComplete]);
-
-  const handleChange = (i: number, val: string) => {
-    const digit = val.replace(/\D/g, '').slice(-1);
-    const arr = value.split('');
-    arr[i] = digit;
-    const next = arr.join('').slice(0, length);
-    onChange(next);
-    playTypeClick(muted);
-    if (digit && i < length - 1) {
-      inputRefs.current[i + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (i: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !value[i] && i > 0) {
-      inputRefs.current[i - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, length);
-    onChange(pasted);
-    if (pasted.length === length) {
-      inputRefs.current[length - 1]?.focus();
-    } else {
-      inputRefs.current[Math.min(pasted.length, length - 1)]?.focus();
-    }
-  };
-
-  const borderColor = success ? D.success : error ? D.error : D.border;
-  const glowColor = success ? 'rgba(59,165,93,0.3)' : error ? 'rgba(237,66,69,0.3)' : 'none';
-
-  return (
-    <motion.div
-      style={{ display: 'flex', gap: 8, justifyContent: 'center' }}
-      animate={error ? { x: [0, -6, 6, -4, 4, 0] } : {}}
-      transition={{ duration: 0.4 }}
-    >
-      {Array.from({ length }, (_, i) => (
-        <motion.input
-          key={i}
-          ref={el => { inputRefs.current[i] = el; }}
-          type="text"
-          inputMode="numeric"
-          maxLength={1}
-          value={value[i] || ''}
-          onChange={e => handleChange(i, e.target.value)}
-          onKeyDown={e => handleKeyDown(i, e)}
-          onPaste={handlePaste}
-          onFocus={e => e.target.select()}
-          animate={success ? { borderColor: D.success, boxShadow: `0 0 20px ${glowColor}` } : error ? { borderColor: D.error, boxShadow: `0 0 20px ${glowColor}` } : { borderColor: D.border, boxShadow: 'none' }}
-          transition={{ duration: 0.3 }}
-          style={{
-            width: 48,
-            height: 56,
-            borderRadius: 12,
-            background: D.inputBg,
-            border: `2px solid ${borderColor}`,
-            color: D.textPrimary,
-            fontSize: 20,
-            fontWeight: 500,
-            fontFamily: FONT,
-            textAlign: 'center',
-            outline: 'none',
-            caretColor: D.primary,
-          }}
-        />
-      ))}
-    </motion.div>
-  );
-}
+const OTP_THEME = {
+  border: D.border,
+  borderFocused: 'rgba(255,255,255,0.5)',
+  inputBg: D.inputBg,
+  textPrimary: D.textPrimary,
+  primary: D.primary,
+  success: D.success,
+  error: D.error,
+} as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN AUTH PAGE
@@ -881,12 +795,15 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
 
             {loginCodeLabel.phase === 'done' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-                <OtpInput
+                <AnimatedOtpInput
                   value={code}
                   onChange={setCode}
                   onComplete={handleLoginConfirm}
                   error={otpError}
-                  muted={muted}
+                  theme={OTP_THEME}
+                  fontFamily={FONT}
+                  onSlotType={() => playTypeClick(muted)}
+                  onSlotErase={() => playEraseClick(muted)}
                 />
                 <motion.button
                   onClick={() => { setScreen('login-email'); setCode(''); setError(''); setOtpError(false); }}
@@ -964,12 +881,15 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
               style={{ color: D.textMuted, fontSize: 13, fontFamily: FONT, marginBottom: 32 }}
             >Код отправлен на {email}</motion.p>
 
-            <OtpInput
+            <AnimatedOtpInput
               value={code}
               onChange={setCode}
               onComplete={handleLoginConfirm}
               error={true}
-              muted={muted}
+              theme={OTP_THEME}
+              fontFamily={FONT}
+              onSlotType={() => playTypeClick(muted)}
+              onSlotErase={() => playEraseClick(muted)}
             />
             <motion.p
               initial={{ opacity: 0, y: 8 }}
@@ -1397,12 +1317,15 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
 
             {regCodeLabel.phase === 'done' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-                <OtpInput
+                <AnimatedOtpInput
                   value={code}
                   onChange={setCode}
                   onComplete={handleRegisterConfirm}
                   error={otpError}
-                  muted={muted}
+                  theme={OTP_THEME}
+                  fontFamily={FONT}
+                  onSlotType={() => playTypeClick(muted)}
+                  onSlotErase={() => playEraseClick(muted)}
                 />
                 <motion.button
                   onClick={() => { setScreen('reg-email'); setCode(''); setError(''); setOtpError(false); }}
@@ -1478,12 +1401,15 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
               style={{ color: D.textMuted, fontSize: 13, fontFamily: FONT, marginBottom: 32 }}
             >Код отправлен на {regEmail}</motion.p>
 
-            <OtpInput
+            <AnimatedOtpInput
               value={code}
               onChange={setCode}
               onComplete={handleRegisterConfirm}
               error={true}
-              muted={muted}
+              theme={OTP_THEME}
+              fontFamily={FONT}
+              onSlotType={() => playTypeClick(muted)}
+              onSlotErase={() => playEraseClick(muted)}
             />
             <motion.p
               initial={{ opacity: 0, y: 8 }}
