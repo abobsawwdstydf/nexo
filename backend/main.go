@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"html"
 
 	"golang.org/x/net/idna"
 	"github.com/joho/godotenv"
@@ -219,8 +220,28 @@ func main() {
 		return c.JSON(fiber.Map{"status": "ok", "engine": "go", "version": "2.0.0", "commit": buildCommit})
 	})
 
-	// Version info (public) — идентификатор релиза для фронта
+	// Version info (public) — идентификатор релиза для фронта.
+	// В браузере отдаёт страницу с одним лишь номером идентификатора,
+	// для API-клиентов (фронтенд) — JSON.
 	app.Get("/api/version", func(c *fiber.Ctx) error {
+		if strings.Contains(c.Get("Accept", ""), "text/html") {
+			c.Set("Content-Type", "text/html; charset=utf-8")
+			return c.SendString(fmt.Sprintf(`<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Нексо · идентификатор версии</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0f;color:#fff;font-family:system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.box{text-align:center;padding:40px;border-radius:24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px)}
+.id{font:700 52px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:#7B61FF;word-break:break-all}
+.label{margin-top:12px;font-size:12px;text-transform:uppercase;letter-spacing:.18em;color:rgba(255,255,255,.35)}
+</style>
+</head>
+<body><div class="box"><div class="id">%s</div><div class="label">%s</div></div></body>
+</html>`, html.EscapeString(buildCommit), html.EscapeString(buildVersion)))
+		}
 		return c.JSON(fiber.Map{
 			"app":       "nexo-backend",
 			"version":   buildVersion,
