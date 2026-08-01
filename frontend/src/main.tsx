@@ -18,6 +18,13 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
+  // VitePWA использует skipWaiting+clientsClaim: при активации новой версии
+  // старые ленивые чанки исчезают из кэша, и динамический импорт падает с
+  // "Failed to fetch dynamically imported module". Перезагружаем страницу,
+  // чтобы новый HTML и чанки загрузились синхронно.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
 }
 
 // Subscribe to push notifications on first visit

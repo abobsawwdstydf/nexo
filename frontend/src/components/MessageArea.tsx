@@ -113,6 +113,29 @@ function formatDuration(totalSec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/** Выбирает поддерживаемый браузером mimeType для MediaRecorder
+ *  (Firefox не умеет vp9, Safari не умеет webm). */
+function pickRecorderMime(preferred: string[]): string {
+  if (typeof MediaRecorder === 'undefined') return '';
+  for (const mime of preferred) {
+    try {
+      if (MediaRecorder.isTypeSupported(mime)) return mime;
+    } catch {
+      /* ignore */
+    }
+  }
+  return '';
+}
+
+/** Расширение файла по фактическому MIME (Firefox пишет OGG, Safari — MP4). */
+function extForMime(mime: string): string {
+  if (mime.includes('ogg')) return '.ogg';
+  if (mime.includes('mp4') || mime.includes('mpeg') || mime.includes('quicktime') || mime.includes('mov')) return '.mp4';
+  if (mime.includes('mp3')) return '.mp3';
+  if (mime.includes('wav')) return '.wav';
+  return '.webm';
+}
+
 /** Uploads a recorded voice/video blob, optionally E2E-encrypting it first. */
 async function uploadRecordedMedia(
   type: 'voice' | 'video',
@@ -126,10 +149,11 @@ async function uploadRecordedMedia(
     const encBlob = await e2eManager.encryptChatMedia(chatId, blob);
     if (encBlob) {
       uploadBlob = encBlob;
-      encMime = type === 'voice' ? 'audio/webm' : 'video/webm';
+      encMime = blob.type || (type === 'voice' ? 'audio/webm' : 'video/webm');
     }
   }
-  const file = new File([uploadBlob], `${type}_${Date.now()}.webm`, { type: type === 'voice' ? 'audio/webm' : 'video/webm' });
+  const fileMime = blob.type || (type === 'voice' ? 'audio/webm' : 'video/webm');
+  const file = new File([uploadBlob], `${type}_${Date.now()}${extForMime(fileMime)}`, { type: fileMime });
   const media = await api.uploadFile(file);
   const result: { media: unknown[]; isEncrypted?: boolean; encryptedContent?: string } = { media: [media] };
   if (encMime) {
@@ -1002,7 +1026,15 @@ function MessageInput({
           videoPreviewRef.current.srcObject = stream;
         }
 
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus' });
+        const mimeType = pickRecorderMime([
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm',
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4',
+        ]);
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        const recMime = recorder.mimeType || 'video/webm';
         chunksRef.current = [];
 
         recorder.ondataavailable = (e) => {
@@ -1014,7 +1046,7 @@ function MessageInput({
           streamRef.current = null;
           if (chunksRef.current.length === 0) return;
 
-          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          const blob = new Blob(chunksRef.current, { type: recMime });
 
           try {
             const media = await uploadRecordedMedia('video', blob, e2eReady, chatId);
@@ -1042,7 +1074,14 @@ function MessageInput({
         // Voice recording
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
-        const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        const mimeType = pickRecorderMime([
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/ogg;codecs=opus',
+          'audio/mp4',
+        ]);
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        const recMime = recorder.mimeType || 'audio/webm';
         chunksRef.current = [];
 
         recorder.ondataavailable = (e) => {
@@ -1054,7 +1093,7 @@ function MessageInput({
           streamRef.current = null;
           if (chunksRef.current.length === 0) return;
 
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const blob = new Blob(chunksRef.current, { type: recMime });
 
           try {
             const media = await uploadRecordedMedia('voice', blob, e2eReady, chatId);

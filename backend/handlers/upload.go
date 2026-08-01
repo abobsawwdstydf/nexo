@@ -155,7 +155,14 @@ func detectContentType(data []byte, filename, claimedType string) string {
 	case ".mp4":
 		return "video/mp4"
 	case ".webm":
-		return "" // A WebM upload must have a valid EBML header.
+		// WebM без EBML-заголовка = E2E-зашифрованные голосовые/кружки
+		// (шифртекст не имеет магических байтов). Принимаем их, если клиент
+		// честно заявляет webm-тип; мусор под видом webm отклоняем.
+		claimed := strings.ToLower(strings.TrimSpace(strings.Split(claimedType, ";")[0]))
+		if claimed == "audio/webm" || claimed == "video/webm" {
+			return claimed
+		}
+		return ""
 	case ".mov":
 		return "video/quicktime"
 	case ".mp3":
