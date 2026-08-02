@@ -3,6 +3,7 @@ module nexo
 go 1.26
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/Tryanks/gorm-sqlite v1.2.25
 	github.com/chromedp/chromedp v0.16.0
 	github.com/gofiber/fiber/v2 v2.52.14
@@ -39,6 +40,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.58.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	modernc.org/libc v1.74.3 // indirect

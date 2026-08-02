@@ -15,6 +15,7 @@ declare module './core' {
     fetchFriendsWS(): Promise<FriendWithId[]>;
     fetchFriendRequestsWS(): Promise<FriendRequest[]>;
     pushSubscribeWS(subscription: PushSubscriptionJSON): Promise<void>;
+    pushUnsubscribeWS(endpoint: string): Promise<void>;
   }
 }
 
@@ -84,6 +85,19 @@ export function installRealtime(api: ApiClient): void {
     await api.request('/users/push-subscription', {
       method: 'POST',
       body: JSON.stringify({ subscription }),
+    });
+  };
+
+  // ─── WS RPC: push_unsubscribe ───────────────────────────────────────────
+  api.pushUnsubscribeWS = async (endpoint: string): Promise<void> => {
+    const socket = getSocket();
+    if (socket?.connected) {
+      await wsRequest('push_unsubscribe', { endpoint });
+      return;
+    }
+    await api.request('/users/push-subscription', {
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint }),
     });
   };
 }

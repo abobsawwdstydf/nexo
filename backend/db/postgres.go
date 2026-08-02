@@ -105,6 +105,8 @@ func Init(dsn string) error {
 		&models.PublicRoom{},
 		// Screenshot Detection
 		&models.ScreenshotLog{},
+		// Web Push subscriptions
+		&models.PushSubscription{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)

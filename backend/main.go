@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"html"
 	"log"
 	"os"
 	"os/signal"
@@ -15,16 +16,15 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
-	"html"
 
-	"golang.org/x/net/idna"
-	"github.com/joho/godotenv"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
+	"github.com/joho/godotenv"
+	"golang.org/x/net/idna"
 
 	"nexo/ai"
 	"nexo/beta"
@@ -33,7 +33,6 @@ import (
 	"nexo/middleware"
 	"nexo/ws"
 )
-
 
 func generateSessionID() string {
 	b := make([]byte, 32)
@@ -96,15 +95,18 @@ func main() {
 	if err := db.InitLocal(dbPath); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	
+
 	// Initialize local KV store
 	if err := db.InitLocalKV(); err != nil {
 		log.Fatalf("Failed to initialize KV store: %v", err)
 	}
-	
+
 	if err := middleware.InitJWT(); err != nil {
 		log.Fatalf("Failed to initialize JWT: %v", err)
 	}
+
+	// Initialize Web Push (VAPID)
+	handlers.InitPush()
 
 	// Initialize beta config
 	beta.Init()
@@ -123,7 +125,7 @@ func main() {
 	go ws.HubInstance.Run()
 
 	app := fiber.New(fiber.Config{
-		AppName:      "Nexo Messenger",
+		AppName: "Nexo Messenger",
 		// Chat attachments are validated per file in handlers.UploadFile (50 MB).
 		// The transport limit must be slightly larger or voice/video uploads never
 		// reach that validation.
@@ -319,6 +321,8 @@ nexo_up 1
 	auth.Get("/users/settings", handlers.GetUserSettings)
 	auth.Put("/users/settings", handlers.UpdateUserSettings)
 	auth.Get("/users/notifications", handlers.GetUserNotifications)
+	auth.Post("/users/push-subscription", handlers.SavePushSubscriptionHandler)
+	auth.Delete("/users/push-subscription", handlers.DeletePushSubscriptionHandler)
 
 	// User by ID (MUST be after /settings, /notifications, /search, /me)
 	auth.Get("/users/:id", handlers.GetUser)

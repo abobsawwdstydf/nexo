@@ -146,6 +146,13 @@ func SendMessage(c *fiber.Ctx) error {
 
 	ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 
+	// Web Push to offline members (skip sender; NotifyUser skips online users)
+	senderName := msg.Sender.DisplayName
+	if senderName == "" {
+		senderName = msg.Sender.Username
+	}
+	NotifyNewMessagePush(chatID, userID, senderName, req.Type, req.Content)
+
 	msg.Sender = sanitizeUser(msg.Sender)
 	return c.Status(201).JSON(msg)
 }

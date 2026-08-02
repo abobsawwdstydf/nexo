@@ -1591,3 +1591,15 @@ type RefreshTokenBlacklist struct {
 	TokenHash string    `json:"tokenHash" gorm:"uniqueIndex;size:64"`
 	ExpiresAt time.Time `json:"expiresAt" gorm:"index"`
 }
+
+// PushSubscription stores a Web Push subscription endpoint for a device.
+type PushSubscription struct {
+	ID           string    `json:"id" gorm:"primaryKey"`
+	UserID       string    `json:"userId" gorm:"index"`
+	Endpoint     string    `json:"endpoint" gorm:"size:512"`
+	P256DH       string    `json:"p256dh" gorm:"size:256"`
+	Auth         string    `json:"auth" gorm:"size:256"`
+	UserAgent    string    `json:"userAgent" gorm:"size:256"`
+	CreatedAt    time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	LastUsedAt   time.Time `json:"lastUsedAt" gorm:"autoUpdateTime"`
+}

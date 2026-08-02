@@ -5,6 +5,9 @@ import { subscribeToNotifications, unsubscribeFromNotifications } from '../lib/n
 import { useInitStore } from './initStore';
 import type { User } from '../lib/types';
 
+/** Shape of the /init payload returned by getInit / fetch_init. */
+type InitPayload = Awaited<ReturnType<typeof api.getInit>>;
+
 interface AuthState {
   user: User | null;
   isLoading: boolean;
@@ -50,6 +53,18 @@ export const useAuthStore = create<AuthState>((set, get) => {
       connectSocket(result.accessToken);
     }
     set({ user: result.user, isLoading: false });
+    scheduleNotificationSubscribe();
+  }
+
+  /** Apply an init payload: persist user, seed init store, connect socket, subscribe. */
+  function finishInit(initData: InitPayload, accessToken: string | null) {
+    const { user, chats, settings, smartFolders, stories } = initData;
+    localStorage.setItem('nexo_user', JSON.stringify(user));
+    useInitStore.getState().setInit({ chats, settings, smartFolders, stories });
+    if (accessToken) {
+      connectSocket(accessToken);
+    }
+    set({ user, isLoading: false });
     scheduleNotificationSubscribe();
   }
 
@@ -126,15 +141,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         connectSocket(token);
         await waitForSocketConnected(3000);
-        type InitPayload = Awaited<ReturnType<typeof api.getInit>>;
         const initData = await wsRequest<InitPayload>('fetch_init');
-        const { user, chats, settings, smartFolders, stories } = initData;
-        if (user) {
-          localStorage.setItem('nexo_user', JSON.stringify(user));
-          useInitStore.getState().setInit({ chats, settings, smartFolders, stories });
-          set({ user, isLoading: false });
-
-          scheduleNotificationSubscribe();
+        if (initData.user) {
+          finishInit(initData, null);
           return;
         }
       } catch (wsErr) {
@@ -144,19 +153,30 @@ export const useAuthStore = create<AuthState>((set, get) => {
       // HTTP fallback
       try {
         const initData = await api.getInit();
-        const { user, chats, settings, smartFolders, stories } = initData;
-        localStorage.setItem('nexo_user', JSON.stringify(user));
-        useInitStore.getState().setInit({ chats, settings, smartFolders, stories });
-        if (token) {
-          connectSocket(token);
-        }
-        set({ user, isLoading: false });
-
-        scheduleNotificationSubscribe();
+        finishInit(initData, token);
       } catch (err) {
+        // Expired access token (or transient backend hiccup): try refreshing
+        // once before giving up. This keeps users logged in across deploys
+        // and page reloads instead of silently wiping the session.
+        console.warn('[Auth] HTTP init failed, attempting refresh:', err);
+        try {
+          const refreshed = await api.doRefresh();
+          if (refreshed) {
+            const newToken = localStorage.getItem('nexo_access_token');
+            const initData = await api.getInit();
+            finishInit(initData, newToken);
+            return;
+          }
+        } catch (refreshErr) {
+          console.warn('[Auth] Refresh also failed:', refreshErr);
+        }
+
+        // Only wipe the session when the refresh token is truly invalid.
         localStorage.removeItem('nexo_user');
         localStorage.removeItem('nexo_access_token');
         localStorage.removeItem('nexo_refresh_token');
+        api.setCsrfToken(null);
+        disconnectSocket();
         set({ user: null, isLoading: false });
       }
     },

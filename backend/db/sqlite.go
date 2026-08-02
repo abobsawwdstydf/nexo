@@ -159,6 +159,8 @@ func InitLocal(dsn string) error {
 		&models.ScreenshotLog{},
 		// Refresh Token Blacklist
 		&models.RefreshTokenBlacklist{},
+		// Web Push subscriptions
+		&models.PushSubscription{},
 		// CSRF Tokens (persistent)
 		&models.CSRFToken{},
 		// Security Audit Log (persistent)

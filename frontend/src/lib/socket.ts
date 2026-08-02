@@ -86,6 +86,16 @@ function getStoredAccessToken(): string | null {
   }
 }
 
+/** True when the JWT `exp` claim is in the past (safe to refresh). */
+function isAccessTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
 const getSocketUrl = () => {
   const apiUrl = getApiUrl();
   if (typeof window === 'undefined') return apiUrl;
@@ -296,32 +306,38 @@ function setupWebSocketHandlers() {
 }
 
 function scheduleReconnect() {
-  if (connectAttempts >= MAX_CONNECT_ATTEMPTS) {
-    setTimeout(() => {
-      connectAttempts = 0;
-      if (ws && ws.readyState === WebSocket.CLOSED) {
-        const token = getStoredAccessToken();
-        if (token) {
-          connectSocket(token);
-        }
+  // Before reconnecting, try refreshing the access token so a stale JWT
+  // doesn't send the socket into an endless reconnect loop. Only refresh
+  // when the token is actually expired to avoid hammering the rate-limited
+  // /auth/refresh endpoint on a flaky network.
+  const refreshTokenThenReconnect = (delay: number) => {
+    setTimeout(async () => {
+      if (ws && ws.readyState !== WebSocket.CLOSED) return;
+      const token = getStoredAccessToken();
+      if (token && isAccessTokenExpired(token)) {
+        try {
+          const { api } = await import('./api');
+          await api.doRefresh();
+        } catch { /* keep old token on refresh failure */ }
       }
-    }, 60000);
+      const freshToken = getStoredAccessToken();
+      if (freshToken) {
+        connectSocket(freshToken);
+      }
+    }, delay);
+  };
+
+  if (connectAttempts >= MAX_CONNECT_ATTEMPTS) {
+    connectAttempts = 0;
+    refreshTokenThenReconnect(60000);
     return;
   }
-  
+
   const delay = Math.min(1000 * Math.pow(2, connectAttempts), 30000);
   connectAttempts++;
   isReconnecting = true;
   emitStatus('reconnecting');
-  
-  setTimeout(() => {
-    if (ws && ws.readyState === WebSocket.CLOSED) {
-      const token = getStoredAccessToken();
-      if (token) {
-        connectSocket(token);
-      }
-    }
-  }, delay);
+  refreshTokenThenReconnect(delay);
 }
 
 export function getSocket(): SocketInterface | null {

@@ -162,6 +162,8 @@ export class ApiClient {
           if (refreshOk) {
             return this.request<T>(endpoint, options);
           }
+
+          this.onAuthFailed?.();
         }
       }
       

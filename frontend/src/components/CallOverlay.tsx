@@ -28,12 +28,15 @@ interface CallOverlayProps {
   type: 'voice' | 'video';
   target?: UserBasic | null;
   chatId?: string;
+  incoming?: boolean;
+  initialOffer?: RTCSessionDescriptionInit | null;
   onClose: () => void;
+  onIncomingRejected?: () => void;
 }
 
 type CallState = 'connecting' | 'ringing' | 'connected' | 'ended' | 'failed';
 
-export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlayProps) {
+export function CallOverlay({ open, type, target, chatId, incoming, initialOffer, onClose, onIncomingRejected }: CallOverlayProps) {
   const [callState, setCallState] = useState<CallState>('connecting');
   const [duration, setDuration] = useState(0);
   const [micOn, setMicOn] = useState(true);
@@ -161,63 +164,6 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     return pc;
   }, [target, chatId]);
 
-  const startCall = useCallback(async () => {
-    const stream = await initLocalStream();
-    if (!stream) return;
-
-    const pc = createPeerConnection(stream);
-    setCallState('ringing');
-
-    try {
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: videoOn,
-      });
-      await pc.setLocalDescription(offer);
-
-      await wsRequest('call:offer', {
-        offer: pc.localDescription,
-        targetUserId: target?.id,
-        chatId,
-        callType: type,
-      });
-
-      const socket = getSocket();
-      if (socket) {
-        const onAnswer = async (data: any) => {
-          if (data.answer && peerRef.current) {
-            await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
-          }
-        };
-
-        const onIceCandidate = async (data: any) => {
-          if (data.candidate && peerRef.current) {
-            try {
-              await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } catch {}
-          }
-        };
-
-        const onEnded = () => {
-          cleanupCall();
-          setCallState('ended');
-        };
-
-        socket.on('call:answer', onAnswer);
-        socket.on('call:ice-candidate', onIceCandidate);
-        socket.on('call:ended', onEnded);
-        callListenersRef.current = [
-          { event: 'call:answer', handler: onAnswer },
-          { event: 'call:ice-candidate', handler: onIceCandidate },
-          { event: 'call:ended', handler: onEnded },
-        ];
-      }
-    } catch (err) {
-      console.error('[Call] Failed to create offer:', err);
-      setCallState('failed');
-    }
-  }, [initLocalStream, createPeerConnection, target, chatId, type, videoOn]);
-
   const cleanupCall = useCallback(() => {
     if (peerRef.current) {
       peerRef.current.close();
@@ -250,6 +196,116 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
     }
   }, [target, chatId]);
 
+  const attachCallListeners = useCallback((onAnswer: (data: any) => void, onIceCandidate: (data: any) => void, onEnded: () => void) => {
+    const socket = getSocket();
+    if (!socket) return;
+    callListenersRef.current = [
+      { event: 'call:answer', handler: onAnswer },
+      { event: 'call:ice-candidate', handler: onIceCandidate },
+      { event: 'call:ended', handler: onEnded },
+    ];
+    socket.on('call:answer', onAnswer);
+    socket.on('call:ice-candidate', onIceCandidate);
+    socket.on('call:ended', onEnded);
+  }, []);
+
+  const startCall = useCallback(async () => {
+    const stream = await initLocalStream();
+    if (!stream) return;
+
+    const pc = createPeerConnection(stream);
+    setCallState('ringing');
+
+    try {
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: videoOn,
+      });
+      await pc.setLocalDescription(offer);
+
+      await wsRequest('call:offer', {
+        offer: pc.localDescription,
+        targetUserId: target?.id,
+        chatId,
+        callType: type,
+      });
+
+      attachCallListeners(
+        async (data: any) => {
+          if (data.answer && peerRef.current) {
+            await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+          }
+        },
+        async (data: any) => {
+          if (data.candidate && peerRef.current) {
+            try {
+              await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } catch {}
+          }
+        },
+        () => {
+          cleanupCall();
+          setCallState('ended');
+        }
+      );
+    } catch (err) {
+      console.error('[Call] Failed to create offer:', err);
+      setCallState('failed');
+    }
+  }, [initLocalStream, createPeerConnection, target, chatId, type, videoOn, attachCallListeners, cleanupCall]);
+
+  const acceptIncomingCall = useCallback(async () => {
+    if (!initialOffer) {
+      setCallState('failed');
+      return;
+    }
+    const stream = await initLocalStream();
+    if (!stream) return;
+
+    const pc = createPeerConnection(stream);
+    setCallState('ringing');
+
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(initialOffer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      await wsRequest('call:answer', {
+        answer: pc.localDescription,
+        targetUserId: target?.id,
+        chatId,
+      });
+
+      attachCallListeners(
+        async () => {},
+        async (data: any) => {
+          if (data.candidate && peerRef.current) {
+            try {
+              await peerRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } catch {}
+          }
+        },
+        () => {
+          cleanupCall();
+          setCallState('ended');
+        }
+      );
+    } catch (err) {
+      console.error('[Call] Failed to answer incoming call:', err);
+      setCallState('failed');
+    }
+  }, [initialOffer, initLocalStream, createPeerConnection, target, chatId, attachCallListeners, cleanupCall]);
+
+  const rejectIncomingCall = useCallback(() => {
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('call:end', { targetUserId: target?.id, chatId });
+    }
+    cleanupCall();
+    onIncomingRejected?.();
+    onClose();
+  }, [target, chatId, cleanupCall, onIncomingRejected, onClose]);
+
   const endCall = useCallback(() => {
     cleanupCall();
     onClose();
@@ -268,12 +324,16 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
 
   useEffect(() => {
     if (open) {
-      startCall();
+      if (incoming) {
+        setCallState('ringing');
+      } else {
+        startCall();
+      }
     }
     return () => {
       cleanupCall();
     };
-  }, [open]);
+  }, [open, incoming, startCall, cleanupCall]);
 
   const toggleMic = useCallback(() => {
     if (localStreamRef.current) {
@@ -386,7 +446,7 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const getStateText = () => {
     switch (callState) {
       case 'connecting': return 'Подключение...';
-      case 'ringing': return 'Звонок...';
+      case 'ringing': return incoming ? 'Входящий звонок...' : 'Звонок...';
       case 'connected': return formatDuration(duration);
       case 'ended': return 'Разговор завершён';
       case 'failed': return 'Не удалось подключиться';
@@ -561,6 +621,25 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
                             className="w-2 h-2 rounded-full bg-green-400/60"
                           />
                         ))}
+                      </div>
+                    )}
+
+                    {incoming && callState === 'ringing' && (
+                      <div className="flex items-center justify-center gap-4 mt-6">
+                        <button
+                          onClick={rejectIncomingCall}
+                          className="flex items-center gap-2 px-5 py-3 rounded-full bg-red-500 hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
+                        >
+                          <PhoneOff size={18} className="text-white" />
+                          <span className="text-sm font-medium text-white">Отклонить</span>
+                        </button>
+                        <button
+                          onClick={acceptIncomingCall}
+                          className="flex items-center gap-2 px-5 py-3 rounded-full bg-green-500 hover:bg-green-600 transition-all shadow-lg shadow-green-500/30"
+                        >
+                          <Phone size={18} className="text-white" />
+                          <span className="text-sm font-medium text-white">Принять</span>
+                        </button>
                       </div>
                     )}
 

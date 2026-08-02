@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
 
@@ -371,11 +372,11 @@ func handleChatMembers(client *ws.Client, env *wsEnvelope) error {
 	db.GetDB().Preload("User").Where("chat_id = ?", payload.ChatID).Find(&members)
 
 	type memberInfo struct {
-		UserID      string `json:"userId"`
-		Username    string `json:"username"`
-		DisplayName string `json:"displayName"`
-		Avatar      string `json:"avatar"`
-		Role        string `json:"role"`
+		UserID            string `json:"userId"`
+		Username          string `json:"username"`
+		DisplayName       string `json:"displayName"`
+		Avatar            string `json:"avatar"`
+		Role              string `json:"role"`
 		IsVerified        bool   `json:"isVerified"`
 		VerifiedBadgeUrl  string `json:"verifiedBadgeUrl"`
 		VerifiedBadgeType string `json:"verifiedBadgeType"`
@@ -526,6 +527,13 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(payload.ChatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
+
+	// Web Push to offline members
+	senderName := msg.Sender.DisplayName
+	if senderName == "" {
+		senderName = msg.Sender.Username
+	}
+	NotifyNewMessagePush(payload.ChatID, userID, senderName, payload.Type, payload.Content)
 
 	return &wsDataResponse{Data: map[string]interface{}{"messageId": msg.ID, "createdAt": msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00")}}
 }
@@ -741,6 +749,94 @@ func handleFetchNotifications(client *ws.Client, _ *wsEnvelope) error {
 	}}
 }
 
+// --- WS RPC: call signaling -------------------------------------------------
+// WebRTC signaling relay: call:offer / call:answer / call:ice-candidate /
+// call:end are forwarded to the target user (and a push notification is sent
+// for incoming calls so offline devices can ring too).
+
+func handleCallRelay(client *ws.Client, env *wsEnvelope) error {
+	var payload struct {
+		TargetUserID string          `json:"targetUserId"`
+		ChatID       string          `json:"chatId"`
+		CallType     string          `json:"callType"`
+		Offer        json.RawMessage `json:"offer"`
+		Answer       json.RawMessage `json:"answer"`
+		Candidate    json.RawMessage `json:"candidate"`
+	}
+	if env.Payload != nil {
+		if err := json.Unmarshal(env.Payload, &payload); err != nil {
+			return err
+		}
+	}
+	if payload.TargetUserID == "" {
+		return errWSMissingField("targetUserId")
+	}
+	if payload.TargetUserID == client.UserID {
+		return errWSInvalidField("targetUserId")
+	}
+
+	from := clientUserInfo(client.UserID)
+	out := map[string]interface{}{
+		"type":       env.Type,
+		"fromUserId": client.UserID,
+		"from":       from,
+		"chatId":     payload.ChatID,
+		"callType":   payload.CallType,
+	}
+	switch env.Type {
+	case "call:offer":
+		out["offer"] = payload.Offer
+	case "call:answer":
+		out["answer"] = payload.Answer
+	case "call:ice-candidate":
+		out["candidate"] = payload.Candidate
+	}
+
+	outBytes, err := json.Marshal(out)
+	if err != nil {
+		return errWSServerError
+	}
+	ws.HubInstance.SendToUser(payload.TargetUserID, outBytes)
+
+	// Push notification for incoming calls so offline devices ring too.
+	if env.Type == "call:offer" {
+		callType := payload.CallType
+		if callType == "" {
+			callType = "voice"
+		}
+		callerName, _ := from["displayName"].(string)
+		if callerName == "" {
+			callerName, _ = from["username"].(string)
+		}
+		if callerName == "" {
+			callerName = "Пользователь"
+		}
+		title := fmt.Sprintf("Входящий %s звонок", map[string]string{"voice": "голосовой", "video": "видео"}[callType])
+		NotifyUser(payload.TargetUserID, title, fmt.Sprintf("%s звонит вам...", callerName), map[string]interface{}{
+			"type":       "call",
+			"callerId":   client.UserID,
+			"callerName": callerName,
+			"chatId":     payload.ChatID,
+			"callType":   callType,
+		}, []int{300, 200, 300, 200, 300, 200, 300})
+	}
+
+	return nil
+}
+
+func clientUserInfo(userID string) map[string]interface{} {
+	var u models.User
+	if err := db.GetDB().First(&u, "id = ?", userID).Error; err != nil {
+		return map[string]interface{}{"id": userID}
+	}
+	return map[string]interface{}{
+		"id":          u.ID,
+		"username":    u.Username,
+		"displayName": u.DisplayName,
+		"avatar":      u.Avatar,
+	}
+}
+
 // --- WS RPC: push_subscribe -------------------------------------------------
 func handlePushSubscribe(client *ws.Client, env *wsEnvelope) error {
 	var payload struct {
@@ -755,11 +851,41 @@ func handlePushSubscribe(client *ws.Client, env *wsEnvelope) error {
 		return errWSMissingField("subscription")
 	}
 
-	sub := string(payload.Subscription)
-	if len([]rune(sub)) > 500 {
-		sub = string([]rune(sub)[:500])
+	var sub webpush.Subscription
+	if err := json.Unmarshal(payload.Subscription, &sub); err != nil {
+		return errWSInvalidField("subscription")
 	}
-	log.Printf("[Push] Subscription from user=%s: %s", client.UserID, sub)
+	if sub.Endpoint == "" || sub.Keys.P256dh == "" || sub.Keys.Auth == "" {
+		return errWSInvalidField("subscription")
+	}
+
+	userAgent := client.Conn.Headers("User-Agent")
+	if err := SavePushSubscription(client.UserID, sub, userAgent); err != nil {
+		log.Printf("[Push] save error user=%s: %v", client.UserID, err)
+		return errWSServerError
+	}
+	log.Printf("[Push] Subscription saved user=%s endpoint=%s", client.UserID, sub.Endpoint)
+	return nil
+}
+
+// handlePushUnsubscribe removes a device push subscription.
+func handlePushUnsubscribe(client *ws.Client, env *wsEnvelope) error {
+	var payload struct {
+		Endpoint string `json:"endpoint"`
+	}
+	if env.Payload != nil {
+		if err := json.Unmarshal(env.Payload, &payload); err != nil {
+			return err
+		}
+	}
+	if payload.Endpoint == "" {
+		return errWSMissingField("endpoint")
+	}
+	if err := DeletePushSubscription(client.UserID, payload.Endpoint); err != nil {
+		log.Printf("[Push] unsubscribe error user=%s: %v", client.UserID, err)
+		return errWSServerError
+	}
+	log.Printf("[Push] Subscription removed user=%s", client.UserID)
 	return nil
 }
 
@@ -845,6 +971,10 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 		wsHandle(client, &env, handleFetchInit)
 	case "push_subscribe", "push-subscribe":
 		wsHandle(client, &env, handlePushSubscribe)
+	case "push_unsubscribe", "push-unsubscribe":
+		wsHandle(client, &env, handlePushUnsubscribe)
+	case "call:offer", "call:answer", "call:ice-candidate", "call:end", "call:ended":
+		wsHandle(client, &env, handleCallRelay)
 	default:
 		if env.ID != "" {
 			wsResponse(client, env.ID, &wsError{Code: "unknown_type", Message: "Unknown message type: " + env.Type})

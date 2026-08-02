@@ -1,10 +1,9 @@
 // Web Push notifications manager
-import { getApiUrl } from '../config';
 import { logger } from './logger';
 import type { PushSubscriptionJSON } from './api/realtime';
 
 // VAPID public key (can be overridden from server config)
-const VAPID_PUBLIC_KEY = 'BPVXBg4HHqwRgo2rX4fnScnnL1bD0AgeSyAiufQluXGctTM0WsSD8VqJx5DUsUsev4uP1pCH42qRGFg8PsrbDd0';
+const VAPID_PUBLIC_KEY = 'BJ1KtETxqOeTH_9VsXDSRJVyXZExqbWJn_WupTc1a6mm9CdQdtXNzzknTTz4SE4dU78Und4ZTwTXKoWIT02cMrk';
 
 /**
  * Register notification service worker
@@ -175,20 +174,24 @@ export async function unsubscribeFromNotifications(): Promise<boolean> {
   try {
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
-    
+
     if (subscription) {
+      const endpoint = subscription.endpoint;
       await subscription.unsubscribe();
-      
-      // Remove from server
-      await fetch(`${getApiUrl()}/api/users/push-subscription`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      
+
+      // Remove from server (WS first, REST fallback — the server removes
+      // stale subscriptions on 404/410 anyway).
+      try {
+        const { api } = await import('./api');
+        await api.pushUnsubscribeWS(endpoint);
+      } catch (err) {
+        console.error('[Push] Failed to remove subscription from server:', err);
+      }
+
       logger.log('[Push] Unsubscribed from push notifications');
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('[Push] Unsubscribe failed:', error);
