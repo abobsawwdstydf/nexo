@@ -28,13 +28,9 @@ export function saveNotesMessage(msg: Message) {
   } else {
     notes.push(msg);
   }
-  localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
-  notifyNotesChanged();
-}
-
-export function deleteNotesMessage(messageId: string) {
-  const notes = getNotesMessages().filter(m => m.id !== messageId);
-  localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  try {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  } catch {}
   notifyNotesChanged();
 }
 

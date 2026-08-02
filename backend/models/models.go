@@ -514,14 +514,6 @@ type UpdateProfileRequest struct {
 	NameGradient string `json:"nameGradient"`
 }
 
-type PaginatedResponse[T any] struct {
-	Items    []T   `json:"items"`
-	Total    int64 `json:"total"`
-	Page     int   `json:"page"`
-	PageSize int   `json:"pageSize"`
-	HasMore  bool  `json:"hasMore"`
-}
-
 type EmailVerification struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
 	Email     string    `json:"email" gorm:"index;size:256"`

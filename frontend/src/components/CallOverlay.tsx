@@ -396,20 +396,24 @@ export function CallOverlay({ open, type, target, chatId, onClose }: CallOverlay
   const callId = chatId || `p2p_${target?.id || Date.now()}`;
 
   const copyCallId = () => {
-    navigator.clipboard.writeText(callId).then(() => {
-      setCopySuccess(true);
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-      copyTimerRef.current = setTimeout(() => setCopySuccess(false), 2000);
-    });
+    navigator.clipboard.writeText(callId)
+      .then(() => {
+        setCopySuccess(true);
+        if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = setTimeout(() => setCopySuccess(false), 2000);
+      })
+      .catch(() => {});
   };
 
   const copyE2EFingerprint = () => {
     if (e2eFingerprint) {
-      navigator.clipboard.writeText(e2eFingerprint).then(() => {
-        setE2eCopySuccess(true);
-        if (e2eCopyTimerRef.current) clearTimeout(e2eCopyTimerRef.current);
-        e2eCopyTimerRef.current = setTimeout(() => setE2eCopySuccess(false), 2000);
-      });
+      navigator.clipboard.writeText(e2eFingerprint)
+        .then(() => {
+          setE2eCopySuccess(true);
+          if (e2eCopyTimerRef.current) clearTimeout(e2eCopyTimerRef.current);
+          e2eCopyTimerRef.current = setTimeout(() => setE2eCopySuccess(false), 2000);
+        })
+        .catch(() => {});
     }
   };
 

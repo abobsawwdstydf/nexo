@@ -4,10 +4,10 @@ import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
 import { api } from '../lib/api';
 import type { Chat, Message } from '../lib/types';
+import { enrichChat } from '../lib/enrichChat';
 import { ChatList } from '../components/ChatList';
 import { MessageArea } from '../components/MessageArea';
 import FriendsPanel from '../components/FriendsPanel';
-import CreateChannelModal from '../components/CreateChannelModal';
 import NewChatModal from '../components/NewChatModal';
 import UserProfileModal from '../components/UserProfileModal';
 import SettingsModal from '../components/SettingsModal';
@@ -66,8 +66,7 @@ export default function MessengerPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string>('general');
   const [showFriends, setShowFriends] = useState(false);
-  const [showNewChat, setShowNewChat] = useState(false);
-  const [showNewChannel, setShowNewChannel] = useState(false);
+  const [createTab, setCreateTab] = useState<null | 'personal' | 'group' | 'channel'>(null);
   const [showAccountManager, setShowAccountManager] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
@@ -161,20 +160,21 @@ export default function MessengerPage() {
   }, []);
 
   const handleOpenFriends = useCallback(() => setShowFriends(true), []);
-  const handleOpenNewChat = useCallback(() => setShowNewChat(true), []);
-  const handleOpenNewChannel = useCallback(() => setShowNewChannel(true), []);
+  const handleOpenNewChat = useCallback(() => setCreateTab('personal'), []);
+  const handleOpenNewChannel = useCallback(() => setCreateTab('channel'), []);
   const handleOpenAccountManager = useCallback(() => setShowAccountManager(true), []);
-  const handleChatCreated = useCallback((chatId: string) => {
-    setSelectedChatId(chatId);
-    setMobileView('chat');
+  const handleChatCreated = useCallback((chat: Chat | null) => {
+    if (chat && user) {
+      useInitStore.getState().addChat(enrichChat(chat, user));
+      setSelectedChatId(chat.id);
+      setMobileView('chat');
+    }
     // Refresh init — re-fetch from /init
     useAuthStore.getState().checkAuth();
-  }, []);
-  const handleChannelCreated = useCallback(() => {
-    useAuthStore.getState().checkAuth();
-  }, []);
+  }, [user]);
 
   const handleFriendsChat = useCallback((userId: string) => {
+    if (!user) return;
     setShowFriends(false);
     // Try to find existing personal chat
     const existing = chats.find(c => c.type === 'personal' && c.otherMember?.id === userId);
@@ -184,12 +184,12 @@ export default function MessengerPage() {
     } else {
       // Create new chat
       api.createPersonalChat(userId).then(chat => {
-        useInitStore.getState().addChat(chat);
+        useInitStore.getState().addChat(enrichChat(chat, user));
         setSelectedChatId(chat.id);
         setMobileView('chat');
       }).catch(console.error);
     }
-  }, [chats]);
+  }, [chats, user]);
 
   // ─── Filter chats by search ──────────────────────────────────────────
   const allChats = [savedMessagesChat, ...chats];
@@ -327,19 +327,11 @@ export default function MessengerPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showNewChat && (
+        {createTab && (
           <NewChatModal
-            onClose={() => setShowNewChat(false)}
+            initialTab={createTab}
+            onClose={() => setCreateTab(null)}
             onChatCreated={handleChatCreated}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showNewChannel && (
-          <CreateChannelModal
-            onClose={() => setShowNewChannel(false)}
-            onCreated={handleChannelCreated}
           />
         )}
       </AnimatePresence>

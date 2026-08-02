@@ -13,7 +13,8 @@ import (
 	"nexo/models"
 )
 
-const badgeStorageDir = "./uploads/badges"
+// Kept in sync with the /uploads static mount in main.go ("../uploads").
+const badgeStorageDir = "../uploads/badges"
 
 func init() {
 	if err := os.MkdirAll(badgeStorageDir, 0755); err != nil {

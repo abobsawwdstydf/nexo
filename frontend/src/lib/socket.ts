@@ -73,7 +73,17 @@ function saveReconnectState(state: ReconnectState) {
 }
 
 function clearReconnectState() {
-  localStorage.removeItem(RECONNECT_KEY);
+  try {
+    localStorage.removeItem(RECONNECT_KEY);
+  } catch {}
+}
+
+function getStoredAccessToken(): string | null {
+  try {
+    return localStorage.getItem('nexo_access_token');
+  } catch {
+    return null;
+  }
 }
 
 const getSocketUrl = () => {
@@ -290,7 +300,7 @@ function scheduleReconnect() {
     setTimeout(() => {
       connectAttempts = 0;
       if (ws && ws.readyState === WebSocket.CLOSED) {
-        const token = localStorage.getItem('nexo_access_token');
+        const token = getStoredAccessToken();
         if (token) {
           connectSocket(token);
         }
@@ -306,7 +316,7 @@ function scheduleReconnect() {
   
   setTimeout(() => {
     if (ws && ws.readyState === WebSocket.CLOSED) {
-      const token = localStorage.getItem('nexo_access_token');
+      const token = getStoredAccessToken();
       if (token) {
         connectSocket(token);
       }

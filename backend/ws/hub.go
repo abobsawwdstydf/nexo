@@ -259,15 +259,3 @@ func (h *Hub) totalConnectionsLocked() int {
 	}
 	return count
 }
-
-// GetMetrics returns a snapshot of hub connection statistics.
-func (h *Hub) GetMetrics() HubMetrics {
-	h.Metrics.mu.RLock()
-	defer h.Metrics.mu.RUnlock()
-	return HubMetrics{
-		TotalConnections:   h.Metrics.TotalConnections,
-		CurrentConnections: h.Metrics.CurrentConnections,
-		TotalMessages:      h.Metrics.TotalMessages,
-		TotalBroadcasts:    h.Metrics.TotalBroadcasts,
-	}
-}

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { UserAvatar, OnlineDot } from './UserAvatar';
-import type { FriendWithId, FriendRequest } from '../lib/types';
+import type { FriendWithId, FriendRequest, UserPresence } from '../lib/types';
 
 type Tab = 'online' | 'all' | 'pending' | 'blocked';
 
@@ -30,7 +30,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
   const [loading, setLoading] = useState(true);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [addQuery, setAddQuery] = useState('');
-  const [addResults, setAddResults] = useState<any[]>([]);
+  const [addResults, setAddResults] = useState<UserPresence[]>([]);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState('');
 

@@ -51,14 +51,3 @@ export const setServerUrl = (url: string): void => {
     window.location.reload();
   }
 };
-
-export const getServerUrl = (): string => {
-  return getApiUrl();
-};
-
-export const APP_CONFIG = {
-  name: 'Нексо Мессенджер',
-  version: '1.0.0',
-  maxFileSize: 25 * 1024 * 1024 * 1024,
-  maxFilesPerMessage: 10,
-};

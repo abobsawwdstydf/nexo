@@ -5,12 +5,15 @@ import './index.css';
 import { loadBaseUrlConfig } from './config';
 import { scheduleAssetPrewarm } from './lib/assetPreloader';
 import { subscribeToNotifications } from './lib/notifications';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Load base URL from base-url.json (for mobile/desktop apps)
 loadBaseUrlConfig();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <App />
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
 );
 
 // Register service worker for offline support

@@ -13,6 +13,15 @@ export interface UserBasic {
   tagStyle?: string | null;
 }
 
+// A GIF result returned by the GIF search/trending endpoints.
+export interface GifItem {
+  id: string;
+  url: string;
+  originalUrl?: string;
+  thumbnailUrl?: string;
+  previewUrl?: string;
+}
+
 export interface UserPresence extends UserBasic {
   isOnline: boolean;
   lastSeen: string;

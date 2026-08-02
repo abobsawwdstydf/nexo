@@ -18,7 +18,6 @@ interface InitState extends InitData {
   loaded: boolean;
   setInit: (data: InitData) => void;
   addChat: (chat: Chat) => void;
-  reset: () => void;
 }
 
 const defaults: InitData = {
@@ -50,9 +49,5 @@ export const useInitStore = create<InitState>((set, get) => ({
 
   addChat: (chat) => {
     set({ chats: [chat, ...get().chats] });
-  },
-
-  reset: () => {
-    set({ ...defaults, loaded: false });
   },
 }));

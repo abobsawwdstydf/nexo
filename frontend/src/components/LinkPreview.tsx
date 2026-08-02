@@ -238,10 +238,6 @@ export function extractUrls(text: string): string[] {
   return matches || [];
 }
 
-export function hasUrl(text: string): boolean {
-  return URL_REGEX.test(text);
-}
-
 const STICKER_REGEX = /\[sticker:([^\]]+?):([^\]]+?)\]/g;
 
 export function renderTextWithLinks(text: string, isOwn: boolean): React.ReactNode[] {

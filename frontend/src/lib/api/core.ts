@@ -75,7 +75,9 @@ export class ApiClient {
       const data = await refreshResponse.json();
 
       if (data.accessToken) {
-        localStorage.setItem('nexo_access_token', data.accessToken);
+        try {
+          localStorage.setItem('nexo_access_token', data.accessToken);
+        } catch { /* localStorage not available */ }
       }
       if (data.refreshToken) {
         this.setStoredRefreshToken(data.refreshToken);

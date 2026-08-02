@@ -5,13 +5,11 @@ import {
   encryptMessage, decryptMessage,
   encryptMedia, decryptMedia,
   getKeyFingerprint,
-  saveSession, getSessionInfo, removeSession,
-  signData, getActiveSessionKey, setActiveSessionKey, clearActiveSessionKey,
-  hasActiveSession,
+  saveSession,
+  signData, getActiveSessionKey, setActiveSessionKey,
   saveSignedPreKey, loadSignedPreKey,
   type E2EKeyPair, type EncryptedPayload,
 } from './e2e';
-import { getSocket } from './socket';
 
 interface E2EInitOptions {
   userId: string;
@@ -133,37 +131,6 @@ export class E2ESessionManager {
     }
   }
 
-  async verifyExistingSession(chatId: string, userId: string, otherUserId: string): Promise<boolean> {
-    try {
-      const existingInfo = getSessionInfo(chatId);
-      if (!existingInfo) return false;
-
-      const activeKey = getActiveSessionKey(chatId);
-      if (activeKey) return true;
-
-      const resp = await api.getE2ESession(chatId);
-      if (!resp.isActive) return false;
-
-      const myKeyPair = loadIdentityKeyPair(userId);
-      if (!myKeyPair) return false;
-
-      const otherResp = await api.fetchKeyBundle(otherUserId);
-      if (!otherResp.bundles || otherResp.bundles.length === 0) return false;
-
-      const sharedSecret = await computeSharedSecret(myKeyPair.privateKey, otherResp.bundles[0].identityKey);
-      const { key } = await deriveSessionKeyStatic(sharedSecret);
-      setActiveSessionKey(chatId, key);
-
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  async getSessionKey(chatId: string): Promise<CryptoKey | undefined> {
-    return getActiveSessionKey(chatId);
-  }
-
   async encryptChatMessage(chatId: string, content: string): Promise<{ encryptedContent: string; iv: string } | null> {
     const key = getActiveSessionKey(chatId);
     if (!key) return null;
@@ -195,11 +162,6 @@ export class E2ESessionManager {
     } catch {
       return null;
     }
-  }
-
-  closeSession(chatId: string): void {
-    clearActiveSessionKey(chatId);
-    removeSession(chatId);
   }
 }
 

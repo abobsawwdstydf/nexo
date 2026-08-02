@@ -60,12 +60,16 @@ function generateDeviceId(): string {
 }
 
 export function getDeviceId(): string {
-  let id = localStorage.getItem(E2E_DEVICE_ID_KEY);
-  if (!id) {
-    id = generateDeviceId();
-    localStorage.setItem(E2E_DEVICE_ID_KEY, id);
+  try {
+    let id = localStorage.getItem(E2E_DEVICE_ID_KEY);
+    if (!id) {
+      id = generateDeviceId();
+      localStorage.setItem(E2E_DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return generateDeviceId();
   }
-  return id;
 }
 
 export async function generateKeyPair(): Promise<E2EKeyPair> {
@@ -112,25 +116,6 @@ export async function computeSharedSecret(
     { name: 'ECDH', public: publicKey },
     privateKey,
     256
-  );
-}
-
-export async function deriveSessionKey(sharedSecret: ArrayBuffer): Promise<CryptoKey> {
-  const salt = new Uint8Array(crypto.getRandomValues(new Uint8Array(16)));
-  const info = new TextEncoder().encode('nexo-e2e-v1');
-  const baseKey = await crypto.subtle.importKey(
-    'raw',
-    sharedSecret,
-    'HKDF',
-    false,
-    ['deriveKey']
-  );
-  return crypto.subtle.deriveKey(
-    { name: 'HKDF', hash: 'SHA-256', salt, info },
-    baseKey,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
   );
 }
 
@@ -217,7 +202,9 @@ export async function getKeyFingerprint(publicKeySpki: string): Promise<string> 
 }
 
 export function saveIdentityKeyPair(userId: string, keyPair: E2EKeyPair): void {
-  localStorage.setItem(E2E_KEY_PREFIX + userId, JSON.stringify(keyPair));
+  try {
+    localStorage.setItem(E2E_KEY_PREFIX + userId, JSON.stringify(keyPair));
+  } catch {}
 }
 
 export function loadIdentityKeyPair(userId: string): E2EKeyPair | null {
@@ -239,21 +226,28 @@ export function loadSignedPreKey(userId: string): SignedPreKey | null {
 }
 
 export function saveSession(chatId: string, session: E2ESession): void {
-  const exportable: any = { chatId: session.chatId, createdAt: session.createdAt, keyFingerprint: session.keyFingerprint };
-  localStorage.setItem(E2E_SESSION_PREFIX + chatId, JSON.stringify(exportable));
+  const exportable = {
+    chatId: session.chatId,
+    createdAt: session.createdAt,
+    keyFingerprint: session.keyFingerprint,
+  };
+  try {
+    localStorage.setItem(E2E_SESSION_PREFIX + chatId, JSON.stringify(exportable));
+  } catch {}
 }
 
 export function getSessionInfo(chatId: string): { createdAt: number; keyFingerprint: string } | null {
-  const raw = localStorage.getItem(E2E_SESSION_PREFIX + chatId);
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(E2E_SESSION_PREFIX + chatId);
+  } catch {
+    return null;
+  }
   if (!raw) return null;
   try {
     const data = JSON.parse(raw);
     return { createdAt: data.createdAt, keyFingerprint: data.keyFingerprint };
   } catch { return null; }
-}
-
-export function removeSession(chatId: string): void {
-  localStorage.removeItem(E2E_SESSION_PREFIX + chatId);
 }
 
 export async function signData(privateKeyJwk: JsonWebKey, data: string): Promise<string> {
@@ -302,10 +296,6 @@ export function setActiveSessionKey(chatId: string, key: CryptoKey): void {
 
 export function getActiveSessionKey(chatId: string): CryptoKey | undefined {
   return activeSessions.get(chatId);
-}
-
-export function clearActiveSessionKey(chatId: string): void {
-  activeSessions.delete(chatId);
 }
 
 export function hasActiveSession(chatId: string): boolean {

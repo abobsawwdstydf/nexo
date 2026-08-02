@@ -181,8 +181,8 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
           return prev - 1;
         });
       }, 1000);
-    } catch (err: any) {
-      toast.error(err.message || 'Ошибка отправки кода');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Ошибка отправки кода');
     } finally {
       setLoading(false);
     }
@@ -223,8 +223,8 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
         setCode('');
         setCodeSent(false);
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Ошибка входа');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Ошибка входа');
     } finally {
       setLoading(false);
     }
@@ -246,7 +246,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
         lastSeen: new Date().toISOString(),
         bio: null,
         createdAt: new Date().toISOString(),
-      } as any);
+      });
       
       // Update last used
       setAccounts(prev => {
@@ -259,7 +259,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
       
       toast.success(`Переключено на ${account.displayName}`);
       onClose();
-    } catch (err: any) {
+    } catch {
       toast.error('Ошибка переключения');
     } finally {
       setLoading(false);

@@ -14,7 +14,8 @@ import (
 	"nexo/models"
 )
 
-const cloudStorageDir = "./uploads/cloud"
+// Kept in sync with the /uploads static mount in main.go ("../uploads").
+const cloudStorageDir = "../uploads/cloud"
 
 func init() {
 	if err := os.MkdirAll(cloudStorageDir, 0755); err != nil {

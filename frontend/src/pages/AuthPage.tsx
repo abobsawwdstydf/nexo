@@ -162,6 +162,10 @@ function useTypingAnimation(
   opts: { typingSpeed?: number; eraseSpeed?: number; pauseAfter?: number; startDelay?: number; enabled?: boolean; muted?: boolean; noErase?: boolean; onType?: () => void; onErase?: () => void } = {}
 ) {
   const { typingSpeed = 50, eraseSpeed = 25, pauseAfter = 1500, startDelay = 150, enabled = true, muted = false, noErase = false, onType, onErase } = opts;
+  // Keep the latest options in a ref so the long-running animation loop never
+  // reads stale closures for callback options that are recreated each render.
+  const optsRef = useRef({ typingSpeed, eraseSpeed, pauseAfter, enabled, noErase, onType, onErase });
+  optsRef.current = { typingSpeed, eraseSpeed, pauseAfter, enabled, noErase, onType, onErase };
   const [display, setDisplay] = useState('');
   const [phase, setPhase] = useState<TypingPhase>('idle');
   const idxRef = useRef(0);
@@ -181,32 +185,35 @@ function useTypingAnimation(
     setPhase('typing');
 
     const type = () => {
+      const { typingSpeed: ts, onType: ot } = optsRef.current;
       if (idxRef.current < text.length) {
         idxRef.current++;
         setDisplay(text.slice(0, idxRef.current));
-        onType?.();
-        const t = window.setTimeout(type, typingSpeed);
+        ot?.();
+        const t = window.setTimeout(type, ts);
         timersRef.current.push(t);
       } else {
-        if (noErase) {
+        const { noErase: ne, pauseAfter: pa } = optsRef.current;
+        if (ne) {
           setPhase('done');
         } else {
           setPhase('pausing');
           const t = window.setTimeout(() => {
             setPhase('erasing');
             erase();
-          }, pauseAfter);
+          }, pa);
           timersRef.current.push(t);
         }
       }
     };
 
     const erase = () => {
+      const { eraseSpeed: es, onErase: oe } = optsRef.current;
       if (idxRef.current > 0) {
         idxRef.current--;
         setDisplay(text.slice(0, idxRef.current));
-        onErase?.();
-        const t = window.setTimeout(erase, eraseSpeed);
+        oe?.();
+        const t = window.setTimeout(erase, es);
         timersRef.current.push(t);
       } else {
         setPhase('done');

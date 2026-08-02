@@ -28,6 +28,8 @@ import {
   Pause,
   Trash,
   ExternalLink,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import {
   Menu,
@@ -40,9 +42,9 @@ import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
 import { toast } from '../lib/toast';
-import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage, deleteNotesMessage } from '../lib/api/noteChat';
+import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/noteChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
-import type { Chat, Message, Reaction } from '../lib/types';
+import type { Chat, Message, Reaction, GifItem } from '../lib/types';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
 import { LinkPreview, extractUrls, renderTextWithLinks } from './LinkPreview';
@@ -858,6 +860,9 @@ function MessageInput({
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showPremium, setShowPremium] = useState(false);
+  const [locationPreview, setLocationPreview] = useState<
+    { lat: number; lng: number; status: 'locating' | 'ready' | 'error' } | null
+  >(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1017,25 +1022,39 @@ function MessageInput({
     e.target.value = '';
   };
 
-  const shareLocation = async () => {
+  const locate = async (): Promise<{ latitude: number; longitude: number } | null> => {
     if (!navigator.geolocation) {
       toast.error('Геолокация не поддерживается');
-      return;
+      return null;
     }
     try {
       const pos = await new Promise<GeolocationPosition>((res, rej) =>
         navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 })
       );
-      const { latitude, longitude } = pos.coords;
-      const link = `https://maps.google.com/maps?q=${latitude},${longitude}`;
-      onSend(`📍 Местоположение: ${link}`);
+      return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
     } catch (err) {
+      console.error('[Geo] Failed to locate:', err);
       toast.error('Не удалось определить местоположение');
+      return null;
     }
   };
 
+  const shareLocation = async () => {
+    const coords = await locate();
+    if (!coords) return;
+    setLocationPreview({ lat: coords.latitude, lng: coords.longitude, status: 'ready' });
+  };
+
+  const sendLocation = () => {
+    if (!locationPreview || locationPreview.status !== 'ready') return;
+    const { lat, lng } = locationPreview;
+    const link = `https://maps.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+    onSend(`📍 Местоположение: ${link}`);
+    setLocationPreview(null);
+  };
+
   // GIF state and handlers
-  const [gifs, setGifs] = useState<any[]>([]);
+  const [gifs, setGifs] = useState<GifItem[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
   const [gifQuery, setGifQuery] = useState('');
   const [stickerQuery, setStickerQuery] = useState('');
@@ -1078,7 +1097,7 @@ function MessageInput({
     }
   }, [showEmojiPanel, emojiTab, gifs.length, gifQuery, loadTrendingGifs]);
 
-  const handleGifSelect = async (gif: any) => {
+  const handleGifSelect = async (gif: GifItem) => {
     try {
       const gifUrl = gif.url || gif.originalUrl;
       if (!gifUrl) return;
@@ -1767,6 +1786,102 @@ function MessageInput({
       <AnimatePresence>
         {showPremium && (
           <PremiumPurchaseModal onClose={() => setShowPremium(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Location preview modal */}
+      <AnimatePresence>
+        {locationPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) setLocationPreview(null); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md rounded-2xl liquid-glass-strong overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+                <div>
+                  <h3 className="text-sm font-semibold text-white/90 font-display">Геопозиция</h3>
+                  <p className="text-[11px] text-white/30">
+                    {locationPreview.status === 'locating'
+                      ? 'Определяем местоположение...'
+                      : 'Проверьте точку и отправьте'}
+                  </p>
+                </div>
+                <motion.button
+                  onClick={() => setLocationPreview(null)}
+                  className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <X size={16} className="text-white/40" />
+                </motion.button>
+              </div>
+
+              <div className="p-4">
+                <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-black/40">
+                  {locationPreview.status === 'ready' ? (
+                    <iframe
+                      title="Карта"
+                      className="absolute inset-0 w-full h-full border-0 grayscale-[0.3]"
+                      src={`https://maps.google.com/maps?q=${locationPreview.lat},${locationPreview.lng}&z=15&output=embed`}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                      <Loader2 size={22} className="text-white/40 animate-spin" />
+                      <span className="text-xs text-white/40">Определение координат...</span>
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-black/60 backdrop-blur text-[10px] text-white/70 font-mono">
+                    {locationPreview.status === 'ready'
+                      ? `${locationPreview.lat.toFixed(5)}, ${locationPreview.lng.toFixed(5)}`
+                      : '—'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 px-4 pb-4">
+                <motion.button
+                  onClick={shareLocation}
+                  disabled={locationPreview.status === 'locating'}
+                  className="px-4 py-2 text-xs text-white/50 hover:text-white/70 transition-colors disabled:opacity-30"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw size={12} />
+                    Обновить
+                  </span>
+                </motion.button>
+                <motion.button
+                  onClick={() => setLocationPreview(null)}
+                  className="px-4 py-2 text-xs text-white/50 hover:text-white/70 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Отмена
+                </motion.button>
+                <motion.button
+                  onClick={sendLocation}
+                  disabled={locationPreview.status !== 'ready'}
+                  className="px-5 py-2 text-xs font-medium bg-red-500/80 hover:bg-red-500 text-white rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  whileHover={locationPreview.status === 'ready' ? { scale: 1.03 } : {}}
+                  whileTap={locationPreview.status === 'ready' ? { scale: 0.97 } : {}}
+                >
+                  Отправить
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
