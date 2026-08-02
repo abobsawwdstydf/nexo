@@ -35,12 +35,14 @@
 - Бэкенд работает из `/opt/nexo/nexo` (systemd-сервис `nexo.service`, WorkingDirectory `/opt/nexo`, env из `/opt/nexo/.env`)
 - Авто-деплой: `/opt/nexo/auto-deploy.sh` опрашивает GitHub каждые 60с, `/opt/nexo/deploy.sh` делает `git reset --hard origin/main`
 - **НЕ пересобирает код**: deploy.sh просто копирует готовый кросс-компилированный бинарник `backend/nexo-linux` (он в .gitignore, в репо не лежит). Если его нет — бэкенд НЕ обновится
+- **Как задеплоить бэкенд (автоматически):** `powershell -ExecutionPolicy Bypass -File backend/deploy-backend.ps1` (или `./backend/deploy-backend.ps1`) — сам: получает SHA/time из git, кросс-компилирует `nexo-linux`, scp на сервер, chmod +x, `.new`+`mv`, рестарт `nexo.service`, проверяет `/api/version`
 - **Как задеплоить бэкенд вручную:**
   1. `cd backend; $env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"` (SQLite — modernc pure-Go, CGO не нужен)
   2. `go build -ldflags "-X main.buildVersion=<sha> -X main.buildCommit=<sha> -X main.buildTime=<iso>" -o nexo-linux .`
   3. `scp backend/nexo-linux dh-s-1@192.168.0.64:/opt/nexo-repo/backend/nexo-linux`
-  4. `ssh dh-s-1 "cp /opt/nexo-repo/backend/nexo-linux /opt/nexo/nexo.new && mv -f /opt/nexo/nexo.new /opt/nexo/nexo && echo '0611 .com' | sudo -S systemctl restart nexo.service"`
+  4. `ssh dh-s-1 "chmod +x /opt/nexo/nexo /opt/nexo-repo/backend/nexo-linux && cp /opt/nexo-repo/backend/nexo-linux /opt/nexo/nexo.new && mv -f /opt/nexo/nexo.new /opt/nexo/nexo && echo '0611 .com' | sudo -S systemctl restart nexo.service"`
   - ⚠️ `cp` напрямую в `/opt/nexo/nexo` падает с "Text file busy" — только через `.new` + `mv`
+  - ⚠️ после scp ОБЯЗАТЕЛЬНО `chmod +x` на обоих файлах, иначе `systemctl` даст `status=203/EXEC`
 - Версия бэкенда: `GET /api/version` (JSON для API, HTML-страница с идентификатором для браузера)
 
 ### Домены фронтенда
