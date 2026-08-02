@@ -2306,6 +2306,10 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
           prev.map(m => (m.id === optimisticId ? savedMsg : m))
         );
       } else if (chat.id === AI_CHAT_ID) {
+        if (!finalText || hasMedia) {
+          setMessages(prev => prev.filter(m => m.id !== optimisticId));
+          return;
+        }
         // Нексо AI: save user message, then request a reply
         const userMsg = { ...optimisticMsg, _isSending: false };
         saveAIMessage(userMsg);
