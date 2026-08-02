@@ -1,5 +1,22 @@
 import { ApiClient } from './core';
 
+export interface E2EKeyBundleData {
+  identityKey: string;
+  signedPreKey: string;
+  signedKeySig: string;
+  oneTimePreKeys: string[];
+  deviceId: string;
+}
+
+export interface E2EKeyBundleResponse {
+  identityKey: string;
+  signedPreKey: string;
+  signedKeySig: string;
+  oneTimePreKeys: string[];
+  deviceId: string;
+  userId: string;
+}
+
 declare module './core' {
   interface ApiClient {
     // Premium
@@ -7,8 +24,8 @@ declare module './core' {
     createPayment(data: { type: 'premium' | 'premium_gift'; premiumMonths: number; giftToUserId?: string }): Promise<{ paymentId: string; confirmationUrl: string; amount: number }>;
     getPremiumPrices(): Promise<{ prices: Record<number, number>; currency: string }>;
     // E2E
-    uploadKeyBundle(data: { identityKey: string; signedPreKey: string; signedKeySig: string; oneTimePreKeys: string[]; deviceId: string }): Promise<any>;
-    fetchKeyBundle(userId: string): Promise<{ bundles: Array<{ identityKey: string; signedPreKey: string; signedKeySig: string; oneTimePreKeys: string[]; deviceId: string; userId: string }> }>;
+    uploadKeyBundle(data: E2EKeyBundleData): Promise<{ ok: boolean }>;
+    fetchKeyBundle(userId: string): Promise<{ bundles: E2EKeyBundleResponse[] }>;
     consumeOneTimePreKey(userId: string): Promise<{ oneTimePreKey: string }>;
     initE2ESession(data: { chatId: string; encryptedKey: string }): Promise<{ ok: boolean; sessionId: string; existed: boolean }>;
     getE2ESession(chatId: string): Promise<{ sessionId: string; chatId: string; isActive: boolean; createdAt: string }>;

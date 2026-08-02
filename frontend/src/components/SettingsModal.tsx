@@ -33,6 +33,7 @@ import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotific
 import { api } from '../lib/api';
 import { toast } from '../lib/toast';
 import { BUILD_COMMIT, BUILD_TIME, getBackendVersion, type BackendVersion } from '../lib/version';
+import { useSoundsEnabled } from '../lib/soundSettings';
 
 type SettingsTab = 'general' | 'notifications' | 'appearance' | 'privacy' | 'profile' | 'premium';
 
@@ -52,12 +53,13 @@ const tabs: { id: SettingsTab; label: string; icon: typeof Bell }[] = [
 ];
 
 function GeneralSettings() {
+  const [soundsOn, setSoundsOn] = useSoundsEnabled();
   return (
     <div className="space-y-1">
       <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Общие</h3>
       <SettingRow icon={Globe} label="Язык" value="Русский" />
       <SettingRow icon={Smartphone} label="Аппаратное ускорение" value="Вкл" toggle />
-      <SettingRow icon={Volume2} label="Звуки в приложении" value="Вкл" toggle />
+      <SettingRow icon={Volume2} label="Звуки в приложении" value={soundsOn ? 'Вкл' : 'Выкл'} toggle checked={soundsOn} onChange={setSoundsOn} />
       <SettingRow icon={Vibrate} label="Вибрация" value="Вкл" toggle />
 
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
@@ -576,6 +578,8 @@ function SettingRow({
   toggle,
   radio,
   selected,
+  checked,
+  onChange,
 }: {
   icon: typeof Bell;
   label: string;
@@ -583,14 +587,22 @@ function SettingRow({
   toggle?: boolean;
   radio?: boolean;
   selected?: boolean;
+  checked?: boolean;
+  onChange?: (v: boolean) => void;
 }) {
-  const [checked, setChecked] = useState(toggle ? value === 'Вкл' : false);
+  const [internal, setInternal] = useState(toggle ? value === 'Вкл' : false);
+  const isChecked = onChange ? !!checked : internal;
 
   return (
     <motion.div
       className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.03] hover:border-white/[0.06] border border-transparent transition-all duration-200 cursor-pointer"
       whileTap={{ scale: 0.99 }}
-      onClick={() => toggle && setChecked(v => !v)}
+      onClick={() => {
+        if (!toggle) return;
+        const next = !isChecked;
+        if (onChange) onChange(next);
+        else setInternal(next);
+      }}
     >
       <div className="flex items-center gap-3">
         <Icon size={15} className="text-white/25" />
@@ -600,11 +612,11 @@ function SettingRow({
         {toggle && (
           <div
             className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${
-              checked ? 'bg-white/30' : 'bg-white/[0.08]'
+              isChecked ? 'bg-white/30' : 'bg-white/[0.08]'
             }`}
           >
             <motion.div
-              animate={{ x: checked ? 18 : 2 }}
+              animate={{ x: isChecked ? 18 : 2 }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
               className="w-4 h-4 rounded-full bg-white/80 absolute top-0.5"
             />

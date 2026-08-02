@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
@@ -17,7 +17,7 @@ import { Confetti } from '../components/Confetti';
 import { CallOverlay } from '../components/CallOverlay';
 import { useCallContext } from '../lib/callContext';
 import { getSocket } from '../lib/socket';
-import { getNotesMessages, NOTES_CHAT_ID } from '../lib/api/noteChat';
+import { getNotesMessages, NOTES_CHAT_ID, NOTES_CHANGED_EVENT } from '../lib/api/noteChat';
 
 const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
@@ -72,9 +72,17 @@ export default function MessengerPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
 
-  // Saved Messages virtual chat
-  const savedMessagesChat: Chat = {
-    id: '_saved_messages_',
+  // Saved Messages virtual chat — memoized so it is not recreated (and notes are
+  // not re-read from localStorage) on every render. Refreshes on notes changes.
+  const [notesVersion, setNotesVersion] = useState(0);
+  useEffect(() => {
+    const handler = () => setNotesVersion(v => v + 1);
+    window.addEventListener(NOTES_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(NOTES_CHANGED_EVENT, handler);
+  }, []);
+
+  const savedMessagesChat = useMemo<Chat>(() => ({
+    id: NOTES_CHAT_ID,
     type: 'personal',
     name: 'Избранное',
     username: null,
@@ -84,7 +92,7 @@ export default function MessengerPage() {
     members: [],
     messages: getNotesMessages(),
     unreadCount: 0,
-  };
+  }), [notesVersion]);
 
   // ─── Chats from initStore (no extra HTTP call) ──────────────────────
   useEffect(() => {

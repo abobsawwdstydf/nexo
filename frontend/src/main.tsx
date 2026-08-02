@@ -22,9 +22,15 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   // старые ленивые чанки исчезают из кэша, и динамический импорт падает с
   // "Failed to fetch dynamically imported module". Перезагружаем страницу,
   // чтобы новый HTML и чанки загрузились синхронно.
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    window.location.reload();
-  });
+  // Guard: перезагружаем не чаще одного раза за сессию, чтобы сбой активации
+  // новой версии SW не превратился в бесконечный цикл перезагрузок.
+  const SW_RELOAD_KEY = 'nexo_sw_reloaded';
+  if (!sessionStorage.getItem(SW_RELOAD_KEY)) {
+    sessionStorage.setItem(SW_RELOAD_KEY, '1');
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
+  }
 }
 
 // Subscribe to push notifications on first visit

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -176,9 +176,19 @@ function shouldShowDateSeparator(messages: Message[], index: number): boolean {
 
 function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: boolean; decryptedUrl?: string }) {
   const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Stable decorative waveform seeded from the URL so bars don't jump on re-render.
+  const bars = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < url.length; i++) h = (h * 31 + url.charCodeAt(i)) >>> 0;
+    return Array.from({ length: 32 }, () => {
+      h = (h * 1664525 + 1013904223) >>> 0;
+      return 0.25 + (h / 4294967296) * 0.75;
+    });
+  }, [url]);
 
   // Stop playback and release the audio element when the player unmounts.
   useEffect(() => {
@@ -194,19 +204,15 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
 
   const togglePlay = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio(decryptedUrl || normalizeMediaUrl(url));
-      audioRef.current.addEventListener('loadedmetadata', () => {
-        setDuration(audioRef.current?.duration || 0);
-      });
-      audioRef.current.addEventListener('timeupdate', () => {
-        if (audioRef.current) {
-          setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-        }
-      });
-      audioRef.current.addEventListener('ended', () => {
+      const audio = new Audio(decryptedUrl || normalizeMediaUrl(url));
+      audio.preload = 'metadata';
+      audio.addEventListener('loadedmetadata', () => setDuration(audio.duration || 0));
+      audio.addEventListener('timeupdate', () => setCurrentTime(audio.currentTime || 0));
+      audio.addEventListener('ended', () => {
         setPlaying(false);
-        setProgress(0);
+        setCurrentTime(0);
       });
+      audioRef.current = audio;
     }
     if (playing) {
       audioRef.current.pause();
@@ -216,26 +222,62 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
     setPlaying(!playing);
   };
 
+  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audioRef.current.currentTime = ratio * duration;
+    setCurrentTime(ratio * duration);
+  };
+
+  const progress = duration ? currentTime / duration : 0;
+
   return (
-    <div className="flex items-center gap-2 min-w-[200px]">
+    <div className="flex items-center gap-2.5 w-full min-w-[200px] max-w-[240px]">
       <button
         onClick={togglePlay}
-        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+        className={`relative w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
           isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/15'
         }`}
       >
         {playing ? <Pause size={14} className="text-white" /> : <Play size={14} className="text-white ml-0.5" />}
+        {duration > 0 && (
+          <svg viewBox="0 0 36 36" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+            <circle cx="18" cy="18" r="16.5" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5" />
+            <circle
+              cx="18" cy="18" r="16.5" fill="none"
+              stroke="rgba(255,255,255,0.85)" strokeWidth="2.5" strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 16.5}`}
+              strokeDashoffset={`${2 * Math.PI * 16.5 * (1 - progress)}`}
+              style={{ transition: 'stroke-dashoffset 0.1s linear' }}
+            />
+          </svg>
+        )}
       </button>
       <div className="flex-1 min-w-0">
-        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-100 ${isOwn ? 'bg-white/60' : 'bg-blue-400/60'}`}
-            style={{ width: `${progress}%` }}
-          />
+        <div
+          className="flex items-end gap-[2px] h-7 cursor-pointer select-none touch-none"
+          onClick={seek}
+          title="Перемотать"
+        >
+          {bars.map((v, i) => {
+            const active = i / bars.length <= progress;
+            return (
+              <div
+                key={i}
+                style={{ height: `${Math.round(8 + v * 18)}px` }}
+                className={`w-[3px] rounded-full transition-colors duration-150 ${
+                  active
+                    ? isOwn ? 'bg-white/85' : 'bg-blue-400/90'
+                    : 'bg-white/20'
+                }`}
+              />
+            );
+          })}
         </div>
-        <div className="flex justify-between mt-0.5">
-          <span className="text-[9px] text-white/40">{formatDuration(duration * (progress / 100))}</span>
-          <span className="text-[9px] text-white/40">{formatDuration(duration)}</span>
+        <div className="flex justify-between mt-1">
+          <span className="text-[9px] tabular-nums text-white/45">{formatDuration(currentTime)}</span>
+          <span className="text-[9px] tabular-nums text-white/45">{formatDuration(duration)}</span>
         </div>
       </div>
     </div>
@@ -244,7 +286,19 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
 
 function VideoNotePlayer({ url, thumbnail, decryptedUrl }: { url: string; thumbnail?: string | null; decryptedUrl?: string }) {
   const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.removeAttribute('src');
+        videoRef.current.load();
+      }
+    };
+  }, []);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -256,27 +310,50 @@ function VideoNotePlayer({ url, thumbnail, decryptedUrl }: { url: string; thumbn
     setPlaying(!playing);
   };
 
+  const R = 66;
+  const C = 2 * Math.PI * R;
+
   return (
-    <div className="relative w-[140px] h-[140px] rounded-full overflow-hidden bg-black/40">
-      {decryptedUrl ? (
-        <video
-          ref={videoRef}
-          src={decryptedUrl}
-          className="w-full h-full object-cover"
-          loop
-          playsInline
-          onEnded={() => setPlaying(false)}
+    <div className="relative w-[150px] h-[150px]">
+      <svg viewBox="0 0 150 150" className="absolute inset-0 w-full h-full -rotate-90">
+        <circle cx="75" cy="75" r={R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+        <circle
+          cx="75" cy="75" r={R} fill="none"
+          stroke="rgba(255,255,255,0.9)" strokeWidth="4" strokeLinecap="round"
+          strokeDasharray={C}
+          strokeDashoffset={C * (1 - progress)}
+          style={{ transition: 'stroke-dashoffset 0.1s linear' }}
         />
-      ) : thumbnail ? (
-        <img src={normalizeMediaUrl(thumbnail)} alt="" className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-white/5">
-          <Video size={24} className="text-white/30" />
-        </div>
-      )}
+      </svg>
+      <div className="absolute inset-[5px] rounded-full overflow-hidden bg-black/40">
+        {decryptedUrl ? (
+          <video
+            ref={videoRef}
+            src={decryptedUrl}
+            className="w-full h-full object-cover"
+            loop
+            playsInline
+            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+            onTimeUpdate={(e) => {
+              const d = e.currentTarget.duration;
+              if (d) setProgress(e.currentTarget.currentTime / d);
+            }}
+            onEnded={() => {
+              setPlaying(false);
+              setProgress(0);
+            }}
+          />
+        ) : thumbnail ? (
+          <img src={normalizeMediaUrl(thumbnail)} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-white/5">
+            <Video size={24} className="text-white/30" />
+          </div>
+        )}
+      </div>
       <button
         onClick={togglePlay}
-        className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
+        className="absolute inset-[5px] rounded-full flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
       >
         {playing ? (
           <Pause size={20} className="text-white" />
@@ -286,6 +363,11 @@ function VideoNotePlayer({ url, thumbnail, decryptedUrl }: { url: string; thumbn
           </div>
         )}
       </button>
+      {duration > 0 && !playing && (
+        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[9px] tabular-nums bg-black/60 text-white/85 rounded-full px-2 py-0.5 backdrop-blur-sm">
+          {formatDuration(duration)}
+        </span>
+      )}
     </div>
   );
 }
@@ -776,7 +858,7 @@ function MessageInput({
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showPremium, setShowPremium] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -785,6 +867,10 @@ function MessageInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileAllInputRef = useRef<HTMLInputElement>(null);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const eqRafRef = useRef<number | null>(null);
+  const eqBarRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Draft: restore saved text
   useEffect(() => {
@@ -843,6 +929,17 @@ function MessageInput({
         streamRef.current.getTracks().forEach(t => t.stop());
         streamRef.current = null;
       }
+      if (eqRafRef.current) {
+        cancelAnimationFrame(eqRafRef.current);
+        eqRafRef.current = null;
+      }
+      try {
+        if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+          audioCtxRef.current.close();
+        }
+      } catch {}
+      audioCtxRef.current = null;
+      analyserRef.current = null;
     };
   }, []);
 
@@ -850,6 +947,14 @@ function MessageInput({
     const t = setTimeout(() => inputRef.current?.focus(), 100);
     return () => clearTimeout(t);
   }, [replyTo]);
+
+  // Auto-grow the composer textarea up to a max height.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
+  }, [text]);
 
   const handleSubmit = (media?: any[]) => {
     const trimmed = text.trim();
@@ -933,6 +1038,7 @@ function MessageInput({
   const [gifs, setGifs] = useState<any[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
   const [gifQuery, setGifQuery] = useState('');
+  const [stickerQuery, setStickerQuery] = useState('');
   const [emojiCategory, setEmojiCategory] = useState(0);
   const gifSearchRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -1010,8 +1116,68 @@ function MessageInput({
     }
   };
 
+  // ─── Live microphone analyser for the recording equalizer ─────────────
+  const startMicAnalyser = (stream: MediaStream) => {
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AC();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.75;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      startEqAnimation();
+    } catch {}
+  };
+
+  const startEqAnimation = () => {
+    if (eqRafRef.current) cancelAnimationFrame(eqRafRef.current);
+    const data = new Uint8Array(128 / 2);
+    const tick = () => {
+      const analyser = analyserRef.current;
+      if (!analyser) {
+        eqRafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      analyser.getByteFrequencyData(data);
+      const count = eqBarRefs.current.length;
+      for (let i = 0; i < count; i++) {
+        const bar = eqBarRefs.current[i];
+        if (!bar) continue;
+        const idx = Math.min(data.length - 1, Math.floor((i + 0.5) * data.length / count));
+        const v = data[idx] / 255;
+        const h = Math.max(6, Math.round(v * 44));
+        bar.style.height = `${h}px`;
+      }
+      eqRafRef.current = requestAnimationFrame(tick);
+    };
+    eqRafRef.current = requestAnimationFrame(tick);
+  };
+
+  const stopEqAnimation = () => {
+    if (eqRafRef.current) {
+      cancelAnimationFrame(eqRafRef.current);
+      eqRafRef.current = null;
+    }
+    analyserRef.current = null;
+    eqBarRefs.current.forEach(bar => {
+      if (bar) bar.style.height = '';
+    });
+    try {
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close();
+      }
+    } catch {}
+    audioCtxRef.current = null;
+  };
+
   const startRecording = async (type: 'voice' | 'video') => {
     try {
+      if (isRecording) return;
       setRecordingError('');
       setRecordingType(type);
 
@@ -1021,6 +1187,7 @@ function MessageInput({
           audio: true
         });
         streamRef.current = stream;
+        startMicAnalyser(stream);
 
         if (videoPreviewRef.current) {
           videoPreviewRef.current.srcObject = stream;
@@ -1074,6 +1241,7 @@ function MessageInput({
         // Voice recording
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
+        startMicAnalyser(stream);
         const mimeType = pickRecorderMime([
           'audio/webm;codecs=opus',
           'audio/webm',
@@ -1127,6 +1295,7 @@ function MessageInput({
       clearInterval(recordTimerRef.current);
       recordTimerRef.current = null;
     }
+    stopEqAnimation();
   };
 
   const cancelRecording = () => {
@@ -1140,18 +1309,12 @@ function MessageInput({
       clearInterval(recordTimerRef.current);
       recordTimerRef.current = null;
     }
+    stopEqAnimation();
   };
 
   const toggleRecType = () => {
+    if (isRecording) return;
     setRecordingType(prev => prev === 'voice' ? 'video' : 'voice');
-  };
-
-  const handleRecordHold = () => {
-    startRecording(recordingType);
-  };
-
-  const handleRecordRelease = () => {
-    stopRecording();
   };
 
   return (
@@ -1239,33 +1402,46 @@ function MessageInput({
             <div className="flex items-center gap-3">
               <motion.button
                 onClick={cancelRecording}
-                className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 transition-colors"
+                className="p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 transition-colors flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                title="Удалить запись"
               >
-                <Trash size={16} className="text-red-400" />
+                <Trash size={17} className="text-red-400" />
               </motion.button>
 
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-                className="w-3 h-3 rounded-full bg-red-400 flex-shrink-0"
-              />
-
-              <div className="flex flex-col items-center">
-                <span className="text-sm text-white/70 font-mono min-w-[40px]">
-                  {formatDuration(recordingDuration)}
+              <div className="flex-1 min-w-0 flex flex-col items-center">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse flex-shrink-0" />
+                  <div className="flex items-end gap-[3px] h-11" aria-hidden>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                      <div
+                        key={i}
+                        ref={el => { eqBarRefs.current[i] = el; }}
+                        className="w-[3px] rounded-full bg-blue-400/80 transition-[height] duration-75 ease-out"
+                        style={{ height: '8px' }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-white/80 font-mono min-w-[40px] tabular-nums">
+                    {formatDuration(recordingDuration)}
+                  </span>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] text-white/40 mt-1">
+                  {recordingType === 'video' ? <Camera size={10} /> : <Mic size={10} />}
+                  {recordingType === 'video' ? 'Видеокружок' : 'Голосовое'}
                 </span>
                 {recordingError && (
-                  <span className="text-[10px] text-red-400 mt-0.5">{recordingError}</span>
+                  <span className="text-[10px] text-red-400 mt-1">{recordingError}</span>
                 )}
               </div>
 
               <motion.button
                 onClick={stopRecording}
-                className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors"
+                className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                title="Отправить"
               >
                 <Send size={18} className="text-white" />
               </motion.button>
@@ -1292,14 +1468,15 @@ function MessageInput({
 
             {/* Text Input */}
             <div className="flex-1 relative">
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
+                rows={1}
                 value={text}
                 onChange={e => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Сообщение..."
-                className="w-full h-10 px-4 pr-10 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
+                className="w-full max-h-[132px] py-2.5 px-4 pr-10 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06] resize-none leading-[1.35]"
+                style={{ height: '40px', overflowY: 'auto' }}
               />
             </div>
 
@@ -1366,25 +1543,39 @@ function MessageInput({
                 <Send size={16} className="text-white" />
               </motion.button>
             ) : (
-              <motion.button
-                onClick={toggleRecType}
-                onMouseDown={handleRecordHold}
-                onMouseUp={handleRecordRelease}
-                onMouseLeave={() => { if (isRecording) stopRecording(); }}
-                onTouchStart={handleRecordHold}
-                onTouchEnd={handleRecordRelease}
-                className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/10 transition-colors flex-shrink-0 relative"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title={recordingType === 'voice' ? 'Голосовое (нажмите для переключения)' : 'Видеокружок (нажмите для переключения)'}
-              >
-                {recordingType === 'voice' ? (
-                  <Mic size={16} className="text-white/40" />
-                ) : (
-                  <Camera size={16} className="text-white/40" />
-                )}
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-white/20" />
-              </motion.button>
+              <>
+                {/* Mode toggle: voice ↔ video circle */}
+                <motion.button
+                  onClick={toggleRecType}
+                  className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors flex-shrink-0"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title={recordingType === 'voice'
+                    ? 'Переключить на видеокружок'
+                    : 'Переключить на голосовое'}
+                >
+                  {recordingType === 'voice'
+                    ? <Camera size={16} className="text-white/35" />
+                    : <Mic size={16} className="text-white/35" />}
+                </motion.button>
+
+                {/* Record button — click starts recording (current mode) */}
+                <motion.button
+                  onClick={() => startRecording(recordingType)}
+                  className={`p-2.5 rounded-xl transition-colors flex-shrink-0 ${
+                    recordingType === 'video'
+                      ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300'
+                      : 'bg-white/[0.06] hover:bg-white/10 text-white/50'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title={recordingType === 'voice' ? 'Записать голосовое' : 'Записать видеокружок'}
+                >
+                  {recordingType === 'voice'
+                    ? <Mic size={16} />
+                    : <Camera size={16} />}
+                </motion.button>
+              </>
             )}
           </div>
         </div>
@@ -1453,36 +1644,77 @@ function MessageInput({
               )}
 
               {emojiTab === 'stickers' && (
-                <div className="space-y-3">
+                <div>
+                  <div className="relative mb-2">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={stickerQuery}
+                      onChange={e => setStickerQuery(e.target.value)}
+                      placeholder={`Поиск стикеров (${stickerPacks.length} наборов)...`}
+                      className="w-full h-8 pl-9 pr-8 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none"
+                    />
+                    {stickerQuery && (
+                      <button
+                        onClick={() => setStickerQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-white/[0.08] transition-colors"
+                      >
+                        <X size={12} className="text-white/40" />
+                      </button>
+                    )}
+                  </div>
                   {stickerPacks.length === 0 && (
                     <p className="text-xs text-white/30 text-center py-4">Загрузка стикеров...</p>
                   )}
-                  {stickerPacks.map((pack) => (
-                    <div key={pack.name}>
-                      <p className="text-[10px] text-white/30 mb-1.5 flex items-center gap-1">
-                        <span>{pack.icon}</span> {pack.name}
-                      </p>
-                      <div className="grid grid-cols-4 gap-1">
-                        {pack.stickers.map((sticker) => (
-                          <button
-                            key={sticker.filename}
-                            onClick={() => {
-                              setText(prev => prev + `[sticker:${pack.name}:${sticker.filename}]`);
-                              inputRef.current?.focus();
-                            }}
-                            className="aspect-square rounded-lg hover:bg-white/[0.08] transition-colors overflow-hidden"
-                          >
-                            <img
-                              src={sticker.fileUrl}
-                              alt={sticker.filename}
-                              className="w-full h-full object-contain p-0.5"
-                              loading="lazy"
-                            />
-                          </button>
+                  {(() => {
+                    const q = stickerQuery.trim().toLowerCase();
+                    const packs = q
+                      ? stickerPacks
+                          .map(pack => ({
+                            ...pack,
+                            stickers: pack.stickers.filter(s => s.filename.toLowerCase().includes(q)),
+                          }))
+                          .filter(pack => pack.stickers.length > 0 || pack.name.toLowerCase().includes(q))
+                      : stickerPacks;
+                    if (packs.length === 0) {
+                      return (
+                        <div className="flex items-center justify-center h-20">
+                          <p className="text-xs text-white/30">Стикеры не найдены</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-3">
+                        {packs.map((pack) => (
+                          <div key={pack.name}>
+                            <p className="text-[10px] text-white/30 mb-1.5 flex items-center gap-1">
+                              <span>{pack.icon}</span> {pack.name}
+                            </p>
+                            <div className="grid grid-cols-4 gap-1">
+                              {pack.stickers.map((sticker) => (
+                                <button
+                                  key={sticker.filename}
+                                  onClick={() => {
+                                    setText(prev => prev + `[sticker:${pack.name}:${sticker.filename}]`);
+                                    inputRef.current?.focus();
+                                  }}
+                                  className="aspect-square rounded-lg hover:bg-white/[0.08] transition-colors overflow-hidden"
+                                  title={sticker.filename}
+                                >
+                                  <img
+                                    src={normalizeMediaUrl(sticker.fileUrl)}
+                                    alt={sticker.filename}
+                                    className="w-full h-full object-contain p-0.5"
+                                    loading="lazy"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1726,6 +1958,20 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const [decryptedMediaUrls, setDecryptedMediaUrls] = useState<Record<string, string>>({});
   const decryptedMediaUrlsRef = useRef<Record<string, string>>({});
 
+  // Revoke blob URLs of decrypted media when leaving the chat or unmounting,
+  // otherwise every decrypted photo/video leaks its object URL forever.
+  useEffect(() => {
+    const urlsRef = decryptedMediaUrlsRef.current;
+    return () => {
+      for (const id of Object.keys(urlsRef)) {
+        try {
+          URL.revokeObjectURL(urlsRef[id]);
+        } catch {}
+      }
+      decryptedMediaUrlsRef.current = {};
+    };
+  }, [chat.id]);
+
   // Feature states
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; sender: string } | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
@@ -1736,6 +1982,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const [showForward, setShowForward] = useState<Message | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<Message | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const typingResetTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   // Decrypt loaded messages
   const decryptLoadedMessages = useCallback(async (msgs: Message[]) => {
@@ -2011,9 +2258,11 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         const typingHandler = (data: { chatId: string; userId: string; username: string }) => {
           if (cancelled || data.chatId !== chat.id || data.userId === user?.id) return;
           setTypingUsers(prev => prev.includes(data.username) ? prev : [...prev, data.username]);
-          setTimeout(() => {
+          const t = setTimeout(() => {
+            typingResetTimersRef.current.delete(t);
             setTypingUsers(prev => prev.filter(u => u !== data.username));
           }, 3000);
+          typingResetTimersRef.current.add(t);
         };
         socket.on('typing', typingHandler);
         addListener('typing', typingHandler);
@@ -2075,6 +2324,8 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
     initTyping();
     return () => {
       cancelled = true;
+      for (const t of typingResetTimersRef.current) clearTimeout(t);
+      typingResetTimersRef.current.clear();
       import('../lib/socket').then(({ getSocket }) => {
         const socket = getSocket();
         if (socket) {

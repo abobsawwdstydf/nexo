@@ -2,6 +2,7 @@
 
 import (
 	"encoding/json"
+	"log"
 	"unicode/utf8"
 
 	"nexo/ai"
@@ -54,7 +55,12 @@ func StartAIBrowse(c *fiber.Ctx) error {
 
 	// Start background browsing
 	go func() {
-		defer func() { <-aiBrowseSlots }()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[AI] panic in browse task %s: %v", taskID, r)
+			}
+			<-aiBrowseSlots
+		}()
 		agent := ai.NewAgent()
 		defer agent.Close()
 		agent.Browse(taskID, req.Query, req.Context)

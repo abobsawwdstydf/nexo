@@ -18,6 +18,7 @@ import {
   Globe,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
+import { NOTES_CHAT_ID } from '../lib/api/noteChat';
 
 interface ChatListProps {
   chats: Chat[];
@@ -59,7 +60,7 @@ function ActionButton({
 }
 
 function ChatAvatar({ chat }: { chat: Chat }) {
-  if (chat.id === '_saved_messages_') {
+  if (chat.id === NOTES_CHAT_ID) {
     return (
       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
         <Bookmark size={16} className="text-amber-400/70" />
@@ -74,7 +75,7 @@ function ChatAvatar({ chat }: { chat: Chat }) {
     .slice(0, 2)
     .toUpperCase();
 
-  const isOnline = chat.type === 'personal' && (chat as any).otherMember?.isOnline;
+  const isOnline = chat.type === 'personal' && chat.otherMember?.isOnline;
 
   return (
     <div className="relative flex-shrink-0">

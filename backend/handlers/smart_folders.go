@@ -1399,7 +1399,7 @@ func triggerWebhooks(userID string, event string, payload interface{}) {
 			} else {
 				delivery.StatusCode = resp.StatusCode
 				delivery.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
-				body, readErr := io.ReadAll(resp.Body)
+				body, readErr := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 				resp.Body.Close()
 				if readErr == nil && len(body) > 0 {
 					delivery.ResponseBody = string(body)

@@ -212,7 +212,7 @@ export interface Chat {
   // Archive
   isArchived?: boolean;
   // Other member (for private chats)
-  otherMember?: UserBasic | null;
+  otherMember?: (UserBasic & { isOnline?: boolean }) | null;
   subscriptionPrice?: number | null;
   // Last message
   lastMessage?: Message | null;

@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react';
 import { AnimatedOtpInput } from '../components/AnimatedOtpInput';
+import { getSoundsEnabled, setSoundsEnabled } from '../lib/soundSettings';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DESIGN TOKENS
@@ -264,7 +265,7 @@ type Screen =
 
 export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'privacy' | 'terms' | 'cookies') => void }) {
   const { sendLoginCode, loginConfirm, register } = useAuthStore();
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(!getSoundsEnabled());
   const [screen, setScreen] = useState<Screen>('greeting');
   const [email, setEmail] = useState('');
   const [emailDraft, setEmailDraft] = useState('');
@@ -480,7 +481,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
     }}>
       {/* Sound toggle */}
       <motion.button
-        onClick={() => setMuted(m => !m)}
+        onClick={() => setMuted(m => { const next = !m; setSoundsEnabled(!next); return next; })}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         style={{

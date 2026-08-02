@@ -8,6 +8,7 @@ import {
   saveSession, getSessionInfo, removeSession,
   signData, getActiveSessionKey, setActiveSessionKey, clearActiveSessionKey,
   hasActiveSession,
+  saveSignedPreKey, loadSignedPreKey,
   type E2EKeyPair, type EncryptedPayload,
 } from './e2e';
 import { getSocket } from './socket';
@@ -17,6 +18,8 @@ interface E2EInitOptions {
   chatId: string;
   otherUserId: string;
 }
+
+const ONE_TIME_KEY_COUNT = 20;
 
 export class E2ESessionManager {
   private initialized = false;
@@ -31,16 +34,58 @@ export class E2ESessionManager {
     }
 
     const deviceId = getDeviceId();
-    const signedPreKeyPair = await generateKeyPair();
-    const signedPreKeySig = await signData(keyPair.privateKey, signedPreKeyPair.publicKey);
+
+    // Persist the signed prekey: without persistence its private half is lost
+    // on every page reload, so handshakes that already fetched its public half
+    // can never be completed by this device.
+    let signedPreKey = loadSignedPreKey(userId);
+    if (!signedPreKey) {
+      const spk = await generateKeyPair();
+      const sig = await signData(keyPair.privateKey, spk.publicKey);
+      signedPreKey = { pair: spk, sig };
+      saveSignedPreKey(userId, signedPreKey);
+    }
+
+    // Fetch our own current bundle and only top up what has been consumed,
+    // instead of overwriting the whole bundle on every load. Overwriting
+    // churns the one-time prekeys that peers may already have fetched but not
+    // yet consumed, silently breaking in-flight handshakes.
+    try {
+      const mine = await api.fetchKeyBundle(userId);
+      const existing = mine.bundles?.find(b => b.deviceId === deviceId);
+      if (
+        existing &&
+        existing.identityKey === keyPair.publicKey &&
+        existing.signedPreKey === signedPreKey.pair.publicKey
+      ) {
+        const remaining = Array.isArray(existing.oneTimePreKeys) ? existing.oneTimePreKeys : [];
+        if (remaining.length < ONE_TIME_KEY_COUNT) {
+          const topUp = await Promise.all(
+            Array.from({ length: ONE_TIME_KEY_COUNT - remaining.length }, () => generateKeyPair())
+          );
+          await api.uploadKeyBundle({
+            identityKey: keyPair.publicKey,
+            signedPreKey: signedPreKey.pair.publicKey,
+            signedKeySig: signedPreKey.sig,
+            oneTimePreKeys: [...remaining, ...topUp.map(k => k.publicKey)],
+            deviceId,
+          });
+        }
+        this.initialized = true;
+        return;
+      }
+    } catch {
+      // No bundle uploaded yet or lookup failed — fall through to a fresh upload.
+    }
+
     const oneTimeKeys = await Promise.all(
-      Array.from({ length: 20 }, () => generateKeyPair())
+      Array.from({ length: ONE_TIME_KEY_COUNT }, () => generateKeyPair())
     );
 
     await api.uploadKeyBundle({
       identityKey: keyPair.publicKey,
-      signedPreKey: signedPreKeyPair.publicKey,
-      signedKeySig: signedPreKeySig,
+      signedPreKey: signedPreKey.pair.publicKey,
+      signedKeySig: signedPreKey.sig,
       oneTimePreKeys: oneTimeKeys.map(k => k.publicKey),
       deviceId,
     });

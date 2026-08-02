@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExternalLink, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
+import { normalizeMediaUrl } from '../lib/mediaUrl';
 
 interface LinkMeta {
   url: string;
@@ -304,7 +305,7 @@ export function renderTextWithLinks(text: string, isOwn: boolean): React.ReactNo
       parts.push(
         <img
           key={`s${token.index}`}
-          src={`/stickers/proxy/${t.filename}`}
+          src={normalizeMediaUrl(`/stickers/proxy/${t.filename}`)}
           alt={t.filename}
           className="max-w-[128px] max-h-[128px] rounded-lg my-1"
           loading="lazy"

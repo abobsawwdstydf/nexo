@@ -31,7 +31,8 @@ export const useBetaStore = create<BetaStore>((set) => ({
       const status: BetaStatus = await api.request<BetaStatus>('/beta/status', { timeout: 5000 });
       set({ status, loaded: true, loading: false });
     } catch {
-      set({ loading: false });
+      // Network failure — fail open (allow access) instead of blocking the app forever
+      set({ loaded: true, loading: false });
     }
   },
 }));

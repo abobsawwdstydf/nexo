@@ -283,7 +283,7 @@ func R2PutObject(key string, data []byte, contentType string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		respBody, err := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		if err != nil {
 			return fmt.Errorf("r2 upload error (status %d): failed to read response body: %w", resp.StatusCode, err)
 		}

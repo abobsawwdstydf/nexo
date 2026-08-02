@@ -50,9 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       connectSocket(result.accessToken);
     }
     set({ user: result.user, isLoading: false });
-    setTimeout(() => {
-      subscribeToNotifications().catch(() => {});
-    }, 2000);
+    scheduleNotificationSubscribe();
   }
 
   return {
@@ -128,16 +126,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         connectSocket(token);
         await waitForSocketConnected(3000);
-        const initData = await wsRequest<any>('fetch_init');
+        type InitPayload = Awaited<ReturnType<typeof api.getInit>>;
+        const initData = await wsRequest<InitPayload>('fetch_init');
         const { user, chats, settings, smartFolders, stories } = initData;
         if (user) {
           localStorage.setItem('nexo_user', JSON.stringify(user));
           useInitStore.getState().setInit({ chats, settings, smartFolders, stories });
           set({ user, isLoading: false });
 
-          setTimeout(() => {
-            subscribeToNotifications().catch(() => {});
-          }, 2000);
+          scheduleNotificationSubscribe();
           return;
         }
       } catch (wsErr) {
@@ -155,9 +152,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         }
         set({ user, isLoading: false });
 
-        setTimeout(() => {
-          subscribeToNotifications().catch(() => {});
-        }, 2000);
+        scheduleNotificationSubscribe();
       } catch (err) {
         localStorage.removeItem('nexo_user');
         localStorage.removeItem('nexo_access_token');
@@ -186,12 +181,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
         connectSocket(token);
       }
       set({ user });
-      setTimeout(() => {
-        subscribeToNotifications().catch(() => {});
-      }, 2000);
+      scheduleNotificationSubscribe();
     },
   };
 });
+
+/** Debounce notification subscription so it never blocks the login/init flow. */
+function scheduleNotificationSubscribe() {
+  setTimeout(() => {
+    subscribeToNotifications().catch(() => {});
+  }, 2000);
+}
 
 api.setOnAuthFailed(() => {
   const { logout } = useAuthStore.getState();

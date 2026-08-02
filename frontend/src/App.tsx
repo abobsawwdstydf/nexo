@@ -25,7 +25,7 @@ const LoadingFallback = () => (
 
 export default function App() {
   const { user, checkAuth } = useAuthStore();
-  const { status: beta, fetch: fetchBeta } = useBetaStore();
+  const { status: beta, fetch: fetchBeta, loaded: betaLoaded } = useBetaStore();
   const [showLegal, setShowLegal] = useState(false);
   const [legalTab, setLegalTab] = useState<'privacy' | 'terms' | 'cookies'>('privacy');
   const [teamLogin, setTeamLogin] = useState(false);
@@ -49,6 +49,17 @@ export default function App() {
           <div className="h-full w-full flex flex-col relative">
             <BetaEnded />
           </div>
+        </AudioClickWrapper>
+      </ErrorBoundary>
+    );
+  }
+
+  // Beta status still loading — show a spinner instead of flashing the main UI
+  if (!betaLoaded) {
+    return (
+      <ErrorBoundary>
+        <AudioClickWrapper>
+          <LoadingFallback />
         </AudioClickWrapper>
       </ErrorBoundary>
     );

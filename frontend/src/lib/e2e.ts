@@ -18,6 +18,12 @@ export interface EncryptedPayload {
 const E2E_KEY_PREFIX = 'nexo_e2e_identity_';
 const E2E_SESSION_PREFIX = 'nexo_e2e_session_';
 const E2E_DEVICE_ID_KEY = 'nexo_e2e_device_id';
+const E2E_SIGNED_PREKEY_PREFIX = 'nexo_e2e_signed_prekey_';
+
+export interface SignedPreKey {
+  pair: E2EKeyPair;
+  sig: string;
+}
 
 function base64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -216,6 +222,18 @@ export function saveIdentityKeyPair(userId: string, keyPair: E2EKeyPair): void {
 
 export function loadIdentityKeyPair(userId: string): E2EKeyPair | null {
   const raw = localStorage.getItem(E2E_KEY_PREFIX + userId);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+export function saveSignedPreKey(userId: string, data: SignedPreKey): void {
+  try {
+    localStorage.setItem(E2E_SIGNED_PREKEY_PREFIX + userId, JSON.stringify(data));
+  } catch {}
+}
+
+export function loadSignedPreKey(userId: string): SignedPreKey | null {
+  const raw = localStorage.getItem(E2E_SIGNED_PREKEY_PREFIX + userId);
   if (!raw) return null;
   try { return JSON.parse(raw); } catch { return null; }
 }

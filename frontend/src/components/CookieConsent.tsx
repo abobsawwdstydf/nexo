@@ -1,13 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cookie, X } from 'lucide-react';
 
 const COOKIE_CONSENT_KEY = 'nexo_cookie_consent';
 
-type ConsentLevel = 'accepted' | 'declined' | null;
-
 export default function CookieConsent() {
-  const [consent, setConsent] = useState<ConsentLevel>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -21,13 +18,11 @@ export default function CookieConsent() {
 
   const accept = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted');
-    setConsent('accepted');
     setVisible(false);
   };
 
   const decline = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, 'declined');
-    setConsent('declined');
     setVisible(false);
   };
 

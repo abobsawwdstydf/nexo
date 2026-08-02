@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Chat, SmartFolder } from '../lib/types';
+import type { Chat, SmartFolder, StoryGroup } from '../lib/types';
 
 interface InitData {
   chats: Chat[];
@@ -11,14 +11,12 @@ interface InitData {
     twoFactorEnabled: boolean;
   };
   smartFolders: SmartFolder[];
-  stories: any[];
+  stories: StoryGroup[];
 }
 
 interface InitState extends InitData {
   loaded: boolean;
   setInit: (data: InitData) => void;
-  updateChat: (chatId: string, updates: Partial<Chat>) => void;
-  removeChat: (chatId: string) => void;
   addChat: (chat: Chat) => void;
   reset: () => void;
 }
@@ -48,15 +46,6 @@ export const useInitStore = create<InitState>((set, get) => ({
       stories: data.stories ?? [],
       loaded: true,
     });
-  },
-
-  updateChat: (chatId, updates) => {
-    const chats = get().chats.map(c => c.id === chatId ? { ...c, ...updates } : c);
-    set({ chats });
-  },
-
-  removeChat: (chatId) => {
-    set({ chats: get().chats.filter(c => c.id !== chatId) });
   },
 
   addChat: (chat) => {

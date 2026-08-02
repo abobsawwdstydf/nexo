@@ -4,6 +4,8 @@
  * Sound: soft click like macOS / iOS keyboard.
  */
 
+import { getSoundsEnabled } from './soundSettings';
+
 let audioCtx: AudioContext | null = null;
 
 function getCtx(): AudioContext {
@@ -12,6 +14,7 @@ function getCtx(): AudioContext {
 }
 
 function playClick() {
+  if (!getSoundsEnabled()) return;
   try {
     const ctx = getCtx();
     const t = ctx.currentTime;

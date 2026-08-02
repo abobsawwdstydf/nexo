@@ -547,10 +547,12 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 		log.Printf("[SECURITY] Payment %s VERIFIED: userId=%s amount=%.0f months=%d via=%s",
 			paymentID, payment.UserID, apiAmount, payment.PremiumMonths, clientIP)
 
-		db.GetDB().Model(&payment).Updates(map[string]interface{}{
+		if err := db.GetDB().Model(&payment).Updates(map[string]interface{}{
 			"status":     "succeeded",
 			"updated_at": time.Now(),
-		})
+		}).Error; err != nil {
+			log.Printf("[PAYMENT] Failed to mark %s as succeeded: %v", paymentID, err)
+		}
 
 		activatePremium(payment.UserID, payment.PremiumMonths)
 
@@ -565,10 +567,12 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 			payment.YooKassaID, payment.Amount))
 
 	} else if event.Type == "payment.canceled" {
-		db.GetDB().Model(&payment).Updates(map[string]interface{}{
+		if err := db.GetDB().Model(&payment).Updates(map[string]interface{}{
 			"status":     "canceled",
 			"updated_at": time.Now(),
-		})
+		}).Error; err != nil {
+			log.Printf("[PAYMENT] Failed to mark %s as canceled: %v", paymentID, err)
+		}
 		log.Printf("[PAYMENT] Canceled: %s userId=%s", paymentID, payment.UserID)
 	}
 

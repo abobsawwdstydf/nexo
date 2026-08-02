@@ -119,6 +119,9 @@ func (h *Hub) SendToUser(userID string, data []byte) {
 		for client := range clients {
 			select {
 			case client.Send <- data:
+				h.Metrics.mu.Lock()
+				h.Metrics.TotalMessages++
+				h.Metrics.mu.Unlock()
 			default:
 			}
 		}
@@ -142,6 +145,9 @@ func (h *Hub) SendToChat(chatID string, data []byte, excludeUserID string) {
 			for client := range clients {
 				select {
 				case client.Send <- data:
+					h.Metrics.mu.Lock()
+					h.Metrics.TotalMessages++
+					h.Metrics.mu.Unlock()
 				default:
 				}
 			}

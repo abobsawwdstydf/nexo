@@ -1,17 +1,21 @@
 package middleware
 
 import (
-	"fmt"
-	"os"
-	"strings"
-	"sync"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"crypto/rand"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/models"
@@ -64,10 +68,27 @@ func BlacklistRefreshToken(token string) {
 		TokenHash: tokenHash,
 		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
 	}
-	db.GetDB().Create(&entry)
+	if err := db.GetDB().Create(&entry).Error; err != nil {
+		// If the DB write fails the in-memory blacklist still protects us,
+		// but the old refresh token would survive a restart — log it.
+		log.Printf("error: failed to persist refresh-token blacklist entry: %v", err)
+	}
 
 	refreshBlacklistMu.Lock()
 	refreshBlacklist[tokenHash] = time.Now().Add(30 * 24 * time.Hour)
+	refreshBlacklistMu.Unlock()
+}
+
+// cleanupRefreshBlacklist drops expired in-memory blacklist entries so the map
+// does not grow unbounded. Called periodically from security.go's cleanup loop.
+func cleanupRefreshBlacklist() {
+	now := time.Now()
+	refreshBlacklistMu.Lock()
+	for tokenHash, expiry := range refreshBlacklist {
+		if !now.Before(expiry) {
+			delete(refreshBlacklist, tokenHash)
+		}
+	}
 	refreshBlacklistMu.Unlock()
 }
 
@@ -96,7 +117,11 @@ func IsTokenBlacklisted(token string) bool {
 
 func generateBlacklistID() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		log.Printf("warn: rand.Read failed in generateBlacklistID: %v", err)
+		h := sha256.Sum256([]byte(strconv.FormatInt(time.Now().UnixNano(), 10)))
+		return hex.EncodeToString(h[:16])
+	}
 	return hex.EncodeToString(b)
 }
 
@@ -192,7 +217,13 @@ func AuthenticateToken(c *fiber.Ctx) error {
 
 	// Ban check
 	var user models.User
-	if result := db.GetDB().First(&user, "id = ?", claims.UserID); result.Error == nil && user.IsBanned {
+	if result := db.GetDB().First(&user, "id = ?", claims.UserID); result.Error != nil {
+		// Log real DB errors instead of silently skipping the ban check; a
+		// missing row (deleted account) is not an error worth reporting.
+		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			log.Printf("error: ban check failed for user %s: %v", claims.UserID, result.Error)
+		}
+	} else if user.IsBanned {
 		return c.Status(403).JSON(fiber.Map{
 			"error":  "Account is banned",
 			"reason": user.BanReason,

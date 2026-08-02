@@ -750,8 +750,8 @@ func handlePushSubscribe(client *ws.Client, env *wsEnvelope) error {
 	}
 
 	sub := string(payload.Subscription)
-	if len(sub) > 500 {
-		sub = sub[:500]
+	if len([]rune(sub)) > 500 {
+		sub = string([]rune(sub)[:500])
 	}
 	log.Printf("[Push] Subscription from user=%s: %s", client.UserID, sub)
 	return nil
@@ -958,6 +958,11 @@ func HandleWebSocket(c *websocket.Conn) {
 	log.Printf("WS client connected: user=%s", userID)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("panic in WS writer goroutine (user=%s): %v", userID, r)
+			}
+		}()
 		for message := range client.Send {
 			if err := c.WriteMessage(websocket.TextMessage, message); err != nil {
 				// Closing the connection unblocks the read loop below,

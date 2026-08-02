@@ -10,7 +10,6 @@ const RPC_TIMEOUT = 15000; // 15 seconds for RPC responses
 
 interface ReconnectState {
   lastEventTimestamp: number;
-  missedEvents: string[];
 }
 
 // ─── WebSocket RPC Layer ──────────────────────────────────────────────────────
@@ -235,7 +234,6 @@ function setupWebSocketHandlers() {
   ws.onclose = (event) => {
     const reconnectState = loadReconnectState() || {
       lastEventTimestamp: Date.now(),
-      missedEvents: [],
     };
     reconnectState.lastEventTimestamp = Date.now();
     saveReconnectState(reconnectState);

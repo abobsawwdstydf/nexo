@@ -27,12 +27,14 @@ const (
 	auditQueueSize = 1024
 )
 
-// truncate bounds a string to max runes so audit logging never panics on short input.
+// truncate bounds a string to max runes so audit logging never panics on short
+// input and multi-byte UTF-8 sequences (Cyrillic) are not split into garbage.
 func truncate(s string, max int) string {
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return s
 	}
-	return s[:max]
+	return string(runes[:max])
 }
 
 // generateID creates a random hex ID for tokens and audit entries
@@ -71,10 +73,6 @@ var (
 	blockedIPs   = make(map[string]time.Time)
 	blockedIPsMu sync.RWMutex
 
-	// Rate limiting per user
-	userRateLimits   = make(map[string][]time.Time)
-	userRateLimitsMu sync.RWMutex
-
 	// Request signing secret
 	RequestSigningSecret []byte
 
@@ -102,8 +100,15 @@ type AuditEntry struct {
 
 func GenerateCSRFToken(sessionID string) string {
 	token := make([]byte, 32)
-	rand.Read(token)
-	tokenHex := hex.EncodeToString(token)
+	var tokenHex string
+	if _, err := rand.Read(token); err != nil {
+		// Fallback: never block token issuance on RNG failure, but log it.
+		log.Printf("warn: rand.Read failed in GenerateCSRFToken: %v", err)
+		h := sha256.Sum256([]byte(sessionID + strconv.FormatInt(time.Now().UnixNano(), 10)))
+		tokenHex = hex.EncodeToString(h[:])
+	} else {
+		tokenHex = hex.EncodeToString(token)
+	}
 
 	csrfTokensMu.Lock()
 	if len(csrfTokens) >= maxCSRFTokens {
@@ -221,50 +226,6 @@ func IPBlockMiddleware() fiber.Handler {
 		if IsIPBlocked(ip) {
 			return c.Status(429).JSON(fiber.Map{"error": "IP temporarily blocked due to suspicious activity"})
 		}
-		return c.Next()
-	}
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PER-USER RATE LIMITING
-// ═══════════════════════════════════════════════════════════════════════════
-
-func UserRateLimit(maxRequests int, window time.Duration) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		userID := UserIDFromCtx(c)
-		if userID == "" {
-			userID = c.IP()
-		}
-
-		key := userID + ":" + c.Path()
-		now := time.Now()
-
-		userRateLimitsMu.Lock()
-		entries, exists := userRateLimits[key]
-		if !exists {
-			entries = make([]time.Time, 0, maxRequests+1)
-		}
-
-		cutoff := 0
-		for i, t := range entries {
-			if now.Sub(t) < window {
-				cutoff = i
-				break
-			}
-			cutoff = i + 1
-		}
-		entries = entries[cutoff:]
-
-		if len(entries) >= maxRequests {
-			userRateLimitsMu.Unlock()
-			BlockIP(c.IP(), 5*time.Minute)
-			LogAudit(c, "RATE_LIMIT_EXCEEDED", false, "")
-			return c.Status(429).JSON(fiber.Map{"error": "Rate limit exceeded", "retryAfter": window.Seconds()})
-		}
-
-		userRateLimits[key] = append(entries, now)
-		userRateLimitsMu.Unlock()
-
 		return c.Next()
 	}
 }
@@ -658,26 +619,12 @@ func init() {
 		}
 	}()
 
-	// Cleanup expired rate limits every minute
+	// Cleanup expired refresh-token blacklist entries every 15 minutes so the
+	// in-memory map does not grow unbounded (tokens live up to 30 days).
 	go func() {
 		for {
-			time.Sleep(1 * time.Minute)
-			userRateLimitsMu.Lock()
-			now := time.Now()
-			for key, timestamps := range userRateLimits {
-				valid := make([]time.Time, 0)
-				for _, t := range timestamps {
-					if now.Sub(t) < 5*time.Minute {
-						valid = append(valid, t)
-					}
-				}
-				if len(valid) == 0 {
-					delete(userRateLimits, key)
-				} else {
-					userRateLimits[key] = valid
-				}
-			}
-			userRateLimitsMu.Unlock()
+			time.Sleep(15 * time.Minute)
+			cleanupRefreshBlacklist()
 		}
 	}()
 }

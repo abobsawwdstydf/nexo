@@ -22,19 +22,22 @@ export default function NewChatModal({ onClose, onChatCreated }: NewChatModalPro
       setResults([]);
       return;
     }
+    let cancelled = false;
     const t = setTimeout(async () => {
       setLoading(true);
       try {
         const users = await api.searchUsers(query);
+        if (cancelled) return;
         setResults(Array.isArray(users) ? users : []);
         setError('');
       } catch {
+        if (cancelled) return;
         setError('Ошибка поиска');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 400);
-    return () => clearTimeout(t);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [query]);
 
   const handleStartChat = async (userId: string) => {
