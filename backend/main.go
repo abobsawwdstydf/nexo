@@ -217,10 +217,6 @@ func main() {
 	// Sticker proxy (caches remote stickers to avoid rate limits)
 	app.Get("/stickers/proxy/:name", handlers.StickerProxy)
 
-	// GIF search/trending proxy (Tenor HTML scrape, no API key)
-	app.Get("/stickers/gifs/trending", handlers.GifsTrending)
-	app.Get("/stickers/gifs/search", handlers.GifsSearch)
-
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok", "engine": "go", "version": "2.0.0", "commit": buildCommit})
@@ -297,6 +293,10 @@ nexo_up 1
 
 	// Beta guard — блокирует все API после окончания беты
 	api.Use(beta.BetaGuard())
+
+	// GIF search/trending proxy (Tenor HTML scrape, no API key) — public, BEFORE auth group
+	api.Get("/stickers/gifs/trending", handlers.GifsTrending)
+	api.Get("/stickers/gifs/search", handlers.GifsSearch)
 
 	// CAPTCHA (public)
 	api.Get("/captcha/generate", handlers.GenerateCaptcha)
