@@ -40,6 +40,7 @@ import { useInitStore } from '../stores/initStore';
 import { toast } from '../lib/toast';
 import { VerifiedBadge } from './VerifiedBadge';
 import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/noteChat';
+import { AI_CHAT_ID, AI_SENDER, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import type { Chat, Message, Reaction, GifItem } from '../lib/types';
 import { useCallContext } from '../lib/callContext';
@@ -2110,6 +2111,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const [showForward, setShowForward] = useState<Message | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<Message | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [aiTyping, setAiTyping] = useState(false);
   const typingResetTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   // Decrypt loaded messages
@@ -2166,6 +2168,8 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
       try {
         if (chat.id === NOTES_CHAT_ID) {
           if (!cancelled) setMessages(getNotesMessages());
+        } else if (chat.id === AI_CHAT_ID) {
+          if (!cancelled) setMessages(getAIMessages());
         } else {
           const { getSocket } = await import('../lib/socket');
           let data;
@@ -2194,7 +2198,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
 
   // E2E initialization
   useEffect(() => {
-    if (e2eInitRef.current || !user || chat.id === NOTES_CHAT_ID) return;
+    if (e2eInitRef.current || !user || chat.id === NOTES_CHAT_ID || chat.id === AI_CHAT_ID) return;
     const isSecret = chat.isSecret || chat.isE2E || false;
     if (!isSecret) return;
 
@@ -2301,6 +2305,52 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         setMessages(prev =>
           prev.map(m => (m.id === optimisticId ? savedMsg : m))
         );
+      } else if (chat.id === AI_CHAT_ID) {
+        // Нексо AI: save user message, then request a reply
+        const userMsg = { ...optimisticMsg, _isSending: false };
+        saveAIMessage(userMsg);
+        setMessages(prev =>
+          prev.map(m => (m.id === optimisticId ? userMsg : m))
+        );
+        setAiTyping(true);
+        try {
+          const resp = await sendAIMessage(getAIMessages());
+          const replyMsg: Message = {
+            id: `ai_${Date.now()}`,
+            chatId: AI_CHAT_ID,
+            senderId: AI_SENDER.id,
+            content: resp.reply,
+            type: 'text',
+            replyToId: null,
+            isEdited: false,
+            isDeleted: false,
+            isEncrypted: false,
+            createdAt: new Date().toISOString(),
+            sender: {
+              id: AI_SENDER.id,
+              username: AI_SENDER.username,
+              displayName: AI_SENDER.displayName,
+              avatar: null,
+            },
+            media: [],
+            reactions: [],
+            readBy: [],
+            _isSending: false,
+          };
+          saveAIMessage(replyMsg);
+          setMessages(prev => [...prev.filter(m => m.id !== optimisticId), userMsg, replyMsg]);
+        } catch (err) {
+          console.error('Failed to get AI reply:', err);
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === optimisticId
+                ? { ...m, _isSending: false, _isFailed: true }
+                : m
+            )
+          );
+        } finally {
+          setAiTyping(false);
+        }
       } else {
         const result = await api.sendMessageWS(chat.id, finalText, {
           ...options,
@@ -2369,7 +2419,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
 
   // Typing indicator
   useEffect(() => {
-    if (chat.id === NOTES_CHAT_ID) return;
+    if (chat.id === NOTES_CHAT_ID || chat.id === AI_CHAT_ID) return;
     let cancelled = false;
     const listeners: { event: string; handler: (...args: any[]) => void }[] = [];
 
@@ -2679,7 +2729,10 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
 
       {/* Typing indicator */}
       <AnimatePresence>
-        {typingUsers.length > 0 && <TypingDots names={typingUsers} />}
+        {aiTyping && <TypingDots names={['Нексо AI']} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {!aiTyping && typingUsers.length > 0 && <TypingDots names={typingUsers} />}
       </AnimatePresence>
 
       <MessageInput

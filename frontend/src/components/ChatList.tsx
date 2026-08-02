@@ -17,9 +17,11 @@ import {
   Shield,
   Globe,
   LifeBuoy,
+  Sparkles,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
 import { NOTES_CHAT_ID } from '../lib/api/noteChat';
+import { AI_CHAT_ID } from '../lib/api/aiChat';
 import { VerifiedBadge } from './VerifiedBadge';
 
 interface ChatListProps {
@@ -67,6 +69,13 @@ function ChatAvatar({ chat }: { chat: Chat }) {
     return (
       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
         <Bookmark size={16} className="text-amber-400/70" />
+      </div>
+    );
+  }
+  if (chat.id === AI_CHAT_ID) {
+    return (
+      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500/25 to-fuchsia-500/25 border border-violet-500/25 flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_rgba(139,92,246,0.25)]">
+        <Sparkles size={16} className="text-violet-300/90" />
       </div>
     );
   }

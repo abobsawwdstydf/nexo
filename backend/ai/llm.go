@@ -131,6 +131,22 @@ func (c *LLMClient) Simple(systemPrompt, userPrompt string) (string, int, error)
 	return text, 0, err // token count not available from proxy
 }
 
+// ChatMessage is a single conversation turn for Chat().
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// Chat sends a full conversation (system + history + last user turn)
+// and returns the assistant reply plus the provider name.
+func (c *LLMClient) Chat(messages []ChatMessage) (string, string, error) {
+	proxyMsgs := make([]proxyMessage, 0, len(messages))
+	for _, m := range messages {
+		proxyMsgs = append(proxyMsgs, proxyMessage{Role: m.Role, Content: m.Content})
+	}
+	return c.chat(proxyMsgs)
+}
+
 // ─── High-level LLM functions ─────────────────────────────────────────
 
 // AnalyzePage analyzes page content for a user query

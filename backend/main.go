@@ -217,6 +217,10 @@ func main() {
 	// Sticker proxy (caches remote stickers to avoid rate limits)
 	app.Get("/stickers/proxy/:name", handlers.StickerProxy)
 
+	// GIF search/trending proxy (Tenor HTML scrape, no API key)
+	app.Get("/stickers/gifs/trending", handlers.GifsTrending)
+	app.Get("/stickers/gifs/search", handlers.GifsSearch)
+
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok", "engine": "go", "version": "2.0.0", "commit": buildCommit})
@@ -343,6 +347,9 @@ nexo_up 1
 
 	// YooKassa webhook (public)
 	app.Post("/webhook/yookassa", handlers.YooKassaWebhook)
+
+	// Нексо AI chat (protected)
+	auth.Post("/ai/chat", handlers.HandleAIChat)
 
 	auth.Post("/chats", handlers.CreateChat)
 	auth.Get("/chats", handlers.GetChats)

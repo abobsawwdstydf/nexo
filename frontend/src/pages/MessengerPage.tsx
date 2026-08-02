@@ -18,6 +18,7 @@ import { CallOverlay } from '../components/CallOverlay';
 import { useCallContext } from '../lib/callContext';
 import { getSocket } from '../lib/socket';
 import { getNotesMessages, NOTES_CHAT_ID, NOTES_CHANGED_EVENT } from '../lib/api/noteChat';
+import { getAIMessages, AI_CHAT_ID, AI_CHANGED_EVENT } from '../lib/api/aiChat';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 
 const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -93,6 +94,27 @@ export default function MessengerPage() {
     messages: getNotesMessages(),
     unreadCount: 0,
   }), [notesVersion]);
+
+  // Нексо AI virtual chat — memoized, refreshes on AI history changes.
+  const [aiVersion, setAiVersion] = useState(0);
+  useEffect(() => {
+    const handler = () => setAiVersion(v => v + 1);
+    window.addEventListener(AI_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(AI_CHANGED_EVENT, handler);
+  }, []);
+
+  const aiChat = useMemo<Chat>(() => ({
+    id: AI_CHAT_ID,
+    type: 'personal',
+    name: 'Нексо AI',
+    username: null,
+    avatar: null,
+    description: 'Умный ИИ-ассистент — отвечает на любые вопросы',
+    createdAt: new Date().toISOString(),
+    members: [],
+    messages: getAIMessages(),
+    unreadCount: 0,
+  }), [aiVersion]);
 
   // ─── Chats from initStore (no extra HTTP call) ──────────────────────
   useEffect(() => {
@@ -240,7 +262,7 @@ export default function MessengerPage() {
   }, [chats, user]);
 
   // ─── Filter chats by search ──────────────────────────────────────────
-  const allChats = [savedMessagesChat, ...chats];
+  const allChats = [savedMessagesChat, aiChat, ...chats];
   const filteredChats = searchQuery
     ? allChats.filter(chat =>
         chat.name?.toLowerCase().includes(searchQuery.toLowerCase())
