@@ -255,6 +255,52 @@ const OTP_THEME = {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN AUTH PAGE
 // ═══════════════════════════════════════════════════════════════════════════
+
+function OtpCountdown({
+  remainingSec,
+  onResend,
+  resending,
+}: {
+  remainingSec: number;
+  onResend: () => void;
+  resending: boolean;
+}) {
+  const mm = Math.floor(remainingSec / 60);
+  const ss = String(remainingSec % 60).padStart(2, '0');
+  const expired = remainingSec <= 0;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        marginTop: 16,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        fontFamily: FONT,
+      }}
+    >
+      <span style={{ color: expired ? D.error : D.textMuted, fontSize: 13 }}>
+        {expired ? 'Код истёк' : `Код действует ещё ${mm}:${ss}`}
+      </span>
+      <motion.button
+        onClick={onResend}
+        disabled={resending}
+        whileHover={{ color: D.primary }}
+        whileTap={{ scale: 0.96 }}
+        style={{
+          background: 'none', border: 'none', cursor: resending ? 'default' : 'pointer',
+          color: resending ? D.textMuted : expired ? D.primary : D.textMuted,
+          fontSize: 13, fontFamily: FONT, opacity: resending ? 0.6 : 1,
+        }}
+      >
+        {resending ? 'Отправляю…' : 'Новый код'}
+      </motion.button>
+    </motion.div>
+  );
+}
+
 type Screen =
   | 'greeting'
   | 'welcome'
@@ -270,7 +316,7 @@ type Screen =
   | 'reg-success'
   | 'reg-error';
 
-export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'privacy' | 'terms' | 'cookies') => void }) {
+export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?: (tab: 'privacy' | 'terms' | 'cookies') => void; onInfoClick?: () => void }) {
   const { sendLoginCode, loginConfirm, register } = useAuthStore();
   const [muted, setMuted] = useState(!getSoundsEnabled());
   const [screen, setScreen] = useState<Screen>('greeting');
@@ -280,9 +326,13 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
   const [error, setError] = useState('');
   const [otpError, setOtpError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [usernameStatusReason, setUsernameStatusReason] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regEmailDraft, setRegEmailDraft] = useState('');
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -377,13 +427,42 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
     }
   }, [screen, regEmailLabel.phase]);
 
+  // ─── OTP countdown (10 min) + resend ──────────────────────────────────
+  useEffect(() => {
+    if (!codeExpiresAt) return;
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [codeExpiresAt]);
+
+  const codeRemainingSec = codeExpiresAt
+    ? Math.max(0, Math.floor((new Date(codeExpiresAt).getTime() - nowMs) / 1000))
+    : 0;
+
+  const handleResendCode = async () => {
+    if (resending || sendingRef.current) return;
+    sendingRef.current = true;
+    setResending(true); setError(''); setOtpError(false); setCode('');
+    try {
+      if (screen === 'login-code' || screen === 'login-error') {
+        const result = await sendLoginCode(email);
+        if (result.requiresCode) setCodeExpiresAt(result.expiresAt ?? null);
+      } else {
+        const r = await api.sendEmailCode(regEmail);
+        setCodeExpiresAt(r.expiresAt ?? null);
+      }
+      setNowMs(Date.now());
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
+    } finally { setResending(false); sendingRef.current = false; }
+  };
+
   // ─── Username check ─────────────────────────────────────────────────────
   useEffect(() => {
     if (username.length < 3 || !/^[a-zA-Zа-яА-ЯёЁ0-9_.-]+$/.test(username)) { setUsernameStatus('idle'); return; }
     setUsernameStatus('checking');
     const t = setTimeout(async () => {
-      try { const r = await api.checkUsername(username); setUsernameStatus(r.available ? 'available' : 'taken'); }
-      catch { setUsernameStatus('idle'); }
+      try { const r = await api.checkUsername(username); setUsernameStatus(r.available ? 'available' : 'taken'); setUsernameStatusReason(r.reason || ''); }
+      catch { setUsernameStatus('idle'); setUsernameStatusReason(''); }
     }, 500);
     return () => clearTimeout(t);
   }, [username]);
@@ -397,6 +476,8 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
     try {
       const result = await sendLoginCode(emailToUse);
       if (result.requiresCode) {
+        setCodeExpiresAt(result.expiresAt ?? null);
+        setNowMs(Date.now());
         setScreen('login-code');
       }
     } catch (err: unknown) {
@@ -427,7 +508,9 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
     setRegEmail(emailToUse);
     setSubmitting(true); setError('');
     try {
-      await api.sendEmailCode(emailToUse);
+      const r = await api.sendEmailCode(emailToUse);
+      setCodeExpiresAt(r.expiresAt ?? null);
+      setNowMs(Date.now());
       setScreen('reg-code');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Ошибка');
@@ -813,6 +896,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                   onSlotType={() => playTypeClick(muted)}
                   onSlotErase={() => playEraseClick(muted)}
                 />
+                <OtpCountdown remainingSec={codeRemainingSec} onResend={handleResendCode} resending={resending} />
                 <motion.button
                   onClick={() => { setScreen('login-email'); setCode(''); setError(''); setOtpError(false); }}
                   whileHover={{ color: D.primary }}
@@ -899,6 +983,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
               onSlotType={() => playTypeClick(muted)}
               onSlotErase={() => playEraseClick(muted)}
             />
+            <OtpCountdown remainingSec={codeRemainingSec} onResend={handleResendCode} resending={resending} />
             <motion.p
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1104,7 +1189,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                       <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 12, color: D.success, fontFamily: FONT }}>Свободен</motion.span>
                     )}
                     {usernameStatus === 'taken' && (
-                      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 12, color: D.error, fontFamily: FONT }}>Занят</motion.span>
+                      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 12, color: D.error, fontFamily: FONT }}>{usernameStatusReason || 'Занят'}</motion.span>
                     )}
                   </AnimatePresence>
                 </div>
@@ -1335,6 +1420,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
                   onSlotType={() => playTypeClick(muted)}
                   onSlotErase={() => playEraseClick(muted)}
                 />
+                <OtpCountdown remainingSec={codeRemainingSec} onResend={handleResendCode} resending={resending} />
                 <motion.button
                   onClick={() => { setScreen('reg-email'); setCode(''); setError(''); setOtpError(false); }}
                   whileHover={{ color: D.primary }}
@@ -1419,6 +1505,7 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
               onSlotType={() => playTypeClick(muted)}
               onSlotErase={() => playEraseClick(muted)}
             />
+            <OtpCountdown remainingSec={codeRemainingSec} onResend={handleResendCode} resending={resending} />
             <motion.p
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1444,6 +1531,14 @@ export default function AuthPage({ onLegalClick }: { onLegalClick?: (tab: 'priva
         className="fixed bottom-6 left-0 right-0 flex items-center justify-center gap-4 px-4 z-50"
         style={{ fontFamily: "'Onest', system-ui, -apple-system, sans-serif", pointerEvents: 'auto' }}
       >
+        {onInfoClick && (
+          <button
+            onClick={onInfoClick}
+            className="text-[11px] text-white/20 hover:text-white/50 transition-colors"
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+          >О Нексо</button>
+        )}
+        <span className="text-[11px] text-white/10">·</span>
         <button
           onClick={() => onLegalClick?.('privacy')}
           className="text-[11px] text-white/20 hover:text-white/50 transition-colors"

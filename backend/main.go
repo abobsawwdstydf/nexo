@@ -304,6 +304,11 @@ nexo_up 1
 
 	// Email availability check (public, for registration)
 	api.Get("/auth/check-email", handlers.CheckEmailAvailability)
+	api.Get("/auth/check-username", handlers.CheckUsername)
+
+	// Bot API (Telegram-совместимый, токен в URL: /api/bot/:token/:method) — public, BEFORE auth group
+	api.All("/bot/:token/:method", handlers.BotAPI)
+	app.Get("/file/:token/*", handlers.BotFile)
 
 	// Auth (public) — rate limited: 5 attempts per minute per IP
 	api.Post("/auth/register", handlers.AuthRateLimit(5, time.Minute), handlers.Register)
@@ -350,6 +355,8 @@ nexo_up 1
 
 	// Нексо AI chat (protected)
 	auth.Post("/ai/chat", handlers.HandleAIChat)
+	auth.Get("/ai/history", handlers.HandleAIHistory)
+	auth.Delete("/ai/history", handlers.HandleAIClearHistory)
 
 	auth.Post("/chats", handlers.CreateChat)
 	auth.Get("/chats", handlers.GetChats)
@@ -445,6 +452,14 @@ nexo_up 1
 	api.Get("/bot/getUpdates", middleware.BotAuthenticateToken, handlers.BotGetUpdates)
 	api.Post("/bot/setWebhook", middleware.BotAuthenticateToken, handlers.SetBotWebhook)
 	api.Delete("/bot/deleteWebhook", middleware.BotAuthenticateToken, handlers.DeleteBotWebhook)
+
+	// Bot API callback (нажатие inline-кнопки, авторизованный)
+	auth.Post("/bots/callback", handlers.BotCallback)
+
+	// Username aliases (premium feature)
+	auth.Get("/users/me/aliases", handlers.GetUserAliases)
+	auth.Post("/users/me/aliases", handlers.CreateUserAlias)
+	auth.Delete("/users/me/aliases/:aliasId", handlers.DeleteUserAlias)
 
 	// ─── Feature 1: Smart Folders ─────────────────────────────────────────
 	auth.Get("/smart-folders", handlers.GetSmartFolders)

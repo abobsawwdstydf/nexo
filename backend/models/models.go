@@ -132,6 +132,7 @@ type Message struct {
 	SelfDestructTimer int        `json:"selfDestructTimer"`
 	CanForward        bool       `json:"canForward" gorm:"default:true"`
 	CanScreenshot     bool       `json:"canScreenshot" gorm:"default:true"`
+	ReplyMarkup       string     `json:"-" gorm:"type:text"` // inline-клавиатура (JSON, Bot API)
 
 	Sender        User          `json:"sender" gorm:"foreignKey:SenderID"`
 	Chat          Chat          `json:"-" gorm:"foreignKey:ChatID"`
@@ -141,6 +142,17 @@ type Message struct {
 	Reactions     []Reaction    `json:"reactions" gorm:"foreignKey:MessageID"`
 	ReadBy        []ReadReceipt `json:"readBy" gorm:"foreignKey:MessageID"`
 }
+
+// AIMessage stores Нексо AI chat history per user (server-side persistence).
+type AIMessage struct {
+	ID        string    `json:"id" gorm:"primaryKey"`
+	UserID    string    `json:"userId" gorm:"index:idx_ai_messages_user_created"`
+	Role      string    `json:"role" gorm:"size:16"` // user | assistant
+	Content   string    `json:"content" gorm:"type:text"`
+	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime;index:idx_ai_messages_user_created"`
+}
+
+func (AIMessage) TableName() string { return "ai_messages" }
 
 type Media struct {
 	ID        string  `json:"id" gorm:"primaryKey"`
@@ -574,6 +586,42 @@ type BotInstallation struct {
 	InstalledAt time.Time `json:"installedAt" gorm:"autoCreateTime"`
 
 	Bot Bot `json:"-" gorm:"foreignKey:BotID"`
+}
+
+// BotUpdate — очередь апдейтов для бота (Telegram Bot API: getUpdates / webhook)
+type BotUpdate struct {
+	ID        uint      `json:"-" gorm:"primaryKey;autoIncrement"` // = update_id
+	BotID     string    `json:"-" gorm:"index;size:64"`
+	Payload   string    `json:"-" gorm:"type:text"` // JSON апдейта в формате Telegram
+	CreatedAt time.Time `json:"-" gorm:"autoCreateTime"`
+}
+
+// BotMessageSeq — маппинг нашего строкового message ID на числовой message_id (Telegram)
+type BotMessageSeq struct {
+	ID        uint      `json:"-" gorm:"primaryKey;autoIncrement"` // = message_id в Bot API
+	BotID     string    `json:"-" gorm:"index;size:64"`
+	ChatID    string    `json:"-" gorm:"index;size:64"`
+	MessageID string    `json:"-" gorm:"index;size:64"` // наш строковый ID
+	CreatedAt time.Time `json:"-" gorm:"autoCreateTime"`
+}
+
+// BotChatState — состояние чата бота (reply-клавиатура и т.п.)
+type BotChatState struct {
+	ID          string    `json:"-" gorm:"primaryKey"`
+	BotID       string    `json:"-" gorm:"index;size:64"`
+	ChatID      string    `json:"-" gorm:"index;size:64"`
+	ReplyMarkup string    `json:"-" gorm:"type:text"` // reply-клавиатура JSON или ""
+	UpdatedAt   time.Time `json:"-" gorm:"autoUpdateTime"`
+}
+
+// UsernameAlias — дополнительный юзернейм для premium (user/chat/bot)
+type UsernameAlias struct {
+	ID         string    `json:"-" gorm:"primaryKey"`
+	SubjectType string   `json:"subjectType" gorm:"size:16"` // "user", "chat", "bot"
+	SubjectID  string    `json:"subjectId" gorm:"index;size:64"`
+	Alias      string    `json:"alias" gorm:"uniqueIndex:idx_alias_subject;size:64"`
+	IsValid    bool      `json:"isValid" gorm:"default:true"`
+	CreatedAt  time.Time `json:"-" gorm:"autoCreateTime"`
 }
 
 // ─── Search History ────────────────────────────────────────────────────────

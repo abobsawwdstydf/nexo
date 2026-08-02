@@ -32,6 +32,7 @@ const (
 	aiMaxPromptRunes  = 2000
 	aiMaxHistory      = 20
 	aiCooldown        = 10 * time.Second
+	aiHistoryLimit    = 100 // messages kept in DB per user
 )
 
 func aiEnvInt(key string, def int) int {
@@ -101,6 +102,65 @@ func aiBurstCheck(userID string) bool {
 	return true
 }
 
+// aiSaveMessage persists one AI chat message and trims history to aiHistoryLimit.
+func aiSaveMessage(userID, role, content string) {
+	msg := models.AIMessage{
+		ID:      generateID(),
+		UserID:  userID,
+		Role:    role,
+		Content: content,
+	}
+	if err := db.GetDB().Create(&msg).Error; err != nil {
+		log.Printf("[AI] failed to save %s message for user=%s: %v", role, userID, err)
+		return
+	}
+	// Keep only the last aiHistoryLimit messages per user.
+	var count int64
+	db.GetDB().Model(&models.AIMessage{}).Where("user_id = ?", userID).Count(&count)
+	if count > aiHistoryLimit {
+		var oldest []models.AIMessage
+		db.GetDB().Where("user_id = ?", userID).
+			Order("created_at ASC").
+			Limit(int(count - aiHistoryLimit)).
+			Find(&oldest)
+		for _, o := range oldest {
+			db.GetDB().Delete(&models.AIMessage{}, "id = ?", o.ID)
+		}
+	}
+}
+
+// aiGetHistory returns the last aiHistoryLimit messages for a user, oldest first.
+func aiGetHistory(userID string) []models.AIMessage {
+	var msgs []models.AIMessage
+	db.GetDB().Where("user_id = ?", userID).
+		Order("created_at ASC").
+		Limit(aiHistoryLimit).
+		Find(&msgs)
+	return msgs
+}
+
+// HandleAIHistory is GET /api/ai/history — returns the user's persisted AI chat history.
+func HandleAIHistory(c *fiber.Ctx) error {
+	userID := middleware.UserIDFromCtx(c)
+	if userID == "" {
+		return c.Status(401).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	return c.JSON(fiber.Map{"messages": aiGetHistory(userID)})
+}
+
+// HandleAIClearHistory is DELETE /api/ai/history — wipes the user's AI chat history.
+func HandleAIClearHistory(c *fiber.Ctx) error {
+	userID := middleware.UserIDFromCtx(c)
+	if userID == "" {
+		return c.Status(401).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	if err := db.GetDB().Where("user_id = ?", userID).Delete(&models.AIMessage{}).Error; err != nil {
+		log.Printf("[AI] failed to clear history for user=%s: %v", userID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "failed to clear history"})
+	}
+	return c.JSON(fiber.Map{"ok": true})
+}
+
 // HandleAIChat is the HTTP handler for POST /api/ai/chat.
 func HandleAIChat(c *fiber.Ctx) error {
 	userID := middleware.UserIDFromCtx(c)
@@ -152,6 +212,9 @@ func HandleAIChat(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "no user message"})
 	}
 
+	// Persist the user's message server-side.
+	aiSaveMessage(userID, "user", lastUserContent)
+
 	// Anti-abuse: cooldown between requests
 	if !aiBurstCheck(userID) {
 		return c.Status(429).JSON(fiber.Map{
@@ -192,6 +255,9 @@ func HandleAIChat(c *fiber.Ctx) error {
 	}
 
 	aiIncrementUsage(userID)
+
+	// Persist the assistant's reply server-side.
+	aiSaveMessage(userID, "assistant", reply)
 
 	remaining := limit - used - 1
 	if remaining < 0 {

@@ -33,6 +33,7 @@ import {
   Menu,
   Phone,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -40,9 +41,9 @@ import { useInitStore } from '../stores/initStore';
 import { toast } from '../lib/toast';
 import { VerifiedBadge } from './VerifiedBadge';
 import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/noteChat';
-import { AI_CHAT_ID, AI_SENDER, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
+import { AI_CHAT_ID, AI_SENDER, loadAIHistory, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
-import type { Chat, Message, Reaction, GifItem } from '../lib/types';
+import type { Chat, Message, Reaction, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup } from '../lib/types';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
 import { LinkPreview, extractUrls, renderTextWithLinks } from './LinkPreview';
@@ -432,12 +433,59 @@ function ImageGallery({ media, isOwn }: { media: Array<{ url: string; thumbnail?
   );
 }
 
+const InlineKeyboard = memo(function InlineKeyboard({
+  message,
+  onCallback,
+  onWebApp,
+}: {
+  message: Message;
+  onCallback?: (messageId: string, data: string) => void;
+  onWebApp?: (url: string) => void;
+}) {
+  const markup = message.replyMarkup as InlineKeyboardMarkup | null;
+  if (!markup || !markup.inline_keyboard || markup.inline_keyboard.length === 0) return null;
+
+  return (
+    <div className="mt-1 flex flex-col gap-1 max-w-[75%]">
+      {markup.inline_keyboard.map((row, ri) => (
+        <div key={ri} className="flex gap-1">
+          {row.map((btn, bi) => {
+            const baseClass =
+              'flex-1 px-3 py-2 rounded-xl bg-blue-500/15 border border-blue-500/25 text-xs font-medium text-blue-300 hover:bg-blue-500/25 active:scale-[0.98] transition-all whitespace-nowrap overflow-hidden text-ellipsis';
+            if (btn.url) {
+              return (
+                <a key={bi} href={btn.url} target="_blank" rel="noopener noreferrer" className={baseClass + ' text-center'}>
+                  {btn.text}
+                </a>
+              );
+            }
+            if (btn.web_app?.url) {
+              return (
+                <button key={bi} onClick={() => onWebApp?.(btn.web_app!.url)} className={baseClass}>
+                  {btn.text}
+                </button>
+              );
+            }
+            return (
+              <button key={bi} onClick={() => onCallback?.(message.id, btn.callback_data ?? '')} className={baseClass}>
+                {btn.text}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+});
+
 const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   isChannel,
   onReply,
   onReact,
+  onCallback,
+  onWebApp,
   decryptedMediaUrl,
 }: {
   message: Message;
@@ -445,6 +493,8 @@ const MessageBubble = memo(function MessageBubble({
   isChannel?: boolean;
   onReply?: (message: Message) => void;
   onReact?: (messageId: string) => void;
+  onCallback?: (messageId: string, data: string) => void;
+  onWebApp?: (url: string) => void;
   decryptedMediaUrl?: string;
 }) {
   const time = formatTime(message.createdAt);
@@ -498,10 +548,10 @@ const MessageBubble = memo(function MessageBubble({
         {/* Bubble */}
         <div
           className={`
-            ${hasVideoNote ? 'px-2 py-2' : 'px-3.5 py-2'}
+            ${hasVideoNote ? 'px-2 py-2' : 'px-4 py-2.5'}
             ${isOwn && !isChannel
-              ? 'rounded-[18px] rounded-br-[6px] bubble-sent'
-              : 'rounded-[18px] rounded-bl-[6px] bubble-received'
+              ? 'rounded-[20px] rounded-br-[8px] liquid-glass bubble-sent-glow'
+              : 'rounded-[20px] rounded-bl-[8px] liquid-glass bubble-received-glow'
             }
           `}
         >
@@ -562,6 +612,11 @@ const MessageBubble = memo(function MessageBubble({
             )}
           </div>
         </div>
+
+        {/* Bot inline keyboard */}
+        {message.replyMarkup && (
+          <InlineKeyboard message={message} onCallback={onCallback} onWebApp={onWebApp} />
+        )}
 
         {/* Reactions */}
         {message.reactions && message.reactions.length > 0 && (
@@ -631,6 +686,7 @@ function ChatHeader({
   const [showPinned, setShowPinned] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { startCall } = useCallContext();
+  const isAIChat = chat.id === AI_CHAT_ID;
   const initials = (chat.name || '?')
     .split(' ')
     .map(w => w[0])
@@ -679,6 +735,10 @@ function ChatHeader({
               alt={chat.name || ''}
               className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
             />
+          ) : isAIChat ? (
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/25 to-fuchsia-500/25 border border-violet-500/25 flex items-center justify-center flex-shrink-0 shadow-[0_0_16px_rgba(139,92,246,0.3)]">
+              <Sparkles size={15} className="text-violet-300/90" />
+            </div>
           ) : (
             <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-medium text-white/50">{initials}</span>
@@ -699,7 +759,9 @@ function ChatHeader({
             </h2>
             <div className="flex items-center gap-2">
               <p className="text-[11px] text-white/30">
-                {chat.type === 'personal'
+                {isAIChat
+                  ? '@nexo_ai'
+                  : chat.type === 'personal'
                   ? 'Личный чат'
                   : chat.type === 'group'
                   ? `${chat.members?.length || 0} участников`
@@ -711,14 +773,16 @@ function ChatHeader({
                   ? 'Поддержка Нексо'
                   : ''}
               </p>
-              <EncryptionBadge
-                chatId={chat.id}
-                isE2E={chat.isE2E}
-                isSecret={chat.isSecret}
-                isChannel={chat.type === 'channel'}
-                e2eReady={e2eReady}
-                e2eFingerprint={e2eFingerprint}
-              />
+              {!isAIChat && (
+                <EncryptionBadge
+                  chatId={chat.id}
+                  isE2E={chat.isE2E}
+                  isSecret={chat.isSecret}
+                  isChannel={chat.type === 'channel'}
+                  e2eReady={e2eReady}
+                  e2eFingerprint={e2eFingerprint}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -740,24 +804,28 @@ function ChatHeader({
             </motion.button>
           )}
 
-          <motion.button
-            onClick={() => handleCall('voice')}
-            className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors relative group/callbtn"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title="Голосовой звонок"
-          >
-            <Phone size={16} className="text-white/40 group-hover/callbtn:text-green-400 transition-colors" />
-          </motion.button>
-          <motion.button
-            onClick={() => handleCall('video')}
-            className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors relative group/callbtn"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title="Видеозвонок"
-          >
-            <Video size={16} className="text-white/40 group-hover/callbtn:text-blue-400 transition-colors" />
-          </motion.button>
+          {!isAIChat && (
+            <>
+              <motion.button
+                onClick={() => handleCall('voice')}
+                className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors relative group/callbtn"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Голосовой звонок"
+              >
+                <Phone size={16} className="text-white/40 group-hover/callbtn:text-green-400 transition-colors" />
+              </motion.button>
+              <motion.button
+                onClick={() => handleCall('video')}
+                className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors relative group/callbtn"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Видеозвонок"
+              >
+                <Video size={16} className="text-white/40 group-hover/callbtn:text-blue-400 transition-colors" />
+              </motion.button>
+            </>
+          )}
 
           <div className="relative" ref={menuRef}>
             <motion.button
@@ -2114,6 +2182,18 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const [aiTyping, setAiTyping] = useState(false);
   const typingResetTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
+  // Bot API: reply-клавиатура и web app
+  const [replyKeyboard, setReplyKeyboard] = useState<ReplyKeyboardMarkup | null>(null);
+  const [webAppUrl, setWebAppUrl] = useState<string | null>(null);
+
+  const handleBotCallback = useCallback(async (messageId: string, data: string) => {
+    try {
+      await api.botCallback(chat.id, messageId, data);
+    } catch (err) {
+      console.error('[bot] callback failed:', err);
+    }
+  }, [chat.id]);
+
   // Decrypt loaded messages
   const decryptLoadedMessages = useCallback(async (msgs: Message[]) => {
     const decrypted = await Promise.all(msgs.map(async (msg) => {
@@ -2169,7 +2249,8 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         if (chat.id === NOTES_CHAT_ID) {
           if (!cancelled) setMessages(getNotesMessages());
         } else if (chat.id === AI_CHAT_ID) {
-          if (!cancelled) setMessages(getAIMessages());
+          const msgs = await loadAIHistory();
+          if (!cancelled) setMessages(msgs);
         } else {
           const { getSocket } = await import('../lib/socket');
           let data;
@@ -2461,6 +2542,14 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
           const msg = data.message;
           if (!msg || msg.chatId !== chat.id) return;
 
+          // Bot API: reply-клавиатура приходит с сообщением бота
+          const rm = msg.replyMarkup as ReplyKeyboardMarkup | null;
+          if (rm?.keyboard) {
+            setReplyKeyboard(rm);
+          } else if (rm && 'remove_keyboard' in rm) {
+            setReplyKeyboard(null);
+          }
+
           (async () => {
             let decryptedMsg = { ...msg };
             if (msg.isEncrypted && msg.encryptedContent && msg.encryptedIv && e2eReadyRef.current) {
@@ -2695,6 +2784,8 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
                       isChannel={isChannel}
                       onReply={handleReplyTo}
                       onReact={handleToggleEmojiPicker}
+                      onCallback={handleBotCallback}
+                      onWebApp={setWebAppUrl}
                       decryptedMediaUrl={decryptedMediaUrls[msg.id]}
                     />
                     {/* Emoji picker for this message */}
@@ -2739,6 +2830,47 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         {!aiTyping && typingUsers.length > 0 && <TypingDots names={typingUsers} />}
       </AnimatePresence>
 
+      {/* Bot reply-клавиатура */}
+      <AnimatePresence>
+        {replyKeyboard && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
+            className="px-3 pb-2"
+          >
+            <div className="flex items-start gap-1.5">
+              <div className="flex-1 flex flex-col gap-1 max-w-[75%]">
+                {replyKeyboard.keyboard.map((row, ri) => (
+                  <div key={ri} className="flex gap-1">
+                    {row.map((btn, bi) => (
+                      <button
+                        key={bi}
+                        onClick={() => {
+                          handleSend(btn.text);
+                          if (replyKeyboard.one_time_keyboard) setReplyKeyboard(null);
+                        }}
+                        className="flex-1 px-3 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-xs font-medium text-white/80 hover:bg-white/[0.14] active:scale-[0.98] transition-all whitespace-nowrap overflow-hidden text-ellipsis"
+                      >
+                        {btn.text}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setReplyKeyboard(null)}
+                className="p-1.5 rounded-lg bg-white/[0.05] border border-white/[0.06] hover:bg-white/[0.1] text-white/40 transition-colors"
+                title="Скрыть клавиатуру"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <MessageInput
         onSend={handleSend}
         replyTo={replyTo}
@@ -2746,6 +2878,44 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
         chatId={chat.id}
         e2eReady={e2eReady}
       />
+
+      {/* Bot web app overlay */}
+      <AnimatePresence>
+        {webAppUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm"
+            onClick={() => setWebAppUrl(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-2 md:inset-8 lg:inset-12 rounded-2xl overflow-hidden liquid-glass-strong"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06]">
+                <span className="text-xs text-white/50 font-medium">Web App</span>
+                <button
+                  onClick={() => setWebAppUrl(null)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <iframe
+                src={webAppUrl}
+                title="Web App"
+                className="w-full h-[calc(100%-41px)] bg-white"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Forward modal */}
       <AnimatePresence>

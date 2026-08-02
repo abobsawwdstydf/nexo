@@ -148,7 +148,27 @@ export interface MessageSender {
   tagText?: string | null;
   tagColor?: string | null;
   tagStyle?: string | null;
+  isBot?: boolean;
 }
+
+export interface InlineKeyboardButton {
+  text: string;
+  url?: string;
+  callback_data?: string;
+  web_app?: { url: string };
+}
+
+export interface InlineKeyboardMarkup {
+  inline_keyboard: InlineKeyboardButton[][];
+}
+
+export interface ReplyKeyboardMarkup {
+  keyboard: Array<Array<{ text: string }>>;
+  one_time_keyboard?: boolean;
+  resize_keyboard?: boolean;
+}
+
+export type ReplyMarkup = InlineKeyboardMarkup | ReplyKeyboardMarkup | { remove_keyboard?: boolean } | { force_reply?: boolean };
 
 export interface Message {
   id: string;
@@ -189,6 +209,8 @@ export interface Message {
   isEncrypted?: boolean;
   encryptedContent?: string;
   encryptedIv?: string;
+  // Bot API inline keyboard
+  replyMarkup?: ReplyMarkup | null;
   // Optimistic send state (client-side only)
   _isSending?: boolean;
   _isFailed?: boolean;

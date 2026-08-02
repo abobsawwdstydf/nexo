@@ -7,6 +7,7 @@ import { installSocial } from './social';
 import { installAI } from './ai';
 import { installFeatures } from './features';
 import { installRealtime } from './realtime';
+import { installBots } from './bots';
 
 const api = new ApiClient();
 
@@ -19,6 +20,7 @@ installSocial(api);
 installAI(api);
 installFeatures(api);
 installRealtime(api);
+installBots(api);
 
 export { api };
 export default api;

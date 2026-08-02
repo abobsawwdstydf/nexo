@@ -21,10 +21,48 @@ export interface AIChatResponse {
   premium?: boolean;
 }
 
+export interface AIHistoryMessage {
+  id: string;
+  userId: string;
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
+let historyLoaded = false;
+
 export function notifyAIChanged() {
   try {
     window.dispatchEvent(new CustomEvent(AI_CHANGED_EVENT));
   } catch {}
+}
+
+/** Loads the persisted history from the server and merges it with local cache. */
+export async function loadAIHistory(): Promise<Message[]> {
+  try {
+    const res = await api.get<{ messages: AIHistoryMessage[] }>('/ai/history');
+    const serverMsgs: Message[] = (res.messages || []).map(m => ({
+      id: m.id,
+      chatId: CHAT_ID,
+      senderId: m.role === 'assistant' ? AI_SENDER.id : '',
+      senderUsername: m.role === 'assistant' ? AI_SENDER.username : '',
+      senderDisplayName: m.role === 'assistant' ? AI_SENDER.displayName : 'Вы',
+      content: m.content,
+      type: 'text',
+      createdAt: m.createdAt,
+    }));
+    if (serverMsgs.length > 0) {
+      try {
+        localStorage.setItem(AI_KEY, JSON.stringify(serverMsgs.slice(-100)));
+      } catch {}
+    }
+    historyLoaded = true;
+    notifyAIChanged();
+    return serverMsgs;
+  } catch {
+    historyLoaded = true;
+    return getAIMessages();
+  }
 }
 
 export function getAIMessages(): Message[] {
@@ -52,11 +90,19 @@ export function saveAIMessage(msg: Message) {
   notifyAIChanged();
 }
 
-export function clearAIMessages() {
+/** Clears history locally and on the server. */
+export async function clearAIMessages() {
   try {
     localStorage.removeItem(AI_KEY);
   } catch {}
+  try {
+    await api.delete('/ai/history');
+  } catch {}
   notifyAIChanged();
+}
+
+export function isAIHistoryLoaded() {
+  return historyLoaded;
 }
 
 /** Builds the message history payload for the backend (last 20 messages). */

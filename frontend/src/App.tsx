@@ -15,6 +15,7 @@ import { BetaNotStarted } from './components/BetaNotStarted';
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const MessengerPage = lazy(() => import('./pages/MessengerPage'));
 const LegalPages = lazy(() => import('./pages/LegalPages'));
+const InfoPage = lazy(() => import('./pages/InfoPage'));
 
 // Module-level fallback keeps a stable component identity across re-renders
 const LoadingFallback = () => (
@@ -29,6 +30,7 @@ export default function App() {
   const [showLegal, setShowLegal] = useState(false);
   const [legalTab, setLegalTab] = useState<'privacy' | 'terms' | 'cookies'>('privacy');
   const [teamLogin, setTeamLogin] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   // Auth + beta check on mount
   useEffect(() => {
@@ -40,6 +42,19 @@ export default function App() {
     setLegalTab(tab);
     setShowLegal(true);
   };
+  const openInfo = () => {
+    history.replaceState(null, '', '#info');
+    setShowInfo(true);
+  };
+  const closeInfo = () => {
+    history.replaceState(null, '', window.location.pathname);
+    setShowInfo(false);
+  };
+
+  // Open /info on hash
+  useEffect(() => {
+    if (window.location.hash === '#info') setShowInfo(true);
+  }, []);
 
   // Beta ended — block everything
   if (beta?.ended) {
@@ -107,7 +122,7 @@ export default function App() {
           >
             <Suspense fallback={<LoadingFallback />}>
               <CallProvider>
-                <MessengerPage />
+                <MessengerPage onInfoClick={openInfo} />
               </CallProvider>
             </Suspense>
           </motion.div>
@@ -121,7 +136,7 @@ export default function App() {
             className="h-full w-full"
           >
             <Suspense fallback={<LoadingFallback />}>
-              <AuthPage onLegalClick={openLegal} />
+              <AuthPage onLegalClick={openLegal} onInfoClick={openInfo} />
             </Suspense>
           </motion.div>
         )}
@@ -143,6 +158,24 @@ export default function App() {
                 initialTab={legalTab}
                 onBack={() => setShowLegal(false)}
               />
+            </Suspense>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ Info overlay (fullscreen) ═══ */}
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div
+            key="info"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.25 }}
+            className="absolute inset-0 z-50 h-full w-full"
+          >
+            <Suspense fallback={<LoadingFallback />}>
+              <InfoPage onBack={closeInfo} />
             </Suspense>
           </motion.div>
         )}

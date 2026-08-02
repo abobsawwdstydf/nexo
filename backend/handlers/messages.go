@@ -37,6 +37,7 @@ type MessageJSON struct {
 	ReplyTo          *MessageJSON      `json:"replyTo,omitempty"`
 	Media            []models.Media    `json:"media"`
 	Reactions        []models.Reaction `json:"reactions"`
+	ReplyMarkup      json.RawMessage   `json:"replyMarkup,omitempty"`
 }
 
 type SenderJSON struct {
@@ -47,17 +48,48 @@ type SenderJSON struct {
 	IsVerified        bool   `json:"isVerified"`
 	VerifiedBadgeUrl  string `json:"verifiedBadgeUrl"`
 	VerifiedBadgeType string `json:"verifiedBadgeType"`
+	IsBot             bool   `json:"isBot,omitempty"`
+}
+
+func senderToJSON(u models.User) SenderJSON {
+	return SenderJSON{
+		ID:                u.ID,
+		Username:          u.Username,
+		DisplayName:       u.DisplayName,
+		Avatar:            u.Avatar,
+		IsVerified:        u.IsVerified,
+		VerifiedBadgeUrl:  u.VerifiedBadgeUrl,
+		VerifiedBadgeType: u.VerifiedBadgeType,
+	}
+}
+
+func senderFromBot(b models.Bot) SenderJSON {
+	return SenderJSON{
+		ID:          b.ID,
+		Username:    b.Username,
+		DisplayName: b.Name,
+		Avatar:      b.Avatar,
+		IsBot:       true,
+	}
 }
 
 func messageToJSON(msg models.Message) string {
-	senderJSON := SenderJSON{
-		ID:                msg.Sender.ID,
-		Username:          msg.Sender.Username,
-		DisplayName:       msg.Sender.DisplayName,
-		Avatar:            msg.Sender.Avatar,
-		IsVerified:        msg.Sender.IsVerified,
-		VerifiedBadgeUrl:  msg.Sender.VerifiedBadgeUrl,
-		VerifiedBadgeType: msg.Sender.VerifiedBadgeType,
+	senderJSON := SenderJSON{}
+	if msg.Sender.ID == "" && msg.SenderID != "" {
+		// Сообщение от бота (нет user-записи)
+		var bot models.Bot
+		if err := db.GetDB().First(&bot, "id = ?", msg.SenderID).Error; err == nil {
+			senderJSON = senderFromBot(bot)
+		} else {
+			senderJSON = SenderJSON{ID: msg.SenderID, IsBot: true}
+		}
+	} else {
+		senderJSON = senderToJSON(msg.Sender)
+	}
+
+	var replyMarkup json.RawMessage
+	if msg.ReplyMarkup != "" {
+		replyMarkup = json.RawMessage(msg.ReplyMarkup)
 	}
 
 	msgJSON := MessageJSON{
@@ -77,6 +109,7 @@ func messageToJSON(msg models.Message) string {
 		Sender:           senderJSON,
 		Media:            msg.Media,
 		Reactions:        msg.Reactions,
+		ReplyMarkup:      replyMarkup,
 	}
 
 	data, _ := json.Marshal(msgJSON)
@@ -145,6 +178,8 @@ func SendMessage(c *fiber.Ctx) error {
 	msgJSON := messageToJSON(msg)
 
 	ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
+
+	notifyBotsOfMessage(chatID, msg, msg.Sender)
 
 	// Web Push to offline members (skip sender; NotifyUser skips online users)
 	senderName := msg.Sender.DisplayName

@@ -26,9 +26,39 @@ import (
 )
 
 var (
-	usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,32}$`)
+	usernameRegex = regexp.MustCompile(`^[a-zA-Zа-яА-ЯёЁ0-9_]{3,32}$`)
 	emailRegex    = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 )
+
+// ─── Reserved usernames ─────────────────────────────────────────────────
+// blockedForAll — никто не может использовать
+var blockedForAll = map[string]bool{
+	"i":       true,
+	"info":    true,
+}
+
+// premiumReserved — только аккаунт nexo.su.support@gmail.com
+var premiumReserved = map[string]bool{
+	"nexo":      true,
+	"nexo.su":   true,
+	"haker_one": true,
+	"hakerone":  true,
+	"нексо":     true,
+}
+
+const earlyAccessEmail = "nexo.su.support@gmail.com"
+
+func isUsernameReserved(username string) (bool, string) {
+	u := strings.ToLower(username)
+	if blockedForAll[u] {
+		return true, "Этот username зарезервирован"
+	}
+	if premiumReserved[u] {
+		return true, "Этот username доступен только администрации"
+	}
+	return false, ""
+}
+
 
 // Brute-force protection for login attempts
 type loginAttempt struct {
@@ -124,6 +154,23 @@ func Register(c *fiber.Ctx) error {
 	// Validate username format
 	if !usernameRegex.MatchString(req.Username) {
 		return c.Status(400).JSON(fiber.Map{"error": "Username must be 3-32 characters, letters, numbers, and underscores only"})
+	}
+
+	// Check reserved usernames
+	if reserved, reason := isUsernameReserved(req.Username); reserved {
+		// Premium reserved names can only be used by early access account
+		if premiumReserved[strings.ToLower(req.Username)] && !BetaAccessAllowed(req.Email) {
+			return c.Status(409).JSON(fiber.Map{"error": reason})
+		}
+		// Fully blocked names
+		if blockedForAll[strings.ToLower(req.Username)] {
+			return c.Status(409).JSON(fiber.Map{"error": reason})
+		}
+	}
+
+	// Check reserved usernames
+	if reserved, reason := isUsernameReserved(req.Username); reserved {
+		return c.Status(409).JSON(fiber.Map{"error": reason})
 	}
 
 	// Email is required for registration
@@ -554,6 +601,36 @@ func CheckEmailAvailability(c *fiber.Ctx) error {
 	var existing models.User
 	if result := db.GetDB().Where("email = ?", email).First(&existing); result.Error == nil {
 		return c.JSON(fiber.Map{"available": false, "message": "Этот email уже зарегистрирован"})
+	}
+
+	return c.JSON(fiber.Map{"available": true})
+}
+
+// CheckUsername checks if a username is available
+func CheckUsername(c *fiber.Ctx) error {
+	username := strings.TrimSpace(c.Query("username"))
+	if username == "" {
+		return c.JSON(fiber.Map{"available": false, "reason": "Username is required"})
+	}
+	if !usernameRegex.MatchString(username) {
+		return c.JSON(fiber.Map{"available": false, "reason": "Invalid username format"})
+	}
+
+	// Check reserved usernames
+	if reserved, reason := isUsernameReserved(username); reserved {
+		return c.JSON(fiber.Map{"available": false, "reason": reason})
+	}
+
+	// Check if taken by a user
+	var existingUser models.User
+	if result := db.GetDB().Where("username = ?", username).First(&existingUser); result.Error == nil {
+		return c.JSON(fiber.Map{"available": false, "reason": "Username already taken"})
+	}
+
+	// Check if taken by a bot
+	var existingBot models.Bot
+	if result := db.GetDB().Where("username = ?", username).First(&existingBot); result.Error == nil {
+		return c.JSON(fiber.Map{"available": false, "reason": "Username already taken"})
 	}
 
 	return c.JSON(fiber.Map{"available": true})

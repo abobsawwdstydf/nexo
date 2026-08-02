@@ -55,7 +55,7 @@ function MessengerBackground() {
   );
 }
 
-export default function MessengerPage() {
+export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => void }) {
   const { user, logout } = useAuthStore();
   const { chats: initChats, loaded: initLoaded } = useInitStore();
   const callContext = useCallContext();
@@ -107,7 +107,7 @@ export default function MessengerPage() {
     id: AI_CHAT_ID,
     type: 'personal',
     name: 'Нексо AI',
-    username: null,
+    username: 'nexo_ai',
     avatar: null,
     description: 'Умный ИИ-ассистент — отвечает на любые вопросы',
     createdAt: new Date().toISOString(),
@@ -402,6 +402,7 @@ export default function MessengerPage() {
             user={user}
             initialTab={settingsTab}
             onClose={() => setShowSettings(false)}
+            onInfoClick={onInfoClick}
           />
         )}
       </AnimatePresence>

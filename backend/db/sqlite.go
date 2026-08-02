@@ -117,6 +117,10 @@ func InitLocal(dsn string) error {
 		&models.Bot{},
 		&models.BotCommand{},
 		&models.BotInstallation{},
+		&models.BotUpdate{},
+		&models.BotMessageSeq{},
+		&models.BotChatState{},
+		&models.UsernameAlias{},
 		// Search
 		&models.SearchHistory{},
 		// Moderation
@@ -165,6 +169,8 @@ func InitLocal(dsn string) error {
 		&models.CSRFToken{},
 		// Security Audit Log (persistent)
 		&models.AuditLogEntry{},
+		// AI chat history
+		&models.AIMessage{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
@@ -318,6 +324,10 @@ func addIndexes(db *gorm.DB) {
 
 		// Whiteboard edits
 		"CREATE INDEX IF NOT EXISTS idx_whiteboard_edits_wb_version ON whiteboard_edits(whiteboard_id, version)",
+
+		// AI chat history
+		"CREATE INDEX IF NOT EXISTS idx_ai_messages_user_id ON ai_messages(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_ai_messages_user_created ON ai_messages(user_id, created_at)",
 	}
 	for _, idx := range indexes {
 		db.Exec(idx)

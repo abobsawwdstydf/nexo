@@ -528,6 +528,8 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(payload.ChatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 
+	notifyBotsOfMessage(payload.ChatID, msg, msg.Sender)
+
 	// Web Push to offline members
 	senderName := msg.Sender.DisplayName
 	if senderName == "" {

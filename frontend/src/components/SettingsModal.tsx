@@ -42,6 +42,7 @@ interface SettingsModalProps {
   user: UserType;
   initialTab?: string;
   onClose: () => void;
+  onInfoClick?: () => void;
 }
 
 const tabs: { id: SettingsTab; label: string; icon: typeof Bell }[] = [
@@ -53,7 +54,7 @@ const tabs: { id: SettingsTab; label: string; icon: typeof Bell }[] = [
   { id: 'profile', label: 'Профиль', icon: User },
 ];
 
-function GeneralSettings() {
+function GeneralSettings({ onInfoClick }: { onInfoClick?: () => void }) {
   const [soundsOn, setSoundsOn] = useSoundsEnabled();
   return (
     <div className="space-y-1">
@@ -65,6 +66,17 @@ function GeneralSettings() {
 
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
       <VersionInfo />
+      {onInfoClick && (
+        <div className="mt-2">
+          <button
+            onClick={onInfoClick}
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/60 hover:text-white/90 hover:bg-white/[0.04] rounded-lg transition-colors"
+          >
+            <Globe size={16} className="text-violet-400 shrink-0" />
+            <span>Страница о проекте</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -555,15 +567,21 @@ function PremiumSettings() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
   const [paying, setPaying] = useState(false);
+  const [aliases, setAliases] = useState<any[]>([]);
+  const [newAlias, setNewAlias] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([
       api.getPremiumStatus().catch(() => ({ isPremium: false, premiumUntil: null })),
       api.getPremiumPrices().catch(() => ({ prices: {}, currency: 'RUB' })),
-    ]).then(([status, priceData]) => {
+      api.getUserAliases().catch(() => []),
+    ]).then(([status, priceData, aliasData]) => {
       setPremiumStatus(status);
       setPrices(priceData.prices || {});
       setCurrency(priceData.currency || 'RUB');
+      setAliases(Array.isArray(aliasData) ? aliasData : []);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -581,6 +599,34 @@ function PremiumSettings() {
       toast.error('Ошибка создания платежа');
     } finally {
       setPaying(false);
+    }
+  };
+
+  const handleAddAlias = async () => {
+    if (!newAlias.trim()) return;
+    setAdding(true);
+    setError('');
+    try {
+      const result = await api.createUserAlias(newAlias.trim());
+      setAliases(prev => [...prev, result]);
+      setNewAlias('');
+      toast.success('Юзернейм добавлен');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Ошибка';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDeleteAlias = async (aliasId: string) => {
+    try {
+      await api.deleteUserAlias(aliasId);
+      setAliases(prev => prev.filter(a => a.id !== aliasId));
+      toast.success('Юзернейм удалён');
+    } catch (err) {
+      toast.error('Не удалось удалить');
     }
   };
 
@@ -603,7 +649,7 @@ function PremiumSettings() {
           <Crown size={18} className="text-amber-400" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white/90">НуЧе</h3>
+          <h3 className="text-sm font-semibold text-white/90">Премиум</h3>
           <p className="text-[10px] text-white/40">
             {isPremium
               ? `Действует до ${new Date(premiumStatus!.premiumUntil!).toLocaleDateString('ru-RU')}`
@@ -625,6 +671,7 @@ function PremiumSettings() {
           { icon: '🎮', label: 'Эксклюзивные стикеры' },
           { icon: '☁️', label: 'Облако 100 ГБ' },
           { icon: '👑', label: 'Приоритетная поддержка' },
+          { icon: '📝', label: 'Доп. юзернеймы' },
         ].map((feat, i) => (
           <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
             <span className="text-sm">{feat.icon}</span>
@@ -632,6 +679,48 @@ function PremiumSettings() {
           </div>
         ))}
       </div>
+
+      {/* Additional usernames */}
+      <div className="h-px bg-white/[0.04] my-1 mx-1" />
+      {isPremium && (
+        <div className="px-1 space-y-2">
+          <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider">Дополнительные юзернеймы</h4>
+          <p className="text-[10px] text-white/30">Доступно 10 дополнительных юзернеймов для аккаунта (0–10)</p>
+          <div className="space-y-1.5">
+            {aliases.map((a) => (
+              <div key={a.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+                <span className="text-sm text-white/80 font-mono">@{a.alias}</span>
+                <button
+                  onClick={() => handleDeleteAlias(a.id)}
+                  className="px-2 py-1 text-[10px] text-white/40 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                >
+                  Удалить
+                </button>
+              </div>
+            ))}
+            {aliases.length === 0 && (
+              <p className="text-xs text-white/20 italic px-1">Нет дополнительных юзернеймов</p>
+            )}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text"
+              value={newAlias}
+              onChange={(e) => { setNewAlias(e.target.value); setError(''); }}
+              placeholder="Новый юзернейм..."
+              className="flex-1 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none focus:border-violet-500/50"
+            />
+            <button
+              onClick={handleAddAlias}
+              disabled={adding || !newAlias.trim() || aliases.length >= 10}
+              className="px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {adding ? '...' : 'Добавить'}
+            </button>
+          </div>
+          {error && <p className="text-xs text-red-400 px-1">{error}</p>}
+        </div>
+      )}
 
       {!isPremium && (
         <>
@@ -751,7 +840,7 @@ function SettingRow({
   );
 }
 
-export default function SettingsModal({ user, initialTab = 'general', onClose }: SettingsModalProps) {
+export default function SettingsModal({ user, initialTab = 'general', onClose, onInfoClick }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab as SettingsTab);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -815,7 +904,7 @@ export default function SettingsModal({ user, initialTab = 'general', onClose }:
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15 }}
             >
-              {activeTab === 'general' && <GeneralSettings />}
+              {activeTab === 'general' && <GeneralSettings onInfoClick={onInfoClick} />}
               {activeTab === 'notifications' && <NotificationSettings />}
               {activeTab === 'appearance' && <AppearanceSettings />}
               {activeTab === 'privacy' && <PrivacySettings />}

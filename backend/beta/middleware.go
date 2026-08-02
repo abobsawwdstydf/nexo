@@ -22,7 +22,7 @@ var publicPrefixes = []string{
 	"/api/auth/",
 	"/api/captcha/",
 	"/api/beta/",
-	"/api/bot/status",
+	"/api/bot/",
 	"/api/stickers/",
 }
 
