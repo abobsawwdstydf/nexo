@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
 import { api } from '../lib/api';
-import type { Chat, Message } from '../lib/types';
+import type { Chat, Message, UserBasic } from '../lib/types';
 import { enrichChat } from '../lib/enrichChat';
 import { ChatList } from '../components/ChatList';
 import { MessageArea } from '../components/MessageArea';
@@ -140,6 +140,40 @@ export default function MessengerPage() {
     socket.on('message:new', onMessage);
     return () => {
       socket.off('message:new', onMessage);
+    };
+  }, []);
+
+  // ─── Incoming calls (WebRTC signalling via WS) ────────────────────────
+  const [incomingCall, setIncomingCall] = useState<{
+    offer: RTCSessionDescriptionInit;
+    from: UserBasic;
+    chatId: string;
+    callType: 'voice' | 'video';
+  } | null>(null);
+  const callContextRef = useRef(callContext);
+  callContextRef.current = callContext;
+  const incomingCallRef = useRef(incomingCall);
+  incomingCallRef.current = incomingCall;
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onCallOffer = (data: any) => {
+      // Busy — already in a call or an incoming call is being presented
+      if (callContextRef.current.activeCall || incomingCallRef.current) return;
+      if (!data.offer || !data.from) return;
+      setIncomingCall({
+        offer: data.offer,
+        from: data.from,
+        chatId: data.chatId || '',
+        callType: data.callType === 'video' ? 'video' : 'voice',
+      });
+    };
+
+    socket.on('call:offer', onCallOffer);
+    return () => {
+      socket.off('call:offer', onCallOffer);
     };
   }, []);
 
@@ -367,6 +401,21 @@ export default function MessengerPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* ═══ Call overlay (outgoing + incoming) ═══ */}
+      <CallOverlay
+        open={callContext.activeCall || !!incomingCall}
+        type={incomingCall ? incomingCall.callType : callContext.callType}
+        target={incomingCall ? incomingCall.from : callContext.callTarget}
+        chatId={incomingCall ? incomingCall.chatId : callContext.callChatId}
+        incoming={!!incomingCall}
+        initialOffer={incomingCall?.offer ?? null}
+        onClose={() => {
+          callContext.endCall();
+          setIncomingCall(null);
+        }}
+        onIncomingRejected={() => setIncomingCall(null)}
+      />
 
     </div>
   );
