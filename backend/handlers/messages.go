@@ -40,18 +40,24 @@ type MessageJSON struct {
 }
 
 type SenderJSON struct {
-	ID          string `json:"id"`
-	Username    string `json:"username"`
-	DisplayName string `json:"displayName"`
-	Avatar      string `json:"avatar"`
+	ID                string `json:"id"`
+	Username          string `json:"username"`
+	DisplayName       string `json:"displayName"`
+	Avatar            string `json:"avatar"`
+	IsVerified        bool   `json:"isVerified"`
+	VerifiedBadgeUrl  string `json:"verifiedBadgeUrl"`
+	VerifiedBadgeType string `json:"verifiedBadgeType"`
 }
 
 func messageToJSON(msg models.Message) string {
 	senderJSON := SenderJSON{
-		ID:          msg.Sender.ID,
-		Username:    msg.Sender.Username,
-		DisplayName: msg.Sender.DisplayName,
-		Avatar:      msg.Sender.Avatar,
+		ID:                msg.Sender.ID,
+		Username:          msg.Sender.Username,
+		DisplayName:       msg.Sender.DisplayName,
+		Avatar:            msg.Sender.Avatar,
+		IsVerified:        msg.Sender.IsVerified,
+		VerifiedBadgeUrl:  msg.Sender.VerifiedBadgeUrl,
+		VerifiedBadgeType: msg.Sender.VerifiedBadgeType,
 	}
 
 	msgJSON := MessageJSON{

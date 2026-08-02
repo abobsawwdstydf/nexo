@@ -215,6 +215,7 @@ function PersonalTab({ onClose, onChatCreated }: { onClose: () => void; onChatCr
 
 function GroupTab({ onClose, onChatCreated }: { onClose: () => void; onChatCreated: (chat: Chat | null) => void }) {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserPresence[]>([]);
   const [selected, setSelected] = useState<UserPresence[]>([]);
@@ -256,7 +257,11 @@ function GroupTab({ onClose, onChatCreated }: { onClose: () => void; onChatCreat
     setSubmitting(true);
     setError('');
     try {
-      const chat = await api.createGroup(name.trim(), selected.map(u => u.id));
+      const chat = await api.createGroup(
+        name.trim(),
+        selected.map(u => u.id),
+        username.trim() || undefined,
+      );
       onChatCreated(chat);
       onClose();
     } catch (err: unknown) {
@@ -280,6 +285,28 @@ function GroupTab({ onClose, onChatCreated }: { onClose: () => void; onChatCreat
           maxLength={64}
           className="w-full h-10 px-4 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
         />
+      </div>
+
+      <div>
+        <label className="block text-xs text-white/40 mb-1.5">
+          Username <span className="text-white/20">(для публичной группы, необязательно)</span>
+        </label>
+        <div className="relative">
+          <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <input
+            type="text"
+            value={username}
+            onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+            placeholder="banda_kotikov"
+            maxLength={32}
+            className="w-full h-10 pl-9 pr-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06]"
+          />
+        </div>
+        {username.length >= 3 && (
+          <p className="text-[10px] text-white/20 mt-1">
+            nexo.app/@{username}
+          </p>
+        )}
       </div>
 
       {/* Selected members */}

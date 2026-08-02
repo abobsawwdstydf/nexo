@@ -1,18 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   User,
   Mail,
   Lock,
+  UserPlus,
+  Plus,
+  Trash2,
+  RefreshCw,
+  XCircle,
+  Globe,
 } from 'lucide-react';
-import {
-  UserCirlceAdd,
-  Add,
-  Trash,
-  Refresh,
-  CloseCircle,
-  Global,
-} from 'iconsax-react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import { toast } from '../lib/toast';
@@ -306,7 +304,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/[0.08] border border-white/[0.06] flex items-center justify-center">
-              <Global size={16} className="text-white/50" />
+              <Globe size={16} className="text-white/50" />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-white/90">Аккаунты</h2>
@@ -319,7 +317,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <CloseCircle size={18} className="text-white/40" />
+            <XCircle size={18} className="text-white/40" />
           </motion.button>
         </div>
 
@@ -378,7 +376,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
                     whileTap={{ scale: 0.9 }}
                     disabled={loading}
                   >
-                    <Refresh size={14} className="text-white/40" />
+                    <RefreshCw size={14} className="text-white/40" />
                   </motion.button>
                   <motion.button
                     onClick={() => handleRemoveAccount(account.id)}
@@ -386,7 +384,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >
-                    <Trash size={14} className="text-red-400/50" />
+                    <Trash2 size={14} className="text-red-400/50" />
                   </motion.button>
                 </div>
               )}
@@ -395,7 +393,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
 
           {accounts.length === 0 && (
             <div className="text-center py-8">
-              <UserCirlceAdd size={32} className="text-white/15 mx-auto mb-3" />
+              <UserPlus size={32} className="text-white/15 mx-auto mb-3" />
               <p className="text-sm text-white/30">Нет сохранённых аккаунтов</p>
               <p className="text-xs text-white/20 mt-1">Добавьте аккаунт для быстрого переключения</p>
             </div>
@@ -411,7 +409,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
-              <Add size={16} />
+              <Plus size={16} />
               Добавить аккаунт
             </motion.button>
           ) : (
@@ -486,7 +484,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
             whileTap={{ scale: 0.99 }}
             disabled={syncing}
           >
-            <Refresh size={12} className={syncing ? 'animate-spin' : ''} />
+            <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
             Синхронизировать между устройствами
           </motion.button>
         </div>

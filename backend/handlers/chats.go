@@ -17,12 +17,15 @@ var chatUsernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,64}$`)
 
 // JSON output structs for safe marshaling
 type ChatMemberJSON struct {
-	ID          string `json:"id"`
-	UserID      string `json:"userId"`
-	Role        string `json:"role"`
-	DisplayName string `json:"displayName"`
-	Avatar      string `json:"avatar"`
-	IsOnline    bool   `json:"isOnline"`
+	ID                string `json:"id"`
+	UserID            string `json:"userId"`
+	Role              string `json:"role"`
+	DisplayName       string `json:"displayName"`
+	Avatar            string `json:"avatar"`
+	IsOnline          bool   `json:"isOnline"`
+	IsVerified        bool   `json:"isVerified"`
+	VerifiedBadgeUrl  string `json:"verifiedBadgeUrl"`
+	VerifiedBadgeType string `json:"verifiedBadgeType"`
 }
 
 type ChatJSON struct {
@@ -52,12 +55,15 @@ func chatToJSON(chat models.Chat, viewerID string) string {
 	membersJSON := make([]ChatMemberJSON, 0, len(chat.Members))
 	for _, m := range chat.Members {
 		membersJSON = append(membersJSON, ChatMemberJSON{
-			ID:          m.ID,
-			UserID:      m.UserID,
-			Role:        m.Role,
-			DisplayName: m.User.DisplayName,
-			Avatar:      m.User.Avatar,
-			IsOnline:    m.User.IsOnline,
+			ID:                m.ID,
+			UserID:            m.UserID,
+			Role:              m.Role,
+			DisplayName:       m.User.DisplayName,
+			Avatar:            m.User.Avatar,
+			IsOnline:          m.User.IsOnline,
+			IsVerified:        m.User.IsVerified,
+			VerifiedBadgeUrl:  m.User.VerifiedBadgeUrl,
+			VerifiedBadgeType: m.User.VerifiedBadgeType,
 		})
 	}
 

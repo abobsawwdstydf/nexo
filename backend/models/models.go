@@ -11,8 +11,10 @@ type User struct {
 	Avatar          string     `json:"avatar"`
 	Bio             string     `json:"bio"`
 	IsOnline        bool       `json:"isOnline" gorm:"default:false"`
-	IsVerified      bool       `json:"isVerified" gorm:"default:false"`
-	IsPremium       bool       `json:"isPremium" gorm:"default:false"`
+	IsVerified       bool       `json:"isVerified" gorm:"default:false"`
+	VerifiedBadgeUrl string     `json:"verifiedBadgeUrl"`
+	VerifiedBadgeType string    `json:"verifiedBadgeType"`
+	IsPremium        bool       `json:"isPremium" gorm:"default:false"`
 	IsBanned        bool       `json:"isBanned" gorm:"default:false"`
 	BanReason       string     `json:"banReason"`
 	IsAdmin         bool       `json:"isAdmin" gorm:"default:false"`

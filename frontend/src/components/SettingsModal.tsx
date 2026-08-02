@@ -27,6 +27,7 @@ import {
   Download,
   Trash2,
   AlertTriangle,
+  Share2,
 } from 'lucide-react';
 import type { User as UserType } from '../lib/types';
 import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotification } from '../lib/notifications';
@@ -205,9 +206,28 @@ const COLOR_SCHEMES = [
   { id: 'yellow', color: '#eab308', label: 'Жёлтый' },
 ];
 
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const num = parseInt(full, 16);
+  if (Number.isNaN(num)) return '163, 163, 163';
+  return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
+}
+
+function applyCustomAccent(color: string) {
+  const root = document.documentElement;
+  root.style.setProperty('--nexo-custom-color', color);
+  root.style.setProperty('--nexo-custom-rgb', hexToRgb(color));
+  root.style.setProperty('--color-accent', color);
+  root.style.setProperty('--color-accent-dark', color);
+  root.style.setProperty('--color-accent-bright', color);
+}
+
 function AppearanceSettings() {
   const [theme, setTheme] = useState(() => localStorage.getItem('nexo_theme') || 'dark');
   const [colorScheme, setColorScheme] = useState(() => localStorage.getItem('nexo_color_scheme') || 'purple');
+  const [customColor, setCustomColor] = useState(() => localStorage.getItem('nexo_custom_color') || '#8b5cf6');
+  const [shared, setShared] = useState(false);
 
   const handleThemeChange = (newTheme: string) => {
     setTheme(newTheme);
@@ -220,6 +240,57 @@ function AppearanceSettings() {
     localStorage.setItem('nexo_color_scheme', newColor);
     document.documentElement.setAttribute('data-color-scheme', newColor);
   };
+
+  const handleCustomColorChange = (color: string) => {
+    setCustomColor(color);
+    localStorage.setItem('nexo_custom_color', color);
+    handleColorChange('custom');
+    applyCustomAccent(color);
+  };
+
+  const handleShare = async () => {
+    const color = colorScheme === 'custom' ? customColor : '';
+    const hash = `#theme=${encodeURIComponent(theme)}&scheme=${encodeURIComponent(colorScheme)}${color ? `&color=${encodeURIComponent(color)}` : ''}`;
+    const url = `${window.location.origin}${window.location.pathname}${hash}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Ссылка на тему скопирована');
+    } catch {
+      window.prompt('Ссылка на тему:', url);
+    }
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  };
+
+  useEffect(() => {
+    // Import theme from URL share link (#theme=dark&scheme=blue&color=...)
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const t = params.get('theme');
+    const s = params.get('scheme');
+    const c = params.get('color');
+    if (t && (t === 'dark' || t === 'light' || t === 'amoled' || t === 'midnight')) {
+      setTheme(t);
+      localStorage.setItem('nexo_theme', t);
+      document.documentElement.setAttribute('data-theme', t);
+    }
+    if (s) {
+      setColorScheme(s);
+      localStorage.setItem('nexo_color_scheme', s);
+      document.documentElement.setAttribute('data-color-scheme', s);
+      if (s === 'custom' && c) {
+        setCustomColor(c);
+        localStorage.setItem('nexo_custom_color', c);
+        applyCustomAccent(c);
+      }
+      if (s === 'custom' && c) {
+        toast.success('Импортирована кастомная тема');
+      }
+    }
+    if (t || s) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -285,9 +356,47 @@ function AppearanceSettings() {
               </motion.button>
             );
           })}
+          {/* Custom swatch */}
+          <label
+            className={`
+              w-full aspect-square rounded-xl transition-all duration-200 relative flex items-center justify-center cursor-pointer
+              ${colorScheme === 'custom' ? 'ring-2 ring-white/40 ring-offset-1 ring-offset-[#0a0a0f]' : ''}
+            `}
+            style={{ background: 'conic-gradient(#ff5f6d, #ffc371, #47e3a1, #6a5af9, #ff5f6d)' }}
+            title="Свой цвет"
+          >
+            {colorScheme === 'custom' ? (
+              <Check size={12} className="text-white" />
+            ) : (
+              <span className="text-[8px] font-bold text-white/90 tracking-wide">RGB</span>
+            )}
+            <input
+              type="color"
+              value={customColor}
+              onChange={e => handleCustomColorChange(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              aria-label="Свой цвет акцента"
+            />
+          </label>
         </div>
         <p className="text-[10px] text-white/25 mt-2 px-1">
           Цвет акцента используется для выделения элементов интерфейса
+        </p>
+      </div>
+
+      {/* Share / Import theme */}
+      <div>
+        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Поделиться темой</h3>
+        <motion.button
+          onClick={handleShare}
+          whileTap={{ scale: 0.98 }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.06] text-xs text-white/70 transition-colors"
+        >
+          {shared ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} className="text-white/40" />}
+          {shared ? 'Скопировано!' : 'Скопировать ссылку на тему'}
+        </motion.button>
+        <p className="text-[10px] text-white/25 mt-2 px-1">
+          Тот, кто откроет ссылку, автоматически применит эту тему
         </p>
       </div>
     </div>

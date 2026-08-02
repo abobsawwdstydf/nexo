@@ -18,6 +18,7 @@ import { CallOverlay } from '../components/CallOverlay';
 import { useCallContext } from '../lib/callContext';
 import { getSocket } from '../lib/socket';
 import { getNotesMessages, NOTES_CHAT_ID, NOTES_CHANGED_EVENT } from '../lib/api/noteChat';
+import { MobileBottomNav } from '../components/MobileBottomNav';
 
 const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
@@ -163,6 +164,19 @@ export default function MessengerPage() {
   const handleOpenNewChat = useCallback(() => setCreateTab('personal'), []);
   const handleOpenNewChannel = useCallback(() => setCreateTab('channel'), []);
   const handleOpenAccountManager = useCallback(() => setShowAccountManager(true), []);
+  const handleOpenFeedback = useCallback(() => {
+    if (!user) return;
+    api.getOrCreateFeedbackChat()
+      .then(chat => {
+        useInitStore.getState().addChat(enrichChat(chat, user));
+        setSelectedChatId(chat.id);
+        setMobileView('chat');
+        setShowFriends(false);
+      })
+      .catch(err => {
+        console.error('Failed to open feedback chat:', err);
+      });
+  }, [user]);
   const handleChatCreated = useCallback((chat: Chat | null) => {
     if (chat && user) {
       useInitStore.getState().addChat(enrichChat(chat, user));
@@ -211,14 +225,14 @@ export default function MessengerPage() {
       <Confetti trigger={confettiTrigger} />
 
       {/* Main layout */}
-      <div className="relative z-10 flex-1 flex gap-3 p-3 h-full overflow-hidden">
+      <div className="relative z-10 flex-1 flex p-2 h-full overflow-hidden">
+        <div className="flex-1 flex overflow-hidden rounded-[26px] border border-white/[0.08] liquid-glass-strong shadow-[0_0_60px_rgba(0,0,0,0.45)]">
         {/* ─── Chat List Sidebar ────────────────────────────────────── */}
         <div
           className={`
             w-full md:w-[360px] md:min-w-[320px] flex-shrink-0
             ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}
-            flex-col rounded-2xl md:overflow-hidden overflow-visible
-            liquid-glass-strong
+            flex-col overflow-hidden border-r border-white/[0.06]
           `}
         >
           {showFriends ? (
@@ -242,6 +256,7 @@ export default function MessengerPage() {
               onNewChat={handleOpenNewChat}
               onNewChannel={handleOpenNewChannel}
               onOpenAccountManager={handleOpenAccountManager}
+              onOpenFeedback={handleOpenFeedback}
             />
           )}
         </div>
@@ -251,8 +266,7 @@ export default function MessengerPage() {
           className={`
             flex-1 min-w-0
             ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}
-            flex-col rounded-2xl overflow-hidden
-            liquid-glass
+            flex-col overflow-hidden
           `}
         >
           <AnimatePresence mode="wait">
@@ -302,7 +316,17 @@ export default function MessengerPage() {
           )}
           </AnimatePresence>
         </div>
+        </div>
       </div>
+
+      {/* ─── Mobile bottom nav (TG 2026) ───────────────────────────── */}
+      <MobileBottomNav
+        active={showFriends ? 'friends' : 'chats'}
+        onChats={() => { setShowFriends(false); setMobileView('list'); }}
+        onFriends={() => { setShowFriends(true); setMobileView('list'); }}
+        onSettings={() => handleOpenSettings('general')}
+        onProfile={handleOpenProfile}
+      />
 
       {/* ═══ Modals ═══ */}
       <AnimatePresence>

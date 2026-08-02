@@ -16,9 +16,11 @@ import {
   ArrowRight,
   Shield,
   Globe,
+  LifeBuoy,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
 import { NOTES_CHAT_ID } from '../lib/api/noteChat';
+import { VerifiedBadge } from './VerifiedBadge';
 
 interface ChatListProps {
   chats: Chat[];
@@ -35,6 +37,7 @@ interface ChatListProps {
   onNewChat: () => void;
   onNewChannel: () => void;
   onOpenAccountManager: () => void;
+  onOpenFeedback: () => void;
 }
 
 function ActionButton({
@@ -146,20 +149,30 @@ function ChatListItem({
     >
       <ChatAvatar chat={chat} />
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-white/90 truncate">
-            {chat.name || 'Без названия'}
-          </span>
-          {timeStr && (
-            <span className="text-[11px] text-white/30 flex-shrink-0">
-              {timeStr}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span className="text-sm font-medium text-white/90 truncate">
+                {chat.name || 'Без названия'}
+              </span>
+              {chat.isVerified && (
+                <VerifiedBadge
+                  isVerified
+                  badgeUrl={chat.verifiedBadgeUrl}
+                  badgeType={chat.verifiedBadgeType}
+                  size={14}
+                />
+              )}
             </span>
-          )}
-        </div>
+            {timeStr && (
+              <span className="text-[11px] text-white/30 flex-shrink-0">
+                {timeStr}
+              </span>
+            )}
+          </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <span className="text-xs text-white/40 truncate">
-            {previewText || (chat.type === 'personal' ? 'Личный чат' : chat.type === 'group' ? 'Группа' : 'Канал')}
+            {previewText || (chat.type === 'personal' ? 'Личный чат' : chat.type === 'group' ? 'Группа' : chat.type === 'system' ? 'Поддержка' : 'Канал')}
           </span>
           {unread > 0 && (
             <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-white/20 flex items-center justify-center">
@@ -189,6 +202,7 @@ export function ChatList({
   onNewChat,
   onNewChannel,
   onOpenAccountManager,
+  onOpenFeedback,
 }: ChatListProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -306,6 +320,13 @@ export function ChatList({
                   <Globe size={15} />
                   Аккаунты
                 </button>
+                <button
+                  onClick={() => { setShowUserMenu(false); onOpenFeedback(); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
+                >
+                  <LifeBuoy size={15} />
+                  Обратная связь
+                </button>
                 <div className="mx-3 my-1 h-px bg-white/[0.06]" />
                 <button
                   onClick={() => { setShowUserMenu(false); onLogout(); }}
@@ -390,11 +411,11 @@ export function ChatList({
 
       <div className="flex-shrink-0 flex items-center gap-1.5 px-3 pb-2">
         <ActionButton icon={Users} label="Друзья" onClick={onOpenFriends} />
-        <ActionButton icon={UserPlus} label="Новый чат" onClick={onNewChat} />
-        <ActionButton icon={Plus} label="Канал" onClick={onNewChannel} />
+        <ActionButton icon={Plus} label="Создать" onClick={onNewChat} />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
+      <div className="relative flex-1 min-h-0">
+        <div className="h-full overflow-y-auto px-2 pb-20">
         {loading ? (
           <div className="flex flex-col gap-2 px-2 pt-2">
             {[1, 2, 3, 4, 5].map(i => (
@@ -438,6 +459,16 @@ export function ChatList({
             </AnimatePresence>
           </div>
         )}
+        </div>
+        <motion.button
+          onClick={onNewChat}
+          whileHover={{ scale: 1.06, rotate: 90 }}
+          whileTap={{ scale: 0.94 }}
+          aria-label="Создать"
+          className="absolute bottom-4 right-3 z-10 w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent-dark text-white flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.4)] glow-accent"
+        >
+          <Plus size={24} strokeWidth={2.2} />
+        </motion.button>
       </div>
 
       <div className="flex-shrink-0 px-3 py-2 border-t border-white/[0.06]">
@@ -461,8 +492,14 @@ export function ChatList({
             <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400/80 border-2 border-[#0a0a0f]" />
           </div>
           <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-medium text-white/90 truncate">
-              {user?.displayName || user?.username || ''}
+            <p className="flex items-center gap-1.5 text-sm font-medium text-white/90 truncate">
+              <span className="truncate">{user?.displayName || user?.username || ''}</span>
+              <VerifiedBadge
+                isVerified={user?.isVerified}
+                badgeUrl={user?.verifiedBadgeUrl}
+                badgeType={user?.verifiedBadgeType}
+                size={14}
+              />
             </p>
             <p className="text-[11px] text-white/40">Личный кабинет</p>
           </div>

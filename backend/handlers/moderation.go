@@ -231,3 +231,102 @@ func SetSlowMode(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"ok": true, "interval": req.Interval})
 }
+
+// BadgeRequest is the payload for granting/clearing a verification badge.
+type BadgeRequest struct {
+	TargetID  string `json:"targetId"`
+	BadgeType string `json:"badgeType"` // e.g. "verified", "premium", "developer", "moderator"
+	BadgeURL  string `json:"badgeUrl"`
+}
+
+// SetUserBadge grants a verification badge to a user (admin only).
+func SetUserBadge(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+
+	var req BadgeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if req.TargetID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "targetId required"})
+	}
+	if req.BadgeURL == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "badgeUrl required"})
+	}
+	if !isPlatformAdmin(userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Only platform admins can grant badges"})
+	}
+
+	var target models.User
+	if result := db.GetDB().First(&target, "id = ?", req.TargetID); result.Error != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(map[string]interface{}{
+		"is_verified":         true,
+		"verified_badge_type": req.BadgeType,
+		"verified_badge_url":  req.BadgeURL,
+	})
+
+	ws.HubInstance.SendToUser(req.TargetID, mustWSMap("user:badge", map[string]string{
+		"badgeType": req.BadgeType,
+		"badgeUrl":  req.BadgeURL,
+	}))
+	ws.HubInstance.SendToChat(target.ID, mustWSMsg("user:badge_updated",
+		"targetId", req.TargetID,
+		"badgeType", req.BadgeType,
+	), "")
+
+	// Log moderation action
+	db.GetDB().Create(&models.ModerationLog{
+		ID:       generateID(),
+		TargetID: req.TargetID,
+		ActorID:  userID,
+		Action:   "grant_badge",
+		Reason:   req.BadgeType,
+	})
+
+	return c.JSON(fiber.Map{"ok": true, "action": "grant_badge"})
+}
+
+// ClearUserBadge removes a verification badge from a user (admin only).
+func ClearUserBadge(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+
+	var req BadgeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if req.TargetID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "targetId required"})
+	}
+	if !isPlatformAdmin(userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Only platform admins can clear badges"})
+	}
+
+	if result := db.GetDB().First(&models.User{}, "id = ?", req.TargetID); result.Error != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(map[string]interface{}{
+		"is_verified":         false,
+		"verified_badge_type": "",
+		"verified_badge_url":  "",
+	})
+
+	ws.HubInstance.SendToUser(req.TargetID, mustWSMap("user:badge", map[string]string{
+		"badgeType": "",
+		"badgeUrl":  "",
+	}))
+
+	db.GetDB().Create(&models.ModerationLog{
+		ID:       generateID(),
+		TargetID: req.TargetID,
+		ActorID:  userID,
+		Action:   "clear_badge",
+	})
+
+	return c.JSON(fiber.Map{"ok": true, "action": "clear_badge"})
+}

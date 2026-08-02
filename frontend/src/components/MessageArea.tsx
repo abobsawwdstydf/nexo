@@ -30,18 +30,15 @@ import {
   ExternalLink,
   Loader2,
   RefreshCw,
-} from 'lucide-react';
-import {
   Menu,
-  CallCalling,
-  VideoCircle,
-  ArrowLeft2,
-  Gallery,
-} from 'iconsax-react';
+  Phone,
+  ArrowLeft,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
 import { toast } from '../lib/toast';
+import { VerifiedBadge } from './VerifiedBadge';
 import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/noteChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import type { Chat, Message, Reaction, GifItem } from '../lib/types';
@@ -508,8 +505,14 @@ const MessageBubble = memo(function MessageBubble({
           `}
         >
           {showSender && (
-            <p className="text-[11px] font-semibold text-blue-400/70 mb-0.5">
-              {message.sender.displayName || message.sender.username}
+            <p className="flex items-center gap-1 text-[11px] font-semibold text-blue-400/70 mb-0.5">
+              <span>{message.sender.displayName || message.sender.username}</span>
+              <VerifiedBadge
+                isVerified={message.sender?.isVerified}
+                badgeUrl={message.sender?.verifiedBadgeUrl}
+                badgeType={message.sender?.verifiedBadgeType}
+                size={12}
+              />
             </p>
           )}
 
@@ -666,7 +669,7 @@ function ChatHeader({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <ArrowLeft2 size={20} className="text-white/70" />
+            <ArrowLeft size={20} className="text-white/70" />
           </motion.button>
 
           {chat.avatar ? (
@@ -682,8 +685,16 @@ function ChatHeader({
           )}
 
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-white/90 truncate">
-              {chat.name || 'Без названия'}
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-white/90 truncate">
+              <span className="truncate">{chat.name || 'Без названия'}</span>
+              {chat.isVerified && (
+                <VerifiedBadge
+                  isVerified
+                  badgeUrl={chat.verifiedBadgeUrl}
+                  badgeType={chat.verifiedBadgeType}
+                  size={15}
+                />
+              )}
             </h2>
             <div className="flex items-center gap-2">
               <p className="text-[11px] text-white/30">
@@ -695,6 +706,8 @@ function ChatHeader({
                   ? 'Канал'
                   : chat.type === 'secret'
                   ? 'Секретный чат'
+                  : chat.type === 'system'
+                  ? 'Поддержка Нексо'
                   : ''}
               </p>
               <EncryptionBadge
@@ -733,7 +746,7 @@ function ChatHeader({
             whileTap={{ scale: 0.95 }}
             title="Голосовой звонок"
           >
-            <CallCalling size={16} className="text-white/40 group-hover/callbtn:text-green-400 transition-colors" />
+            <Phone size={16} className="text-white/40 group-hover/callbtn:text-green-400 transition-colors" />
           </motion.button>
           <motion.button
             onClick={() => handleCall('video')}
@@ -742,7 +755,7 @@ function ChatHeader({
             whileTap={{ scale: 0.95 }}
             title="Видеозвонок"
           >
-            <VideoCircle size={16} className="text-white/40 group-hover/callbtn:text-blue-400 transition-colors" />
+            <Video size={16} className="text-white/40 group-hover/callbtn:text-blue-400 transition-colors" />
           </motion.button>
 
           <div className="relative" ref={menuRef}>
@@ -1471,13 +1484,13 @@ function MessageInput({
 
       {/* Main Input Area */}
       {!isRecording && (
-        <div className="px-3 py-3">
-          <div className="flex items-center gap-2">
+        <div className="px-3 pb-3 pt-1">
+          <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-[28px] bg-white/[0.05] border border-white/[0.08] liquid-glass-strong shadow-[0_8px_32px_rgba(0,0,0,0.35)]">
             {/* Emoji/Attach Button */}
             <div className="relative">
               <motion.button
                 onClick={() => setShowEmojiPanel(!showEmojiPanel)}
-                className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors flex-shrink-0"
+                className="p-2 rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -1494,7 +1507,7 @@ function MessageInput({
                 onChange={e => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Сообщение..."
-                className="w-full max-h-[132px] py-2.5 px-4 pr-10 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none transition-all duration-200 focus:border-white/20 focus:bg-white/[0.06] resize-none leading-[1.35]"
+                className="w-full max-h-[132px] py-2.5 px-3 pr-9 text-sm bg-transparent border border-transparent rounded-full text-white/80 placeholder:text-white/25 outline-none resize-none leading-[1.35]"
                 style={{ height: '40px', overflowY: 'auto' }}
               />
             </div>
@@ -1503,7 +1516,7 @@ function MessageInput({
             <div className="relative">
               <motion.button
                 onClick={() => setShowAttach(!showAttach)}
-                className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors flex-shrink-0"
+                className="p-2 rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -1555,9 +1568,9 @@ function MessageInput({
             {text.trim() || selectedFiles.length > 0 ? (
               <motion.button
                 onClick={() => selectedFiles.length > 0 ? sendImages() : handleSubmit()}
-                className="p-2.5 rounded-xl bg-blue-500/80 hover:bg-blue-500 transition-colors flex-shrink-0"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="p-2.5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-[0_4px_16px_rgba(59,130,246,0.4)] transition-all duration-200 flex-shrink-0"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.94 }}
               >
                 <Send size={16} className="text-white" />
               </motion.button>
@@ -1566,7 +1579,7 @@ function MessageInput({
                 {/* Mode toggle: voice ↔ video circle */}
                 <motion.button
                   onClick={toggleRecType}
-                  className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors flex-shrink-0"
+                  className="p-2 rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   title={recordingType === 'voice'
@@ -1581,7 +1594,7 @@ function MessageInput({
                 {/* Record button — click starts recording (current mode) */}
                 <motion.button
                   onClick={() => startRecording(recordingType)}
-                  className={`p-2.5 rounded-xl transition-colors flex-shrink-0 ${
+                  className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${
                     recordingType === 'video'
                       ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300'
                       : 'bg-white/[0.06] hover:bg-white/10 text-white/50'

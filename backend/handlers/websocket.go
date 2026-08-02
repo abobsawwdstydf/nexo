@@ -376,15 +376,21 @@ func handleChatMembers(client *ws.Client, env *wsEnvelope) error {
 		DisplayName string `json:"displayName"`
 		Avatar      string `json:"avatar"`
 		Role        string `json:"role"`
+		IsVerified        bool   `json:"isVerified"`
+		VerifiedBadgeUrl  string `json:"verifiedBadgeUrl"`
+		VerifiedBadgeType string `json:"verifiedBadgeType"`
 	}
 	var result []memberInfo
 	for _, m := range members {
 		result = append(result, memberInfo{
-			UserID:      m.UserID,
-			Username:    m.User.Username,
-			DisplayName: m.User.DisplayName,
-			Avatar:      m.User.Avatar,
-			Role:        m.Role,
+			UserID:            m.UserID,
+			Username:          m.User.Username,
+			DisplayName:       m.User.DisplayName,
+			Avatar:            m.User.Avatar,
+			Role:              m.Role,
+			IsVerified:        m.User.IsVerified,
+			VerifiedBadgeUrl:  m.User.VerifiedBadgeUrl,
+			VerifiedBadgeType: m.User.VerifiedBadgeType,
 		})
 	}
 	return &wsDataResponse{Data: map[string]interface{}{"members": result}}

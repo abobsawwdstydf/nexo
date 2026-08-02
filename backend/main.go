@@ -403,6 +403,15 @@ nexo_up 1
 	auth.Post("/chats/:id/moderation/kick", handlers.KickUser)
 	auth.Post("/chats/:id/moderation/slow-mode", handlers.SetSlowMode)
 
+	// ─── Admin Badges ────────────────────────────────────────────────────
+	auth.Post("/admin/badges", handlers.SetUserBadge)
+	auth.Delete("/admin/badges", handlers.ClearUserBadge)
+
+	// ─── System Feedback Chat ────────────────────────────────────────────
+	auth.Post("/feedback/chat", handlers.GetOrCreateFeedbackChat)
+	auth.Get("/admin/feedback", handlers.AdminListFeedback)
+	auth.Post("/admin/feedback/:chatId/reply", handlers.AdminReplyFeedback)
+
 	// Bot API (user-managed)
 	auth.Post("/bots", handlers.CreateBot)
 	auth.Get("/bots", handlers.GetBots)

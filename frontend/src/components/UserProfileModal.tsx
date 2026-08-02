@@ -15,8 +15,14 @@ import {
   LogOut,
   Copy,
   Check,
+  Play,
+  Pause,
+  SkipForward,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import type { User } from '../lib/types';
+import { VerifiedBadge } from './VerifiedBadge';
 
 interface UserProfileModalProps {
   user: User;
@@ -25,10 +31,86 @@ interface UserProfileModalProps {
   onLogout: () => void;
 }
 
+interface ProfileTrack {
+  title: string;
+  url: string;
+}
+
+function loadTracks(): ProfileTrack[] {
+  try {
+    const raw = localStorage.getItem('nexo_profile_tracks');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function UserProfileModal({ user, onClose, onOpenSettings, onLogout }: UserProfileModalProps) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // ─── Music player ───────────────────────────────────────────────
+  const [tracks, setTracks] = useState<ProfileTrack[]>(loadTracks);
+  const [current, setCurrent] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('nexo_profile_tracks', JSON.stringify(tracks));
+  }, [tracks]);
+
+  // Stop music as soon as the modal is closed.
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    const track = tracks[current];
+    if (!track) {
+      audioRef.current?.pause();
+      return;
+    }
+    const audio = audioRef.current ?? (audioRef.current = new Audio());
+    if (audio.src !== track.url) {
+      audio.src = track.url;
+      audio.preload = 'none';
+    }
+    audio.onended = () => setCurrent(i => (i + 1) % Math.max(tracks.length, 1));
+    if (playing) {
+      audio.play().catch(() => setPlaying(false));
+    } else {
+      audio.pause();
+    }
+  }, [playing, current, tracks]);
+
+  const togglePlay = () => setPlaying(p => !p);
+
+  const addTrack = () => {
+    const title = newTitle.trim();
+    const url = newUrl.trim();
+    if (!title || !url) return;
+    const next = [...tracks, { title, url }];
+    setTracks(next);
+    setCurrent(0);
+    setNewTitle('');
+    setNewUrl('');
+    setAdding(false);
+  };
+
+  const removeTrack = (index: number) => {
+    const wasPlayingCurrent = playing && current === index;
+    const next = tracks.filter((_, i) => i !== index);
+    setTracks(next);
+    if (current >= next.length) setCurrent(Math.max(0, next.length - 1));
+    if (wasPlayingCurrent) setPlaying(false);
+  };
 
   useEffect(() => () => {
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
@@ -113,6 +195,12 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
             <h1 className="text-lg font-bold text-white/90 font-display">
               {user.displayName || user.username}
             </h1>
+            <VerifiedBadge
+              isVerified={user.isVerified}
+              badgeUrl={user.verifiedBadgeUrl}
+              badgeType={user.verifiedBadgeType}
+              size={16}
+            />
             {user.isPremium && <Star size={14} className="text-amber-400" />}
           </div>
 
@@ -152,8 +240,115 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
           </div>
         </div>
 
+        {/* ─── Music player ───────────────────────────────────────── */}
+        {tracks.length > 0 && (
+          <div className="px-5 py-3">
+            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-3 space-y-2">
+              <div className="flex items-center gap-3">
+                <motion.button
+                  onClick={togglePlay}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
+                  className="w-11 h-11 rounded-full bg-gradient-to-br from-accent to-accent-dark text-white flex items-center justify-center flex-shrink-0 shadow-[0_4px_16px_rgba(99,102,241,0.35)]"
+                >
+                  {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
+                </motion.button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white/85 truncate">
+                    {tracks[current]?.title || 'Нет трека'}
+                  </p>
+                  <p className="text-[10px] text-white/30">
+                    {playing ? 'Сейчас играет' : 'На паузе'}
+                  </p>
+                </div>
+                <motion.button
+                  onClick={() => setCurrent(i => (i + 1) % tracks.length)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 rounded-full hover:bg-white/[0.08] transition-colors flex-shrink-0"
+                >
+                  <SkipForward size={16} className="text-white/40" />
+                </motion.button>
+              </div>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {tracks.map((t, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer transition-colors ${
+                      i === current ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+                    }`}
+                    onClick={() => { setCurrent(i); setPlaying(true); }}
+                  >
+                    <Music size={11} className={i === current ? 'text-accent' : 'text-white/20'} />
+                    <span className={`text-[11px] truncate flex-1 ${i === current ? 'text-white/85' : 'text-white/45'}`}>
+                      {t.title}
+                    </span>
+                    <button
+                      onClick={e => { e.stopPropagation(); removeTrack(i); }}
+                      className="p-0.5 rounded hover:bg-white/[0.1] transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={10} className="text-white/25" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add track form */}
+        <div className="px-5 pb-1">
+          {adding ? (
+            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-3 space-y-2">
+              <div>
+                <label className="block text-[10px] text-white/30 mb-1">Название трека</label>
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  placeholder="Например: My Way"
+                  className="w-full h-9 px-3 text-xs bg-white/[0.05] border border-white/[0.06] rounded-lg text-white/80 placeholder:text-white/20 outline-none focus:border-white/20"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-white/30 mb-1">Ссылка на аудио</label>
+                <input
+                  type="text"
+                  value={newUrl}
+                  onChange={e => setNewUrl(e.target.value)}
+                  placeholder="https://.../track.mp3"
+                  className="w-full h-9 px-3 text-xs bg-white/[0.05] border border-white/[0.06] rounded-lg text-white/80 placeholder:text-white/20 outline-none focus:border-white/20"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setAdding(false)}
+                  className="px-3 py-1.5 text-[11px] text-white/40 hover:text-white/60 transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={addTrack}
+                  disabled={!newTitle.trim() || !newUrl.trim()}
+                  className="px-3 py-1.5 text-[11px] rounded-lg bg-white/[0.08] hover:bg-white/[0.12] text-white/70 transition-colors disabled:opacity-30"
+                >
+                  Добавить
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAdding(true)}
+              className="flex items-center gap-2 text-[11px] text-white/30 hover:text-white/50 transition-colors"
+            >
+              <Plus size={12} />
+              {tracks.length > 0 ? 'Добавить трек' : 'Добавить музыку в профиль'}
+            </button>
+          )}
+        </div>
+
         {/* ─── Divider ────────────────────────────────────────────── */}
-        <div className="mx-6 h-px bg-white/[0.06]" />
+        <div className="mx-6 h-px bg-white/[0.06] mt-2" />
 
         {/* ─── Quick actions ──────────────────────────────────────── */}
         <div className="px-3 py-2 space-y-0.5">
