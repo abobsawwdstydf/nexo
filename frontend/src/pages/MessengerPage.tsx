@@ -20,6 +20,7 @@ import { getSocket } from '../lib/socket';
 import { getNotesMessages, NOTES_CHAT_ID, NOTES_CHANGED_EVENT } from '../lib/api/noteChat';
 import { getAIMessages, AI_CHAT_ID, AI_CHANGED_EVENT } from '../lib/api/aiChat';
 import { MobileBottomNav } from '../components/MobileBottomNav';
+import { playNotification } from '../lib/sounds';
 
 const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
@@ -154,6 +155,8 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
         const chat = chatsRef.current.find(c => c.id === msg.chatId);
         const name = chat?.name || msg.sender?.displayName || msg.sender?.username || 'Новое сообщение';
         toast.info(`✉️ ${name}`, msg.content || '');
+        // Deep Nexo notification thump
+        playNotification();
       }
       // Trigger confetti on first received message
       setConfettiTrigger(t => t + 1);

@@ -273,8 +273,9 @@ type StickerPack struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	CreatorID   string    `json:"creatorId"`
+	CreatorID   string    `json:"creatorId" gorm:"index"`
 	Thumbnail   string    `json:"thumbnail"`
+	Type        string    `json:"type" gorm:"size:16;default:sticker"` // sticker | emoji
 	IsPublic    bool      `json:"isPublic" gorm:"default:true"`
 	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
 

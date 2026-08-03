@@ -50,6 +50,8 @@ import { LinkPreview, extractUrls, renderTextWithLinks } from './LinkPreview';
 import { e2eManager } from '../lib/e2eSession';
 import { tryInitE2EForChat } from '../lib/e2eStore';
 import { EncryptionBadge } from './EncryptionBadge';
+import { playSend } from '../lib/sounds';
+import { MyStickersPanel } from './MyStickersPanel';
 
 const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Лица', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🫨', '🤗', '🫡', '🤔', '🫣', '🤫', '😶', '😏'] },
@@ -933,7 +935,8 @@ function MessageInput({
   const [text, setText] = useState('');
   const [showAttach, setShowAttach] = useState(false);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
-  const [emojiTab, setEmojiTab] = useState<'emoji' | 'stickers' | 'gif'>('emoji');
+  const [emojiTab, setEmojiTab] = useState<'emoji' | 'stickers' | 'gif' | 'my'>('emoji');
+  const [myPackType, setMyPackType] = useState<'sticker' | 'emoji'>('sticker');
   const [stickerPacks, setStickerPacks] = useState<StickerPack[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingType, setRecordingType] = useState<'voice' | 'video'>('voice');
@@ -1052,6 +1055,7 @@ function MessageInput({
     setPreviewImages([]);
     setSelectedFiles([]);
     localStorage.removeItem(`nexo_draft_${chatId}`);
+    playSend();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -1693,7 +1697,7 @@ function MessageInput({
           >
             {/* Tab Bar */}
             <div className="flex items-center gap-1 px-3 pt-2">
-              {(['emoji', 'stickers', 'gif'] as const).map(tab => (
+              {(['emoji', 'stickers', 'gif', 'my'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setEmojiTab(tab)}
@@ -1703,7 +1707,7 @@ function MessageInput({
                       : 'text-white/40 hover:text-white/60'
                   }`}
                 >
-                  {tab === 'emoji' ? 'Эмодзи' : tab === 'stickers' ? 'Стикеры' : 'GIF'}
+                  {tab === 'emoji' ? 'Эмодзи' : tab === 'stickers' ? 'Стикеры' : tab === 'gif' ? 'GIF' : 'Мои'}
                 </button>
               ))}
             </div>
@@ -1857,6 +1861,36 @@ function MessageInput({
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {emojiTab === 'my' && (
+                <div>
+                  <div className="flex gap-1 mb-2">
+                    <button
+                      onClick={() => setMyPackType('sticker')}
+                      className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        myPackType === 'sticker' ? 'bg-white/10 text-white/90' : 'text-white/30 hover:text-white/50'
+                      }`}
+                    >
+                      Мои стикеры
+                    </button>
+                    <button
+                      onClick={() => setMyPackType('emoji')}
+                      className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        myPackType === 'emoji' ? 'bg-white/10 text-white/90' : 'text-white/30 hover:text-white/50'
+                      }`}
+                    >
+                      Мои эмодзи
+                    </button>
+                  </div>
+                  <MyStickersPanel
+                    packType={myPackType}
+                    onPick={token => {
+                      setText(prev => prev + token);
+                      inputRef.current?.focus();
+                    }}
+                  />
                 </div>
               )}
             </div>

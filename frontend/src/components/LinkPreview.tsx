@@ -239,6 +239,8 @@ export function extractUrls(text: string): string[] {
 }
 
 const STICKER_REGEX = /\[sticker:([^\]]+?):([^\]]+?)\]/g;
+const MY_STICKER_REGEX = /\[mysticker:([^\]]+?):([^\]]+?)\]/g;
+const MY_EMOJI_REGEX = /\[myemoji:([^\]]+?):([^\]]+?)\]/g;
 
 export function renderTextWithLinks(text: string, isOwn: boolean): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
@@ -258,9 +260,23 @@ export function renderTextWithLinks(text: string, isOwn: boolean): React.ReactNo
     stickerMatches.push({ index: match.index, pack: match[1], filename: match[2] });
   }
 
+  let myStickerMatches: { index: number; pack: string; filename: string }[] = [];
+  MY_STICKER_REGEX.lastIndex = 0;
+  while ((match = MY_STICKER_REGEX.exec(text)) !== null) {
+    myStickerMatches.push({ index: match.index, pack: match[1], filename: match[2] });
+  }
+
+  let myEmojiMatches: { index: number; pack: string; filename: string }[] = [];
+  MY_EMOJI_REGEX.lastIndex = 0;
+  while ((match = MY_EMOJI_REGEX.exec(text)) !== null) {
+    myEmojiMatches.push({ index: match.index, pack: match[1], filename: match[2] });
+  }
+
   const allTokens = [
     ...urlMatches.map(m => ({ ...m, type: 'url' as const })),
     ...stickerMatches.map(m => ({ ...m, type: 'sticker' as const })),
+    ...myStickerMatches.map(m => ({ ...m, type: 'mysticker' as const })),
+    ...myEmojiMatches.map(m => ({ ...m, type: 'myemoji' as const })),
   ].sort((a, b) => a.index - b.index);
 
   for (const token of allTokens) {
@@ -308,6 +324,32 @@ export function renderTextWithLinks(text: string, isOwn: boolean): React.ReactNo
         />
       );
       lastIndex = token.index + `[sticker:${t.pack}:${t.filename}]`.length;
+    } else if (token.type === 'mysticker') {
+      const t = token as typeof myStickerMatches[0];
+      parts.push(
+        <img
+          key={`ms${token.index}`}
+          src={normalizeMediaUrl(`/uploads/stickers/${t.pack}/${t.filename}`)}
+          alt="стикер"
+          className="max-w-[128px] max-h-[128px] rounded-lg my-1"
+          loading="lazy"
+          draggable={false}
+        />
+      );
+      lastIndex = token.index + `[mysticker:${t.pack}:${t.filename}]`.length;
+    } else if (token.type === 'myemoji') {
+      const t = token as typeof myEmojiMatches[0];
+      parts.push(
+        <img
+          key={`me${token.index}`}
+          src={normalizeMediaUrl(`/uploads/stickers/${t.pack}/${t.filename}`)}
+          alt="эмодзи"
+          className="inline-block w-[1.3em] h-[1.3em] align-[-0.25em] mx-[1px] object-contain"
+          loading="lazy"
+          draggable={false}
+        />
+      );
+      lastIndex = token.index + `[myemoji:${t.pack}:${t.filename}]`.length;
     }
   }
 

@@ -393,6 +393,13 @@ nexo_up 1
 	auth.Post("/users/block", handlers.BlockUser)
 	auth.Post("/users/unblock", handlers.UnblockUser)
 
+	// ─── User sticker & emoji packs (files on the file server) ──────────
+	auth.Post("/sticker-packs", handlers.CreateUserStickerPack)
+	auth.Get("/sticker-packs", handlers.GetMyStickerPacks)
+	auth.Post("/sticker-packs/:packId/stickers", handlers.UploadUserSticker)
+	auth.Delete("/sticker-packs/:packId", handlers.DeleteUserStickerPack)
+	auth.Delete("/stickers/:stickerId", handlers.DeleteUserSticker)
+
 	// ─── New Features ─────────────────────────────────────────────────────
 
 	// File Upload

@@ -22,6 +22,7 @@ import {
 import { getSocket, wsRequest } from '../lib/socket';
 import type { UserBasic } from '../lib/types';
 import { getSessionInfo } from '../lib/e2e';
+import { playRingtone, playSoundFile } from '../lib/sounds';
 
 interface CallOverlayProps {
   open: boolean;
@@ -61,6 +62,7 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
   const audioContextRef = useRef<AudioContext | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const e2eCopyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
   const iceConfigRef = useRef<RTCConfiguration>({
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -149,6 +151,13 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
       const state = pc.connectionState;
       if (state === 'connected') {
         setCallState('connected');
+        if (ringtoneRef.current) {
+          try {
+            ringtoneRef.current.pause();
+            ringtoneRef.current.currentTime = 0;
+          } catch {}
+          ringtoneRef.current = null;
+        }
       } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
         setCallState('ended');
         cleanupCall();
@@ -185,6 +194,14 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    // Stop ringtone (deep Nexo call sound)
+    if (ringtoneRef.current) {
+      try {
+        ringtoneRef.current.pause();
+        ringtoneRef.current.currentTime = 0;
+      } catch {}
+      ringtoneRef.current = null;
+    }
 
     const socket = getSocket();
     if (socket) {
@@ -215,6 +232,8 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
 
     const pc = createPeerConnection(stream);
     setCallState('ringing');
+    ringtoneRef.current = playSoundFile('/sounds/call_sound.mp3', true);
+    playRingtone();
 
     try {
       const offer = await pc.createOffer({
@@ -326,6 +345,8 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
     if (open) {
       if (incoming) {
         setCallState('ringing');
+        ringtoneRef.current = playSoundFile('/sounds/call_sound.mp3', true);
+        playRingtone();
       } else {
         startCall();
       }

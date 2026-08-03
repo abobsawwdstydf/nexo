@@ -100,30 +100,40 @@ function playSuccessSound(muted: boolean) {
   try {
     const ctx = getAudioCtx();
     const t = ctx.currentTime;
-    // Apple-style ascending arpeggio: C5 E5 G5 C6
-    const notes = [523.25, 659.25, 783.99, 1046.5];
+    // Deep warm ascending arpeggio: A2 C3 E3 G3
+    const notes = [110, 130.81, 164.81, 196];
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       osc.connect(g); g.connect(ctx.destination);
       osc.frequency.value = freq;
       osc.type = 'sine';
-      const start = t + i * 0.09;
+      const start = t + i * 0.12;
       g.gain.setValueAtTime(0, start);
-      g.gain.linearRampToValueAtTime(0.07, start + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.001, start + 0.28);
-      osc.start(start); osc.stop(start + 0.28);
-      // harmonic overtone for warmth
+      g.gain.linearRampToValueAtTime(0.11, start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, start + 0.4);
+      osc.start(start); osc.stop(start + 0.4);
+      // warm overtone
       const osc2 = ctx.createOscillator();
       const g2 = ctx.createGain();
       osc2.connect(g2); g2.connect(ctx.destination);
       osc2.frequency.value = freq * 2;
       osc2.type = 'sine';
       g2.gain.setValueAtTime(0, start);
-      g2.gain.linearRampToValueAtTime(0.02, start + 0.015);
-      g2.gain.exponentialRampToValueAtTime(0.001, start + 0.2);
-      osc2.start(start); osc2.stop(start + 0.2);
+      g2.gain.linearRampToValueAtTime(0.03, start + 0.02);
+      g2.gain.exponentialRampToValueAtTime(0.001, start + 0.28);
+      osc2.start(start); osc2.stop(start + 0.28);
     });
+    // soft bass root
+    const b = ctx.createOscillator();
+    const bg = ctx.createGain();
+    b.connect(bg); bg.connect(ctx.destination);
+    b.frequency.value = 55;
+    b.type = 'sine';
+    bg.gain.setValueAtTime(0, t);
+    bg.gain.linearRampToValueAtTime(0.12, t + 0.02);
+    bg.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    b.start(t); b.stop(t + 0.6);
   } catch {}
 }
 
@@ -132,21 +142,21 @@ function playErrorSound(muted: boolean) {
   try {
     const ctx = getAudioCtx();
     const t = ctx.currentTime;
-    // Low thud + dissonant buzz
+    // Soft warm error — deep thud, no harsh buzz
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
     osc.connect(g); g.connect(ctx.destination);
-    osc.frequency.value = 180;
+    osc.frequency.value = 130;
     osc.type = 'sine';
-    g.gain.setValueAtTime(0.08, t);
+    g.gain.setValueAtTime(0.14, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
     osc.start(t); osc.stop(t + 0.35);
     const osc2 = ctx.createOscillator();
     const g2 = ctx.createGain();
     osc2.connect(g2); g2.connect(ctx.destination);
-    osc2.frequency.value = 130;
-    osc2.type = 'sawtooth';
-    g2.gain.setValueAtTime(0.03, t + 0.02);
+    osc2.frequency.value = 196;
+    osc2.type = 'triangle';
+    g2.gain.setValueAtTime(0.05, t + 0.02);
     g2.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
     osc2.start(t + 0.02); osc2.stop(t + 0.25);
   } catch {}
