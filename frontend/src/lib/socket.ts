@@ -189,10 +189,10 @@ export function connectSocket(token?: string): SocketInterface | null {
   }
 
   const baseUrl = getSocketUrl();
-  const wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/chat';
+  const wsUrl = baseUrl.replace(/^http/, 'ws') + '/ws/chat?token=' + encodeURIComponent(token);
   
   emitStatus('connecting');
-  ws = new WebSocket(wsUrl, [token]);
+  ws = new WebSocket(wsUrl);
   
   // Create compatibility interface
   socket = {
@@ -222,8 +222,8 @@ export function connectSocket(token?: string): SocketInterface | null {
     },
     connect: () => {
       if (!ws || ws.readyState === WebSocket.CLOSED) {
-        const newUrl = getSocketUrl().replace(/^http/, 'ws') + '/ws/chat';
-        ws = new WebSocket(newUrl, [token]);
+        const newUrl = getSocketUrl().replace(/^http/, 'ws') + '/ws/chat?token=' + encodeURIComponent(token);
+        ws = new WebSocket(newUrl);
         setupWebSocketHandlers();
       }
     }
