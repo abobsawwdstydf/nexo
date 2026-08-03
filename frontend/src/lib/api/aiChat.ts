@@ -41,16 +41,7 @@ export function notifyAIChanged() {
 export async function loadAIHistory(): Promise<Message[]> {
   try {
     const res = await api.get<{ messages: AIHistoryMessage[] }>('/ai/history');
-    const serverMsgs: Message[] = (res.messages || []).map(m => ({
-      id: m.id,
-      chatId: CHAT_ID,
-      senderId: m.role === 'assistant' ? AI_SENDER.id : '',
-      senderUsername: m.role === 'assistant' ? AI_SENDER.username : '',
-      senderDisplayName: m.role === 'assistant' ? AI_SENDER.displayName : 'Вы',
-      content: m.content,
-      type: 'text',
-      createdAt: m.createdAt,
-    }));
+    const serverMsgs: Message[] = (res.messages || []).map(m => toClientMessage(m));
     if (serverMsgs.length > 0) {
       try {
         localStorage.setItem(AI_KEY, JSON.stringify(serverMsgs.slice(-100)));
@@ -63,6 +54,30 @@ export async function loadAIHistory(): Promise<Message[]> {
     historyLoaded = true;
     return getAIMessages();
   }
+}
+
+function toClientMessage(m: AIHistoryMessage): Message {
+  const isAssistant = m.role === 'assistant';
+  return {
+    id: m.id,
+    chatId: CHAT_ID,
+    senderId: isAssistant ? AI_SENDER.id : '',
+    content: m.content,
+    type: 'text',
+    replyToId: null,
+    isEdited: false,
+    isDeleted: false,
+    createdAt: m.createdAt,
+    sender: {
+      id: isAssistant ? AI_SENDER.id : '',
+      username: isAssistant ? AI_SENDER.username : '',
+      displayName: isAssistant ? AI_SENDER.displayName : 'Вы',
+      avatar: null,
+    },
+    media: [],
+    reactions: [],
+    readBy: [],
+  };
 }
 
 export function getAIMessages(): Message[] {

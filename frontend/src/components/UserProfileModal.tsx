@@ -133,6 +133,13 @@ function loadUrlTracks(): ProfileTrack[] {
   }
 }
 
+interface UserProfileModalProps {
+  user: User;
+  onClose: () => void;
+  onOpenSettings: (tab?: string) => void;
+  onLogout: () => void;
+}
+
 export default function UserProfileModal({ user, onClose, onOpenSettings, onLogout }: UserProfileModalProps) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -269,7 +276,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
 
   const initials = (user.displayName || user.username || '?')
     .split(' ')
-    .map(w => w[0])
+    .map((w: string) => w[0])
     .join('')
     .slice(0, 2)
     .toUpperCase();
@@ -492,7 +499,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
                   </div>
                   <div className="flex justify-end gap-2">
                     <button
-                      onClick={() => setAdding(false)}
+                      onClick={() => setAdding(null)}
                       className="px-3 py-1.5 text-[11px] text-white/40 hover:text-white/60 transition-colors"
                     >
                       Отмена
@@ -538,7 +545,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
                   />
                   <div className="flex justify-end">
                     <button
-                      onClick={() => setAdding(false)}
+                      onClick={() => setAdding(null)}
                       className="px-3 py-1.5 text-[11px] text-white/40 hover:text-white/60 transition-colors"
                     >
                       Отмена

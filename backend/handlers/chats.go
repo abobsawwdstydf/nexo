@@ -329,6 +329,9 @@ func AddChatMember(c *fiber.Ctx) error {
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).
 		Update("subscribers_count", chat.SubscribersCount+1)
 
+	// Keep the hub's in-memory membership in sync.
+	ws.HubInstance.JoinChat(chatID, req.UserID)
+
 	ws.HubInstance.SendToUser(req.UserID, mustWSMap("chat:member_added", map[string]string{
 		"chatId": chatID,
 	}))
@@ -356,6 +359,10 @@ func LeaveChat(c *fiber.Ctx) error {
 	db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).Delete(&models.ChatMember{})
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).
 		Update("subscribers_count", memberCount-1)
+
+	// Keep the hub's in-memory membership in sync so the leaving user stops
+	// receiving live messages immediately (no wait for a reconnect).
+	ws.HubInstance.LeaveChat(chatID, userID)
 
 	return c.JSON(fiber.Map{"ok": true})
 }

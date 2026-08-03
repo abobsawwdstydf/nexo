@@ -367,7 +367,16 @@ func handleChatMembers(client *ws.Client, env *wsEnvelope) error {
 		return errWSMissingField("chatId")
 	}
 
-	// Verify membership and return current members
+	// Verify membership before exposing the member list.
+	var count int64
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", payload.ChatID, client.UserID).
+		Count(&count)
+	if count == 0 {
+		return errWSNotMember
+	}
+
+	// Return current members
 	var members []models.ChatMember
 	db.GetDB().Preload("User").Where("chat_id = ?", payload.ChatID).Find(&members)
 
@@ -579,10 +588,21 @@ func handleFetchMessages(client *ws.Client, env *wsEnvelope) error {
 		Where("chat_id = ?", payload.ChatID)
 
 	if payload.Cursor != "" {
-		query = query.Where("created_at < (SELECT created_at FROM messages WHERE id = ?)", payload.Cursor)
+		// Composite cursor (created_at, id): timestamps have millisecond
+		// precision, so filtering on created_at alone skips messages that
+		// share the cursor's timestamp. The id tie-breaker matches the
+		// secondary ORDER BY so no message is lost at page boundaries.
+		query = query.Where(
+			"(created_at < (SELECT created_at FROM messages WHERE id = ?)) OR "+
+				"(created_at = (SELECT created_at FROM messages WHERE id = ?) AND id < ?)",
+			payload.Cursor, payload.Cursor, payload.Cursor,
+		)
+		query = query.Order("created_at DESC, id DESC")
+	} else {
+		query = query.Order("created_at DESC")
 	}
 
-	query.Order("created_at DESC").Limit(payload.Limit + 1).Find(&messages)
+	query.Limit(payload.Limit + 1).Find(&messages)
 
 	hasMore := len(messages) > payload.Limit
 	if hasMore {
@@ -1086,9 +1106,17 @@ func HandleWebSocket(c *websocket.Conn) {
 
 	defer func() {
 		ws.HubInstance.UnregisterClient(client)
-		// Leave all chats on disconnect
-		for _, chatID := range chatIDs {
-			ws.HubInstance.LeaveChat(chatID, userID)
+		// Only leave chats when this was the user's last active connection,
+		// otherwise other open tabs would stop receiving live messages.
+		// NB: this defer runs before the counter-decrement defer (LIFO), so
+		// the count still includes this connection.
+		activeWSConnectionsMu.Lock()
+		isLastConnection := activeWSConnections[userID] <= 1
+		activeWSConnectionsMu.Unlock()
+		if isLastConnection {
+			for _, chatID := range chatIDs {
+				ws.HubInstance.LeaveChat(chatID, userID)
+			}
 		}
 		c.Close()
 	}()

@@ -447,6 +447,11 @@ func SetBotWebhook(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "URL required"})
 	}
 
+	// Reject private/internal targets to prevent SSRF via webhook delivery.
+	if !isURLSafe(req.URL) {
+		return c.Status(400).JSON(fiber.Map{"error": "URL is not allowed"})
+	}
+
 	if result := db.GetDB().Model(&models.Bot{}).Where("id = ?", botID).Update("webhook_url", req.URL); result.Error != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to set webhook"})
 	}

@@ -1342,6 +1342,18 @@ func isURLSafe(rawURL string) bool {
 		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
 			return false
 		}
+	} else {
+		// Resolve the hostname and reject if ANY resolved address is internal.
+		// Mitigates DNS-rebinding and domains pointing at 169.254.169.254,
+		// decimal/hex IPs, etc.
+		addrs, err := net.LookupIP(host)
+		if err == nil {
+			for _, a := range addrs {
+				if a.IsLoopback() || a.IsPrivate() || a.IsLinkLocalUnicast() || a.IsLinkLocalMulticast() || a.IsUnspecified() {
+					return false
+				}
+			}
+		}
 	}
 	// Block common internal ports
 	port := u.Port()

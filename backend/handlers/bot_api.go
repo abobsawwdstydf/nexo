@@ -229,6 +229,11 @@ func createBotUpdate(bot models.Bot, payload map[string]interface{}) {
 	if bot.WebhookURL == "" {
 		return
 	}
+	// Defense-in-depth: never deliver to a private/internal target even if the
+	// URL was saved before the SSRF validation existed.
+	if !isURLSafe(bot.WebhookURL) {
+		return
+	}
 	payload["update_id"] = upd.ID
 	finalData, _ := json.Marshal(payload)
 	go func() {
@@ -355,14 +360,14 @@ func botGetUpdates(c *fiber.Ctx, bot models.Bot) error {
 	var updates []models.BotUpdate
 	q := db.GetDB().Where("bot_id = ?", bot.ID)
 	if offset > 0 {
-		q = q.Where("id >= ?", offset)
+		// Bot API semantics: offset is the id AFTER the last confirmed update.
+		q = q.Where("id > ?", offset)
 	}
 	if result := q.Order("id ASC").Limit(limit).Find(&updates); result.Error != nil {
 		return tgErr(c, 500, "Internal server error")
 	}
 
 	result := make([]map[string]interface{}, 0, len(updates))
-	ids := make([]uint, 0, len(updates))
 	for _, u := range updates {
 		var payload map[string]interface{}
 		if err := json.Unmarshal([]byte(u.Payload), &payload); err != nil {
@@ -370,11 +375,17 @@ func botGetUpdates(c *fiber.Ctx, bot models.Bot) error {
 		}
 		payload["update_id"] = u.ID
 		result = append(result, payload)
-		ids = append(ids, u.ID)
 	}
-	if len(ids) > 0 {
-		db.GetDB().Delete(&updates)
+
+	// At-least-once delivery: only delete updates the client has confirmed by
+	// advancing offset past them. Unacked updates survive a bot crash and are
+	// redelivered on the next poll.
+	if offset > 0 {
+		db.GetDB().Where("bot_id = ? AND id <= ?", bot.ID, offset).Delete(&models.BotUpdate{})
 	}
+	// Bound the queue: drop updates older than a day regardless of ack state.
+	db.GetDB().Where("bot_id = ? AND created_at < ?", bot.ID, time.Now().Add(-24*time.Hour)).Delete(&models.BotUpdate{})
+
 	return tgOK(c, result)
 }
 
@@ -386,8 +397,9 @@ func botSetWebhook(c *fiber.Ctx, bot models.Bot) error {
 	if err := c.BodyParser(&req); err != nil || req.URL == "" {
 		return tgErr(c, 400, "Bad Request: url is required")
 	}
-	if !strings.HasPrefix(req.URL, "https://") && !strings.HasPrefix(req.URL, "http://") {
-		return tgErr(c, 400, "Bad Request: url must start with http(s)://")
+	// Reject private/internal targets to prevent SSRF via webhook delivery.
+	if !isURLSafe(req.URL) {
+		return tgErr(c, 400, "Bad Request: url is not allowed")
 	}
 	if err := db.GetDB().Model(&bot).Update("webhook_url", req.URL).Error; err != nil {
 		return tgErr(c, 500, "Internal server error")
@@ -535,6 +547,10 @@ func botEditMessage(c *fiber.Ctx, bot models.Bot, withText bool) error {
 	if err := db.GetDB().Preload("Media").First(&msg, "id = ?", ourID).Error; err != nil {
 		return tgErr(c, 400, "Bad Request: message to edit not found")
 	}
+	// Bots may only edit messages they sent themselves.
+	if msg.SenderID != bot.ID || msg.ChatID != req.ChatID {
+		return tgErr(c, 403, "Forbidden: bots can only edit their own messages")
+	}
 
 	updates := map[string]interface{}{"updated_at": time.Now()}
 	if withText {
@@ -581,6 +597,10 @@ func botDeleteMessage(c *fiber.Ctx, bot models.Bot) error {
 	var msg models.Message
 	if err := db.GetDB().First(&msg, "id = ?", ourID).Error; err != nil {
 		return tgErr(c, 400, "Bad Request: message not found")
+	}
+	// Bots may only delete messages they sent themselves.
+	if msg.SenderID != bot.ID || msg.ChatID != req.ChatID {
+		return tgErr(c, 403, "Forbidden: bots can only delete their own messages")
 	}
 	db.GetDB().Model(&msg).Updates(map[string]interface{}{
 		"is_deleted": true,
@@ -649,6 +669,9 @@ func botGetChatMember(c *fiber.Ctx, bot models.Bot) error {
 	if req.ChatID == "" || req.UserID == "" {
 		return tgErr(c, 400, "Bad Request: chat_id and user_id are required")
 	}
+	if _, ok := checkBotInstalled(bot.ID, req.ChatID); !ok {
+		return tgErr(c, 403, "Forbidden: bot is not a member of the chat")
+	}
 
 	status := "left"
 	var member models.ChatMember
@@ -682,6 +705,9 @@ func botGetChatAdministrators(c *fiber.Ctx, bot models.Bot) error {
 	}
 	if req.ChatID == "" {
 		return tgErr(c, 400, "Bad Request: chat_id is required")
+	}
+	if _, ok := checkBotInstalled(bot.ID, req.ChatID); !ok {
+		return tgErr(c, 403, "Forbidden: bot is not a member of the chat")
 	}
 
 	var members []models.ChatMember
@@ -896,6 +922,18 @@ func botGetFile(c *fiber.Ctx, bot models.Bot) error {
 	var media models.Media
 	if err := db.GetDB().First(&media, "id = ?", req.FileID).Error; err != nil {
 		return tgErr(c, 400, "Bad Request: file_id not found")
+	}
+
+	// Scope access to files the bot can actually see: media must belong to a
+	// message in a chat where this bot is installed.
+	var msg models.Message
+	if err := db.GetDB().First(&msg, "id = ?", media.MessageID).Error; err != nil {
+		return tgErr(c, 403, "Forbidden: file is not accessible to this bot")
+	}
+	var count int64
+	db.GetDB().Model(&models.BotInstallation{}).Where("bot_id = ? AND chat_id = ? AND is_active = ?", bot.ID, msg.ChatID, true).Count(&count)
+	if count == 0 {
+		return tgErr(c, 403, "Forbidden: file is not accessible to this bot")
 	}
 	return tgOK(c, tgFileFromMedia(media, bot.Token))
 }

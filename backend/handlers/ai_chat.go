@@ -212,9 +212,6 @@ func HandleAIChat(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "no user message"})
 	}
 
-	// Persist the user's message server-side.
-	aiSaveMessage(userID, "user", lastUserContent)
-
 	// Anti-abuse: cooldown between requests
 	if !aiBurstCheck(userID) {
 		return c.Status(429).JSON(fiber.Map{
@@ -234,6 +231,10 @@ func HandleAIChat(c *fiber.Ctx) error {
 			"limitHit":  true,
 		})
 	}
+
+	// Persist the user's message server-side (only after abuse checks pass,
+	// otherwise rejected requests would pollute the history with duplicates).
+	aiSaveMessage(userID, "user", lastUserContent)
 
 	// Build prompt: system + conversation history
 	system := `Ты — Нексо AI, умный ИИ-ассистент защищённого мессенджера Нексо (Dark Heavens Corporate).

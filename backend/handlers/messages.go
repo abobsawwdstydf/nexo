@@ -329,6 +329,15 @@ func AddReaction(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Message not found"})
 	}
 
+	// Only chat members may react to messages.
+	var memberCount int64
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", msg.ChatID, userID).
+		Count(&memberCount)
+	if memberCount == 0 {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
+
 	// Toggle: if exists, remove; if not, add
 	var existing models.Reaction
 	if result := db.GetDB().Where("message_id = ? AND user_id = ? AND emoji = ?", msgID, userID, req.Emoji).First(&existing); result.Error == nil {
