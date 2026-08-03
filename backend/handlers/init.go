@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"nexo/db"
+	"nexo/middleware"
 	"nexo/models"
 )
 
@@ -18,6 +19,7 @@ type InitResponse struct {
 	Settings     UserSettingsJSON     `json:"settings"`
 	SmartFolders []models.SmartFolder `json:"smartFolders"`
 	Stories      []StoryGroupJSON     `json:"stories"`
+	CsrfToken    string               `json:"csrfToken"`
 }
 
 type UserSettingsJSON struct {
@@ -140,5 +142,6 @@ func GetInit(c *fiber.Ctx) error {
 		Settings:     settings,
 		SmartFolders: smartFolders,
 		Stories:      storyGroups,
+		CsrfToken:    middleware.GenerateCSRFToken(userID),
 	})
 }

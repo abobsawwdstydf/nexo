@@ -58,7 +58,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
   /** Apply an init payload: persist user, seed init store, connect socket, subscribe. */
   function finishInit(initData: InitPayload, accessToken: string | null) {
-    const { user, chats, settings, smartFolders, stories } = initData;
+    const { user, chats, settings, smartFolders, stories, csrfToken } = initData;
+    if (csrfToken) api.setCsrfToken(csrfToken);
     localStorage.setItem('nexo_user', JSON.stringify(user));
     useInitStore.getState().setInit({ chats, settings, smartFolders, stories });
     if (accessToken) {

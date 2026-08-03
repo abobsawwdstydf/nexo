@@ -751,6 +751,7 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 		"settings":     settings,
 		"smartFolders": smartFolders,
 		"stories":      storyGroups,
+		"csrfToken":    middleware.GenerateCSRFToken(userID),
 	}}
 }
 

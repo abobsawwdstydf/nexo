@@ -27,6 +27,7 @@ declare module './core' {
       };
       smartFolders: SmartFolder[];
       stories: StoryGroup[];
+      csrfToken?: string;
     }>;
     logout(): Promise<{ success: boolean }>;
   }
