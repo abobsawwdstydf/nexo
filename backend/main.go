@@ -212,7 +212,7 @@ func main() {
 	app.Use(middleware.VerifyRequestSignature)
 
 	// Ensure uploads directory exists
-	os.MkdirAll("../uploads", 0755)
+	os.MkdirAll(handlers.UploadDir(), 0755)
 
 	// Sticker proxy (caches remote stickers to avoid rate limits)
 	app.Get("/stickers/proxy/:name", handlers.StickerProxy)
@@ -373,6 +373,9 @@ nexo_up 1
 	auth.Put("/messages/:messageId", handlers.EditMessage)
 	auth.Delete("/messages/:messageId", handlers.DeleteMessage)
 	auth.Post("/messages/:messageId/reactions", handlers.AddReaction)
+	auth.Delete("/messages/:messageId/reactions/:emoji", handlers.RemoveReaction)
+	auth.Post("/reactions/:messageId", handlers.AddReaction)
+	auth.Delete("/reactions/:messageId/:emoji", handlers.RemoveReaction)
 	auth.Post("/chats/:id/read", handlers.ReadMessages)
 	auth.Post("/chats/:id/typing", handlers.Typing)
 	auth.Get("/messages/search", handlers.SearchMessages)
@@ -566,6 +569,7 @@ nexo_up 1
 	auth.Post("/ai/auto-reply/config", handlers.SetAutoReplyConfig)
 	auth.Get("/ai/auto-reply/config", handlers.GetAutoReplyConfig)
 	auth.Post("/ai/voice-command", handlers.ProcessVoiceCommand)
+	auth.Post("/ai/transcribe", handlers.TranscribeAudio)
 	auth.Post("/ai/smart-reminder", handlers.CreateSmartReminder)
 	auth.Get("/ai/smart-reminders", handlers.GetSmartReminders)
 	auth.Post("/ai/privacy-audit", handlers.RunPrivacyAudit)
@@ -674,7 +678,7 @@ nexo_up 1
 	app.Get("/ws/chat", websocket.New(handlers.HandleWebSocket))
 
 	// Serve uploaded files (avatars, cloud storage, badges)
-	app.Static("/uploads", "../uploads")
+	app.Static("/uploads", handlers.UploadDir())
 
 	// Frontend - serve from frontend/dist (one level up from backend)
 	frontendDir := "../frontend/dist"

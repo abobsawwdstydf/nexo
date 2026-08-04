@@ -1,5 +1,7 @@
+let ENV = {};
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
+    ENV = env || {};
     const origin = request.headers.get('Origin') || '';
     const url = new URL(request.url);
     const path = url.pathname;
@@ -9,10 +11,22 @@ export default {
     if (request.method !== 'POST') return j2({ error: 'POST only' }, 405, ch);
 
     // Refuse to serve when the shared secret is not configured (no auth bypass)
+    const SECRET = getSecret();
     if (!SECRET) return j2({ error: 'Proxy secret not configured' }, 503, ch);
 
     const secret = request.headers.get('X-Proxy-Secret');
     if (secret !== SECRET) return j2({ error: 'Unauthorized' }, 401, ch);
+
+    // Speech-to-text: raw audio body, no JSON parsing
+    if (url.pathname === '/transcribe') {
+      const cl = parseInt(request.headers.get('Content-Length') || '0', 10);
+      if (cl > MAX_AUDIO_BYTES) return j2({ error: 'Audio too large (max 25MB)' }, 413, ch);
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      if (!checkRateLimit(ip, true)) {
+        return j2({ error: 'Rate limit exceeded, slow down' }, 429, ch);
+      }
+      return transcribe(request, ch);
+    }
 
     // Per-IP rate limiting (in-memory, best-effort)
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -77,8 +91,10 @@ export default {
   }
 };
 
-// SECRET is set via `npx wrangler secret put SECRET`
-const SECRET = globalThis.SECRET || '';
+// SECRET is set via `npx wrangler secret put SECRET` (available as env.SECRET)
+function getSecret() {
+  return ENV.SECRET || '';
+}
 const SYS = 'You are Nexo AI. Reply in Russian briefly. Use markdown.';
 
 const MAX_BODY_BYTES = 256 * 1024;
@@ -158,27 +174,28 @@ function sanitizeMessages(messages) {
 }
 
 // ── Providers ───────────────────────────────────────────────────────────────
+// Keys are env bindings (set via `wrangler secret put <NAME>_<N>`)
 const KEYS = {
   cerebras: [
-    globalThis.CEREBRAS_KEY_1 || '', globalThis.CEREBRAS_KEY_2 || '',
-    globalThis.CEREBRAS_KEY_3 || '', globalThis.CEREBRAS_KEY_4 || '',
+    () => ENV.CEREBRAS_KEY_1 || '', () => ENV.CEREBRAS_KEY_2 || '',
+    () => ENV.CEREBRAS_KEY_3 || '', () => ENV.CEREBRAS_KEY_4 || '',
   ],
   groq: [
-    globalThis.GROQ_KEY_1 || '', globalThis.GROQ_KEY_2 || '',
-    globalThis.GROQ_KEY_3 || '', globalThis.GROQ_KEY_4 || '',
+    () => ENV.GROQ_KEY_1 || '', () => ENV.GROQ_KEY_2 || '',
+    () => ENV.GROQ_KEY_3 || '', () => ENV.GROQ_KEY_4 || '',
   ],
   sambanova: [
-    globalThis.SAMBANOVA_KEY_1 || '', globalThis.SAMBANOVA_KEY_2 || '',
-    globalThis.SAMBANOVA_KEY_3 || '', globalThis.SAMBANOVA_KEY_4 || '',
+    () => ENV.SAMBANOVA_KEY_1 || '', () => ENV.SAMBANOVA_KEY_2 || '',
+    () => ENV.SAMBANOVA_KEY_3 || '', () => ENV.SAMBANOVA_KEY_4 || '',
   ],
-  mistral: [globalThis.MISTRAL_KEY_1 || ''],
+  mistral: [() => ENV.MISTRAL_KEY_1 || ''],
   openrouter: [
-    globalThis.OPENROUTER_KEY_1 || '', globalThis.OPENROUTER_KEY_2 || '',
-    globalThis.OPENROUTER_KEY_3 || '', globalThis.OPENROUTER_KEY_4 || '',
+    () => ENV.OPENROUTER_KEY_1 || '', () => ENV.OPENROUTER_KEY_2 || '',
+    () => ENV.OPENROUTER_KEY_3 || '', () => ENV.OPENROUTER_KEY_4 || '',
   ],
   fal: [
-    globalThis.FAL_KEY_1 || '', globalThis.FAL_KEY_2 || '',
-    globalThis.FAL_KEY_3 || '', globalThis.FAL_KEY_4 || '',
+    () => ENV.FAL_KEY_1 || '', () => ENV.FAL_KEY_2 || '',
+    () => ENV.FAL_KEY_3 || '', () => ENV.FAL_KEY_4 || '',
   ],
 };
 
@@ -194,7 +211,7 @@ const ki = {};
 
 function getKey(name) {
   const k = KEYS[name] || [];
-  const valid = k.filter((x) => x);
+  const valid = k.map((f) => f()).filter((x) => x);
   if (!valid.length) return null;
   const i = (ki[name] || 0) % valid.length;
   ki[name] = i + 1;
@@ -282,4 +299,56 @@ async function genImg(prompt) {
     } catch (e) {}
   }
   return null;
+}
+
+// ── Speech-to-text (Groq Whisper) ───────────────────────────────────────────
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // Groq file limit
+const STT_MODEL = 'whisper-large-v3-turbo';
+
+async function transcribe(request, ch) {
+  const contentType = request.headers.get('Content-Type') || 'audio/webm';
+  const contentLength = parseInt(request.headers.get('Content-Length') || '0', 10);
+  if (contentLength > MAX_AUDIO_BYTES) return j2({ error: 'Audio too large (max 25MB)' }, 413, ch);
+  if (!contentType.toLowerCase().startsWith('audio/')) {
+    return j2({ error: 'Content-Type must be audio/*' }, 400, ch);
+  }
+
+  const key = getKey('groq');
+  if (!key) return j2({ error: 'No Groq key configured' }, 503, ch);
+
+  let buf;
+  try {
+    buf = await request.arrayBuffer();
+  } catch (e) {
+    return j2({ error: 'Failed to read audio body' }, 400, ch);
+  }
+  if (!buf || buf.byteLength === 0) return j2({ error: 'Empty audio body' }, 400, ch);
+
+  const fd = new FormData();
+  const fname = 'voice_' + Date.now() + (contentType.includes('mp4') ? '.mp4' : contentType.includes('mpeg') ? '.mp3' : contentType.includes('wav') ? '.wav' : contentType.includes('ogg') ? '.ogg' : '.webm');
+  fd.append('file', new File([buf], fname, { type: contentType.split(';')[0].trim() }));
+  fd.append('model', STT_MODEL);
+  fd.append('response_format', 'json');
+  fd.append('language', 'ru');
+
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 60000);
+    const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + key },
+      body: fd,
+      signal: ctrl.signal,
+    });
+    clearTimeout(tid);
+    if (!r.ok) {
+      let t = '';
+      try { t = await r.text(); } catch (e) {}
+      return j2({ error: 'groq ' + r.status + ': ' + t.slice(0, 300) }, 502, ch);
+    }
+    const d = await r.json();
+    return j2({ text: (d.text || '').trim(), provider: 'Groq Whisper (' + STT_MODEL + ')' }, 200, ch);
+  } catch (e) {
+    return j2({ error: e.message || 'STT failed' }, 502, ch);
+  }
 }

@@ -2,6 +2,7 @@
 
 import (
 	"os"
+	"path/filepath"
 	"time"
 
 	"nexo/db"
@@ -21,8 +22,9 @@ func UploadScreenRecording(c *fiber.Ctx) error {
 
 	// Save file
 	filename := generateID() + ".webm"
- filepath := "../uploads/recordings/" + filename
-	os.MkdirAll("../uploads/recordings", 0755)
+	recDir := filepath.Join(UploadDir(), "recordings")
+	os.MkdirAll(recDir, 0755)
+	filepath := recDir + "/" + filename
 	if err := c.SaveFile(file, filepath); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save recording"})
 	}

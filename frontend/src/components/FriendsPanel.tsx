@@ -373,7 +373,7 @@ export default function FriendsPanel({ onClose, onStartChat }: FriendsPanelProps
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="flex-1 overflow-y-auto px-2 py-2 pb-24 md:pb-2">
         {loading ? (
           <div className="flex flex-col gap-2 px-2 pt-4">
             {[1, 2, 3, 4].map(i => (

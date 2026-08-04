@@ -17,14 +17,13 @@ import (
 // while official Nexo stickers stay in the frontend bundle.
 
 const (
-	userStickerDir     = "../uploads/stickers"
 	maxUserPacks       = 20
 	maxStickersPerPack = 100
 	maxStickerSize     = 5 * 1024 * 1024 // 5 MB per image
 )
 
 func userStickerPackDir(packID string) string {
-	return filepath.Join(userStickerDir, packID)
+	return filepath.Join(UploadDir(), "stickers", packID)
 }
 
 func CreateUserStickerPack(c *fiber.Ctx) error {

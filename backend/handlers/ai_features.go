@@ -6,6 +6,7 @@ import (
 	"nexo/models"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -205,6 +206,39 @@ func GetAutoReplyConfig(c *fiber.Ctx) error {
 	return c.JSON(config)
 }
 
+// POST /ai/transcribe
+func TranscribeAudio(c *fiber.Ctx) error {
+	file, err := c.FormFile("audio")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Audio file required"})
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to open audio"})
+	}
+	defer src.Close()
+
+	tempPath := filepath.Join(os.TempDir(), "transcribe_"+generateID()+filepath.Ext(file.Filename))
+	if err := c.SaveFile(file, tempPath); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save audio"})
+	}
+	defer os.Remove(tempPath)
+
+	agent := ai.NewAgent()
+	defer agent.Close()
+
+	text, provider, err := agent.TranscribeFile(tempPath, file.Header.Get("Content-Type"))
+	if err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": "Transcription failed", "detail": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"text":     text,
+		"provider": provider,
+	})
+}
+
 // POST /ai/voice-command
 func ProcessVoiceCommand(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
@@ -222,10 +256,13 @@ func ProcessVoiceCommand(c *fiber.Ctx) error {
 	}
 	defer os.Remove(tempPath)
 
-	// For now, we'll use a simple text fallback since Whisper requires additional setup
-	// In production, integrate with OpenAI Whisper API
 	agent := ai.NewAgent()
 	defer agent.Close()
+
+	transcript, _, err := agent.TranscribeFile(tempPath, file.Header.Get("Content-Type"))
+	if err != nil || strings.TrimSpace(transcript) == "" {
+		transcript = "voice_command"
+	}
 
 	response, err := agent.AnswerQuestion("Voice command received", "Обработай голосовую команду")
 	if err != nil {
@@ -237,7 +274,7 @@ func ProcessVoiceCommand(c *fiber.Ctx) error {
 		ID:        generateID(),
 		UserID:    userID,
 		Command:   "voice",
-		Transcript: "voice_command",
+		Transcript: transcript,
 		Response:  response,
 		Executed:  true,
 		CreatedAt: time.Now(),
@@ -245,9 +282,10 @@ func ProcessVoiceCommand(c *fiber.Ctx) error {
 	db.GetDB().Create(&log)
 
 	return c.JSON(fiber.Map{
-		"command":  "voice",
-		"response": response,
-		"executed": true,
+		"command":    "voice",
+		"transcript": transcript,
+		"response":   response,
+		"executed":   true,
 	})
 }
 

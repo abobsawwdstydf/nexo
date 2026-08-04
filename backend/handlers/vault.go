@@ -40,8 +40,9 @@ func VaultUpload(c *fiber.Ctx) error {
 	// Save file — sanitize filename to prevent path traversal
 	safeFilename := filepath.Base(file.Filename)
 	filename := generateID() + "_" + safeFilename
-	savePath := filepath.Join("..", "uploads", "vault", filename)
-	if err := os.MkdirAll("../uploads/vault", 0755); err != nil {
+	vaultDir := filepath.Join(UploadDir(), "vault")
+	savePath := filepath.Join(vaultDir, filename)
+	if err := os.MkdirAll(vaultDir, 0755); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create directory"})
 	}
 	if err := c.SaveFile(file, savePath); err != nil {

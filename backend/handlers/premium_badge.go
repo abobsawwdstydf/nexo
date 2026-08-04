@@ -13,11 +13,11 @@ import (
 	"nexo/models"
 )
 
-// Kept in sync with the /uploads static mount in main.go ("../uploads").
-const badgeStorageDir = "../uploads/badges"
+// Kept in sync with the /uploads static mount in main.go.
+func badgeDir() string { return filepath.Join(UploadDir(), "badges") }
 
 func init() {
-	if err := os.MkdirAll(badgeStorageDir, 0755); err != nil {
+	if err := os.MkdirAll(badgeDir(), 0755); err != nil {
 		log.Printf("[BADGE] Failed to create badge directory: %v", err)
 	}
 }
@@ -54,7 +54,7 @@ func UploadPremiumBadge(c *fiber.Ctx) error {
 	}
 
 	if user.PremiumBadgeUrl != "" {
-		oldFile := filepath.Join(badgeStorageDir, filepath.Base(user.PremiumBadgeUrl))
+		oldFile := filepath.Join(badgeDir(), filepath.Base(user.PremiumBadgeUrl))
 		if err := os.Remove(oldFile); err != nil {
 			log.Printf("[BADGE] Failed to delete old badge: %v", err)
 		}
@@ -77,7 +77,7 @@ func UploadPremiumBadge(c *fiber.Ctx) error {
 
 	// Save new badge
 	filename := generateID() + ext
-	savePath := filepath.Join(badgeStorageDir, filename)
+	savePath := filepath.Join(badgeDir(), filename)
 
 	if err := c.SaveFile(file, savePath); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Не удалось сохранить файл"})
@@ -105,7 +105,7 @@ func DeletePremiumBadge(c *fiber.Ctx) error {
 	}
 
 	if user.PremiumBadgeUrl != "" {
-		oldFile := filepath.Join(badgeStorageDir, filepath.Base(user.PremiumBadgeUrl))
+		oldFile := filepath.Join(badgeDir(), filepath.Base(user.PremiumBadgeUrl))
 		if err := os.Remove(oldFile); err != nil {
 			log.Printf("[BADGE] Failed to delete badge file: %v", err)
 		}

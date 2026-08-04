@@ -28,6 +28,11 @@ import {
   Trash2,
   AlertTriangle,
   Share2,
+  Paperclip,
+  Trophy,
+  Gamepad2,
+  Cloud,
+  PenLine,
 } from 'lucide-react';
 import type { User as UserType } from '../lib/types';
 import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotification } from '../lib/notifications';
@@ -50,7 +55,7 @@ const tabs: { id: SettingsTab; label: string; icon: typeof Bell }[] = [
   { id: 'notifications', label: 'Уведомления', icon: Bell },
   { id: 'appearance', label: 'Внешний вид', icon: Palette },
   { id: 'privacy', label: 'Конфиденциальность', icon: Shield },
-  { id: 'premium', label: 'НуЧе', icon: Crown },
+  { id: 'premium', label: 'Премиум', icon: Crown },
   { id: 'profile', label: 'Профиль', icon: User },
 ];
 
@@ -563,7 +568,6 @@ function ProfileSettings({ user }: { user: UserType }) {
 function PremiumSettings() {
   const [premiumStatus, setPremiumStatus] = useState<{ isPremium: boolean; premiumUntil: string | null } | null>(null);
   const [prices, setPrices] = useState<Record<number, number>>({});
-  const [currency, setCurrency] = useState('RUB');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
   const [paying, setPaying] = useState(false);
@@ -575,12 +579,11 @@ function PremiumSettings() {
   useEffect(() => {
     Promise.all([
       api.getPremiumStatus().catch(() => ({ isPremium: false, premiumUntil: null })),
-      api.getPremiumPrices().catch(() => ({ prices: {}, currency: 'RUB' })),
+      api.getPremiumPrices().catch(() => ({ prices: {} })),
       api.getUserAliases().catch(() => []),
     ]).then(([status, priceData, aliasData]) => {
       setPremiumStatus(status);
       setPrices(priceData.prices || {});
-      setCurrency(priceData.currency || 'RUB');
       setAliases(Array.isArray(aliasData) ? aliasData : []);
     }).finally(() => setLoading(false));
   }, []);
@@ -631,7 +634,6 @@ function PremiumSettings() {
   };
 
   const months = [1, 3, 6, 12];
-  const currencySymbol = currency === 'RUB' ? '₽' : currency === 'USD' ? '$' : currency;
   const isPremium = premiumStatus?.isPremium ?? false;
 
   if (loading) {
@@ -645,9 +647,7 @@ function PremiumSettings() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 px-1 pb-2">
-        <div className="p-2 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-400/20 border border-amber-400/20">
-          <Crown size={18} className="text-amber-400" />
-        </div>
+        <img src="/beaver-coin.png" alt="" className="w-9 h-9 object-contain" />
         <div>
           <h3 className="text-sm font-semibold text-white/90">Премиум</h3>
           <p className="text-[10px] text-white/40">
@@ -665,16 +665,16 @@ function PremiumSettings() {
 
       <div className="flex flex-wrap gap-1.5 px-1">
         {[
-          { icon: '🎨', label: 'Уникальные темы' },
-          { icon: '📎', label: 'Файлы до 2 ГБ' },
-          { icon: '🏆', label: 'Особый значок' },
-          { icon: '🎮', label: 'Эксклюзивные стикеры' },
-          { icon: '☁️', label: 'Облако 100 ГБ' },
-          { icon: '👑', label: 'Приоритетная поддержка' },
-          { icon: '📝', label: 'Доп. юзернеймы' },
+          { icon: Palette, label: 'Уникальные темы' },
+          { icon: Paperclip, label: 'Файлы до 2 ГБ' },
+          { icon: Trophy, label: 'Особый значок' },
+          { icon: Gamepad2, label: 'Эксклюзивные стикеры' },
+          { icon: Cloud, label: 'Облако 100 ГБ' },
+          { icon: Crown, label: 'Приоритетная поддержка' },
+          { icon: PenLine, label: 'Доп. юзернеймы' },
         ].map((feat, i) => (
           <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-            <span className="text-sm">{feat.icon}</span>
+            <feat.icon size={13} className="text-amber-400" />
             <span className="text-[10px] text-white/60 whitespace-nowrap">{feat.label}</span>
           </div>
         ))}
@@ -729,7 +729,8 @@ function PremiumSettings() {
             {months.map(m => {
               const price = prices[m];
               const isSelected = selected === m;
-              const monthlyPrice = price ? (price / m) : null;
+              const roundedPrice = price ? Math.round(price) : null;
+              const monthlyPrice = roundedPrice ? Math.round(roundedPrice / m) : null;
               return (
                 <button
                   key={m}
@@ -741,12 +742,13 @@ function PremiumSettings() {
                   }`}
                 >
                   <span className="text-sm font-medium text-white/80">{m} {m === 1 ? 'месяц' : m < 5 ? 'месяца' : 'месяцев'}</span>
-                  {price && (
-                    <div className="mt-1">
-                      <span className="text-lg font-bold text-white/90">{price} {currencySymbol}</span>
+                  {roundedPrice && (
+                    <div className="mt-1 flex items-center gap-1">
+                      <span className="text-lg font-bold text-white/90">{roundedPrice.toLocaleString('ru-RU')}</span>
+                      <img src="/beaver-coin.png" alt="" className="w-4 h-4 object-contain" />
                       {monthlyPrice && (
-                        <span className="text-[10px] text-white/30 ml-1">
-                          {monthlyPrice} {currencySymbol}/мес
+                        <span className="text-[10px] text-white/30 ml-0.5">
+                          {monthlyPrice.toLocaleString('ru-RU')}/мес
                         </span>
                       )}
                     </div>
@@ -761,7 +763,7 @@ function PremiumSettings() {
             disabled={!selected || paying}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {paying ? 'Создание платежа...' : selected ? `Купить за ${prices[selected]} ${currencySymbol}` : 'Выберите тариф'}
+            {paying ? 'Создание платежа...' : selected ? `Купить за ${Math.round(prices[selected]).toLocaleString('ru-RU')} НуЧе` : 'Выберите тариф'}
           </button>
         </>
       )}

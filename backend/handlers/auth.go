@@ -643,14 +643,18 @@ func SearchUsers(c *fiber.Ctx) error {
 	}
 
 	// SECURITY FIX: Escape SQL LIKE wildcards to prevent data leak
-	escapedQuery := strings.ReplaceAll(query, "%", "\\%")
-	escapedQuery = strings.ReplaceAll(escapedQuery, "_", "\\_")
+	escapedQuery := strings.ReplaceAll(query, `\`, `\\`)
+	escapedQuery = strings.ReplaceAll(escapedQuery, "%", `\%`)
+	escapedQuery = strings.ReplaceAll(escapedQuery, "_", `\_`)
 
 	var users []models.User
-	db.GetDB().Where("username LIKE ? ESCAPE '\\\\' OR display_name LIKE ? ESCAPE '\\\\'",
+	db.GetDB().Where("username LIKE ? ESCAPE '\\' OR display_name LIKE ? ESCAPE '\\'",
 		"%"+escapedQuery+"%", "%"+escapedQuery+"%").
 		Limit(20).Find(&users)
 
+	if users == nil {
+		users = []models.User{}
+	}
 	return c.JSON(users)
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Shield, Lock, Globe, Server, Heart, Users, Zap, Mail, User, Video, Layers } from 'lucide-react';
+import { ArrowLeft, Lock, Globe, Server, Heart, Users, Zap, Mail, User, Video, Shield } from 'lucide-react';
 
 export default function InfoPage({ onBack }: { onBack: () => void }) {
   const [mounted, setMounted] = useState(false);
@@ -71,7 +71,7 @@ export default function InfoPage({ onBack }: { onBack: () => void }) {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="inline-flex items-center justify-center w-20 h-20 mb-4 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25"
           >
-            <Shield size={36} className="text-white" />
+            <img src="/logo.png" alt="Нексо" className="w-14 h-14 object-contain" />
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
@@ -125,13 +125,7 @@ export default function InfoPage({ onBack }: { onBack: () => void }) {
               <li className="flex items-start gap-2">
                 <Zap size={14} className="text-yellow-400 mt-0.5 shrink-0" />
                 <span>
-                  <strong className="text-white/80">Open Source ядро</strong> — бэкенд на Go, фронт на React. Прозрачный код, независимая аудитория.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Layers size={14} className="text-purple-400 mt-0.5 shrink-0" />
-                <span>
-                  <strong className="text-white/80">Self-hosted</strong> — можно развернуть собственную копию Нексо без ограничений.
+                  <strong className="text-white/80">Молниеносная скорость</strong> — мгновенная доставка, живой WebSocket и оптимизированное ядро.
                 </span>
               </li>
             </ul>

@@ -121,6 +121,11 @@ func NewAgent() *Agent {
 	}
 }
 
+// TranscribeFile recognizes speech in an audio file via the AI proxy.
+func (a *Agent) TranscribeFile(filePath, contentType string) (string, string, error) {
+	return a.LLM.TranscribeFile(filePath, contentType)
+}
+
 // Browse performs an AI-powered web search and analysis
 func (a *Agent) Browse(taskID, query, chatContext string) {
 	a.tasks.UpdateTask(taskID, func(t *Task) {

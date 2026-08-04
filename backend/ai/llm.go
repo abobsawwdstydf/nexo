@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -145,6 +146,70 @@ func (c *LLMClient) Chat(messages []ChatMessage) (string, string, error) {
 		proxyMsgs = append(proxyMsgs, proxyMessage{Role: m.Role, Content: m.Content})
 	}
 	return c.chat(proxyMsgs)
+}
+
+// ─── Speech-to-text (via Nexo AI Proxy /transcribe) ──────────────────────
+
+type transcribeResponse struct {
+	Text     string `json:"text"`
+	Provider string `json:"provider"`
+	Error    string `json:"error"`
+}
+
+// TranscribeFile sends an audio file to the AI proxy /transcribe endpoint
+// (raw body, Content-Type audio/*) and returns the recognized text.
+func (c *LLMClient) TranscribeFile(filePath, contentType string) (string, string, error) {
+	if c.config.ProxyURL == "" {
+		return "", "", fmt.Errorf("AI_PROXY_URL not configured")
+	}
+	proxyURL := c.config.ProxyURL
+	if !strings.HasPrefix(proxyURL, "https://") {
+		return "", "", fmt.Errorf("AI_PROXY_URL must use HTTPS")
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", "", fmt.Errorf("read audio: %w", err)
+	}
+
+	if contentType == "" {
+		contentType = "audio/webm"
+	}
+	if !strings.HasPrefix(contentType, "audio/") {
+		contentType = "audio/webm"
+	}
+
+	url := strings.TrimRight(proxyURL, "/") + "/transcribe"
+	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(data))
+	if err != nil {
+		return "", "", fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", contentType)
+	httpReq.Header.Set("X-Proxy-Secret", c.config.ProxySecret)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return "", "", fmt.Errorf("proxy request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := readBoundedResponse(resp.Body, maxProxyResponseBytes)
+	if err != nil {
+		return "", "", fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("proxy status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var tr transcribeResponse
+	if err := json.Unmarshal(respBody, &tr); err != nil {
+		return "", "", fmt.Errorf("unmarshal response: %w", err)
+	}
+	if tr.Error != "" {
+		return "", "", fmt.Errorf("proxy error: %s", tr.Error)
+	}
+	return tr.Text, tr.Provider, nil
 }
 
 // ─── High-level LLM functions ─────────────────────────────────────────

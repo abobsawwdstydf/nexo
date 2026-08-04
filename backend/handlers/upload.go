@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -12,8 +13,14 @@ import (
 )
 
 // The server is run from backend/, while public uploads live at the project
-// root and are served by main.go at /uploads.
-const uploadDir = "../uploads"
+// root and are served by main.go at /uploads. Override with UPLOAD_DIR for
+// deployments where the working directory differs (e.g. systemd services).
+func UploadDir() string {
+	if d := os.Getenv("UPLOAD_DIR"); d != "" {
+		return d
+	}
+	return "../uploads"
+}
 
 func UploadFile(c *fiber.Ctx) error {
 	if id, ok := c.Locals("userId").(string); !ok || id == "" {
@@ -70,10 +77,11 @@ func UploadFile(c *fiber.Ctx) error {
 		ext = mimeToExt(contentType)
 	}
 	filename := generateID() + ext
-	savePath := filepath.Join(uploadDir, filename)
+	savePath := filepath.Join(UploadDir(), filename)
 
 	// Save file
 	if err := c.SaveFile(file, savePath); err != nil {
+		log.Printf("[UPLOAD] Failed to save %s: %v", savePath, err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file"})
 	}
 

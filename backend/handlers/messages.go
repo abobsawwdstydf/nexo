@@ -369,6 +369,40 @@ func AddReaction(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true, "action": "added"})
 }
 
+func RemoveReaction(c *fiber.Ctx) error {
+	msgID := c.Params("messageId")
+	emoji := c.Params("emoji")
+	userID := c.Locals("userId").(string)
+
+	var msg models.Message
+	if result := db.GetDB().First(&msg, "id = ?", msgID); result.Error != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Message not found"})
+	}
+
+	// Only chat members may remove reactions.
+	var memberCount int64
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", msg.ChatID, userID).
+		Count(&memberCount)
+	if memberCount == 0 {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
+
+	var existing models.Reaction
+	if result := db.GetDB().Where("message_id = ? AND user_id = ? AND emoji = ?", msgID, userID, emoji).First(&existing); result.Error != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Reaction not found"})
+	}
+
+	db.GetDB().Delete(&existing)
+	ws.HubInstance.SendToChat(msg.ChatID, mustWSMap("message:reaction_removed", map[string]string{
+		"messageId": msgID,
+		"userId":    userID,
+		"emoji":     emoji,
+	}), "")
+
+	return c.JSON(fiber.Map{"ok": true, "action": "removed"})
+}
+
 func ReadMessages(c *fiber.Ctx) error {
 	chatID := c.Params("id")
 	userID := c.Locals("userId").(string)

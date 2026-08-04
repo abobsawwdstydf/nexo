@@ -147,6 +147,24 @@ export class ApiClient {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Ошибка сервера' }));
       
+      // Stale/invalid CSRF token (e.g. after backend restart): fetch a fresh
+      // one from the public endpoint and retry the mutation once.
+      if (response.status === 403 && error.error?.includes('CSRF') && isMutation && !(fetchOptions.headers as Record<string, string>)?.['X-CSRF-Token-Retry']) {
+        try {
+          const csrfRes = await fetch(`${getApiBase()}/api/csrf-token`, { credentials: 'include' });
+          if (csrfRes.ok) {
+            const csrfData = await csrfRes.json();
+            if (csrfData.token) {
+              this.csrfToken = csrfData.token;
+              return this.request<T>(endpoint, {
+                ...options,
+                headers: { ...fetchOptions.headers, 'X-CSRF-Token-Retry': '1' },
+              });
+            }
+          }
+        } catch { /* fall through to error */ }
+      }
+
       if (response.status === 401) {
         const isAuthEndpoint = endpoint.startsWith('/auth/');
 

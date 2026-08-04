@@ -53,6 +53,7 @@ func persistCSRFToken(tokenHex, sessionID string) {
 	var entry models.CSRFToken
 	if result := db.GetDB().Where("token = ?", tokenHex).First(&entry); result.Error != nil {
 		db.GetDB().Create(&models.CSRFToken{
+			ID:        generateID(),
 			Token:     tokenHex,
 			SessionID: sessionID,
 			ExpiresAt: time.Now().Add(1 * time.Hour),

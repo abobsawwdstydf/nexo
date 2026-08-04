@@ -14,11 +14,11 @@ import (
 	"nexo/models"
 )
 
-// Kept in sync with the /uploads static mount in main.go ("../uploads").
-const cloudStorageDir = "../uploads/cloud"
+// Kept in sync with the /uploads static mount in main.go.
+func cloudDir() string { return filepath.Join(UploadDir(), "cloud") }
 
 func init() {
-	if err := os.MkdirAll(cloudStorageDir, 0755); err != nil {
+	if err := os.MkdirAll(cloudDir(), 0755); err != nil {
 		log.Printf("[CLOUD] Failed to create storage directory: %v", err)
 	}
 }
@@ -86,7 +86,7 @@ func CloudUpload(c *fiber.Ctx) error {
 
 	// Generate unique filename
 	filename := generateID() + ext
-	savePath := filepath.Join(cloudStorageDir, filename)
+	savePath := filepath.Join(cloudDir(), filename)
 
 	if err := c.SaveFile(file, savePath); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Не удалось сохранить файл"})
@@ -162,7 +162,7 @@ func CloudDelete(c *fiber.Ctx) error {
 
 	// Delete physical file
 	filename := filepath.Base(cloudFile.URL)
-	filePath := filepath.Join(cloudStorageDir, filename)
+	filePath := filepath.Join(cloudDir(), filename)
 	if err := os.Remove(filePath); err != nil {
 		log.Printf("[CLOUD] Failed to delete physical file: %v", err)
 	}
