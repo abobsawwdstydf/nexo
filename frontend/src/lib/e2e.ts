@@ -267,27 +267,6 @@ export async function signData(privateKeyJwk: JsonWebKey, data: string): Promise
   return arrayBufferToBase64(signature);
 }
 
-export async function verifySignature(
-  publicKeySpki: string,
-  data: string,
-  signatureBase64: string
-): Promise<boolean> {
-  const publicKey = await crypto.subtle.importKey(
-    'spki',
-    base64ToArrayBuffer(publicKeySpki),
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    true,
-    ['verify']
-  );
-  const encoded = new TextEncoder().encode(data);
-  return crypto.subtle.verify(
-    { name: 'ECDSA', hash: 'SHA-256' },
-    publicKey,
-    base64ToArrayBuffer(signatureBase64),
-    encoded
-  );
-}
-
 const activeSessions = new Map<string, CryptoKey>();
 
 export function setActiveSessionKey(chatId: string, key: CryptoKey): void {

@@ -121,11 +121,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     logout: () => {
+      // Revoke the server-side session first (the request needs the stored
+      // tokens for authorization), then clear local state.
+      api.logout().catch(() => {});
       localStorage.removeItem('nexo_user');
       localStorage.removeItem('nexo_access_token');
       localStorage.removeItem('nexo_refresh_token');
       api.setCsrfToken(null);
-      api.logout().catch(() => {});
       disconnectSocket();
       unsubscribeFromNotifications().catch(() => {});
       set({ user: null });

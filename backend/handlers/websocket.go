@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -704,46 +703,16 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 	smartFolders := make([]models.SmartFolder, 0)
 	db.GetDB().Where("user_id = ?", userID).Order(`"order" ASC`).Find(&smartFolders)
 
-	// 5. Stories (only active, non-expired)
+	// 5. Stories (only active, non-expired, from friends)
 	var stories []models.Story
 	db.GetDB().
 		Preload("User").
-		Where("expires_at > ?", time.Now()).
+		Where("user_id IN ? AND expires_at > ?", getFriendIDs(userID), time.Now()).
 		Order("created_at DESC").
 		Limit(100).
 		Find(&stories)
 
-	storyMap := make(map[string]*StoryGroupJSON)
-	for _, s := range stories {
-		group, exists := storyMap[s.UserID]
-		if !exists {
-			group = &StoryGroupJSON{
-				UserID:      s.UserID,
-				DisplayName: s.User.DisplayName,
-				Avatar:      s.User.Avatar,
-				IsOnline:    s.User.IsOnline,
-				Stories:     []StoryJSON{},
-			}
-			storyMap[s.UserID] = group
-		}
-		group.Stories = append(group.Stories, StoryJSON{
-			ID:        s.ID,
-			Type:      s.Type,
-			MediaURL:  s.MediaURL,
-			Content:   s.Content,
-			BgColor:   s.BgColor,
-			CreatedAt: s.CreatedAt.Format(time.RFC3339),
-			ExpiresAt: s.ExpiresAt.Format(time.RFC3339),
-		})
-	}
-
-	storyGroups := make([]StoryGroupJSON, 0, len(storyMap))
-	for _, g := range storyMap {
-		storyGroups = append(storyGroups, *g)
-	}
-	sort.Slice(storyGroups, func(i, j int) bool {
-		return len(storyGroups[i].Stories) > len(storyGroups[j].Stories)
-	})
+	storyGroups := buildStoryGroups(stories)
 
 	return &wsDataResponse{Data: map[string]interface{}{
 		"user":         user,

@@ -25,6 +25,9 @@ import (
 
 const maxYooKassaResponseBytes int64 = 2 * 1024 * 1024
 
+// premiumPlanName identifies the premium tier returned to clients.
+const premiumPlanName = "nexo_premium"
+
 func readLimitedBody(body io.Reader, limit int64) ([]byte, error) {
 	data, err := io.ReadAll(io.LimitReader(body, limit+1))
 	if err != nil {
@@ -276,7 +279,7 @@ func GetPremiumStatus(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"isPremium":    hasPremium,
 		"premiumUntil": user.PremiumUntil,
-		"plan":         "НуЧе",
+		"plan":         premiumPlanName,
 	})
 }
 
@@ -442,7 +445,9 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 
 	if webhookSecret == "" {
 		log.Printf("[SECURITY] YUKASSA_WEBHOOK_SECRET not configured — rejecting all webhooks")
-		return c.Status(500).JSON(fiber.Map{"error": "Webhook verification not configured"})
+		// Return 200 so YooKassa does not retry indefinitely; IP whitelist
+		// above already restricted who can reach this handler.
+		return c.JSON(fiber.Map{"ok": true})
 	}
 
 	signature := c.Get("X-Signature")
@@ -624,7 +629,7 @@ func verifyPaymentWithYooKassa(paymentID string) (*YooKassaGetPaymentResponse, e
 // GetPremiumPrices — отримати ціни premium
 func GetPremiumPrices(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
-		"plan": "НуЧе",
+		"plan": premiumPlanName,
 		"prices": map[int]int{
 			1:  99,
 			3:  249,

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -72,16 +73,37 @@ func senderFromBot(b models.Bot) SenderJSON {
 	}
 }
 
+type cachedBotSender struct {
+	sender SenderJSON
+	at     time.Time
+}
+
+// botSenderCache avoids a DB query per bot message when serializing a list of
+// messages from bot chats (N+1). Entries refresh at most once per minute.
+var botSenderCache sync.Map // botID -> cachedBotSender
+
+func botSenderJSON(botID string) SenderJSON {
+	if v, ok := botSenderCache.Load(botID); ok {
+		c := v.(cachedBotSender)
+		if time.Since(c.at) < time.Minute {
+			return c.sender
+		}
+	}
+
+	sender := SenderJSON{ID: botID, IsBot: true}
+	var bot models.Bot
+	if err := db.GetDB().First(&bot, "id = ?", botID).Error; err == nil {
+		sender = senderFromBot(bot)
+	}
+	botSenderCache.Store(botID, cachedBotSender{sender: sender, at: time.Now()})
+	return sender
+}
+
 func messageToJSON(msg models.Message) string {
 	senderJSON := SenderJSON{}
 	if msg.Sender.ID == "" && msg.SenderID != "" {
 		// Сообщение от бота (нет user-записи)
-		var bot models.Bot
-		if err := db.GetDB().First(&bot, "id = ?", msg.SenderID).Error; err == nil {
-			senderJSON = senderFromBot(bot)
-		} else {
-			senderJSON = SenderJSON{ID: msg.SenderID, IsBot: true}
-		}
+		senderJSON = botSenderJSON(msg.SenderID)
 	} else {
 		senderJSON = senderToJSON(msg.Sender)
 	}
@@ -111,8 +133,21 @@ func messageToJSON(msg models.Message) string {
 		ReplyMarkup:      replyMarkup,
 	}
 
-	data, _ := json.Marshal(msgJSON)
+	data, err := json.Marshal(msgJSON)
+	if err != nil {
+		log.Printf("[messageToJSON] marshal failed for message %s: %v", msg.ID, err)
+		return ""
+	}
 	return string(data)
+}
+
+// isChatMember reports whether userID is a member of chatID.
+func isChatMember(chatID, userID string) bool {
+	var count int64
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", chatID, userID).
+		Count(&count)
+	return count > 0
 }
 
 func SendMessage(c *fiber.Ctx) error {
@@ -163,11 +198,15 @@ func SendMessage(c *fiber.Ctx) error {
 	}
 
 	// Batch update chat member and chat
-	db.GetDB().Model(&models.ChatMember{}).
+	if err := db.GetDB().Model(&models.ChatMember{}).
 		Where("chat_id = ? AND user_id = ?", chatID, userID).
-		Update("last_message_at", now)
+		Update("last_message_at", now).Error; err != nil {
+		log.Printf("[SendMessage] failed to update last_message_at for chat %s user %s: %v", chatID, userID, err)
+	}
 
-	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now)
+	if err := db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now).Error; err != nil {
+		log.Printf("[SendMessage] failed to update chat %s: %v", chatID, err)
+	}
 
 	// Fetch with preload in single query
 	if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msg.ID).Error; err != nil {
@@ -258,14 +297,19 @@ func EditMessage(c *fiber.Ctx) error {
 	}
 
 	now := time.Now()
-	db.GetDB().Model(&msg).Updates(map[string]interface{}{
+	if err := db.GetDB().Model(&msg).Updates(map[string]interface{}{
 		"content":    req.Content,
 		"is_edited":  true,
 		"edited_at":  now,
 		"updated_at": now,
-	})
+	}).Error; err != nil {
+		log.Printf("[EditMessage] update failed for message %s: %v", msgID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to edit message"})
+	}
 
-	db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msgID)
+	if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msgID).Error; err != nil {
+		log.Printf("[EditMessage] failed to reload message %s after edit: %v", msgID, err)
+	}
 
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(msg.ChatID, mustWSMsg("message:edited", "message", json.RawMessage(msgJSON)), "")
@@ -329,11 +373,7 @@ func AddReaction(c *fiber.Ctx) error {
 	}
 
 	// Only chat members may react to messages.
-	var memberCount int64
-	db.GetDB().Model(&models.ChatMember{}).
-		Where("chat_id = ? AND user_id = ?", msg.ChatID, userID).
-		Count(&memberCount)
-	if memberCount == 0 {
+	if !isChatMember(msg.ChatID, userID) {
 		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
 	}
 
@@ -379,11 +419,7 @@ func RemoveReaction(c *fiber.Ctx) error {
 	}
 
 	// Only chat members may remove reactions.
-	var memberCount int64
-	db.GetDB().Model(&models.ChatMember{}).
-		Where("chat_id = ? AND user_id = ?", msg.ChatID, userID).
-		Count(&memberCount)
-	if memberCount == 0 {
+	if !isChatMember(msg.ChatID, userID) {
 		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
 	}
 
@@ -436,6 +472,11 @@ func ReadMessages(c *fiber.Ctx) error {
 func Typing(c *fiber.Ctx) error {
 	chatID := c.Params("id")
 	userID := c.Locals("userId").(string)
+
+	// Verify membership (mirrors the WS handler)
+	if !isChatMember(chatID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
 
 	// Throttle DB writes: if a fresh indicator already exists, just broadcast
 	var existing models.TypingIndicator

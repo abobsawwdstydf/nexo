@@ -52,12 +52,14 @@ func generateID() string {
 func persistCSRFToken(tokenHex, sessionID string) {
 	var entry models.CSRFToken
 	if result := db.GetDB().Where("token = ?", tokenHex).First(&entry); result.Error != nil {
-		db.GetDB().Create(&models.CSRFToken{
+		if err := db.GetDB().Create(&models.CSRFToken{
 			ID:        generateID(),
 			Token:     tokenHex,
 			SessionID: sessionID,
 			ExpiresAt: time.Now().Add(1 * time.Hour),
-		})
+		}).Error; err != nil {
+			log.Printf("warn: failed to persist CSRF token: %v", err)
+		}
 	}
 }
 

@@ -95,15 +95,28 @@ func GetInit(c *fiber.Ctx) error {
 	var smartFolders []models.SmartFolder
 	db.GetDB().Where("user_id = ?", userID).Order(`"order" ASC`).Find(&smartFolders)
 
-	// 5. Stories (only active, non-expired)
+	// 5. Stories (only active, non-expired, from friends)
 	var stories []models.Story
 	db.GetDB().
 		Preload("User").
-		Where("expires_at > ?", time.Now()).
+		Where("user_id IN ? AND expires_at > ?", getFriendIDs(userID), time.Now()).
 		Order("created_at DESC").
 		Find(&stories)
 
-	// Group stories by user
+	storyGroups := buildStoryGroups(stories)
+
+	return c.JSON(InitResponse{
+		User:         user,
+		Chats:        chats,
+		Settings:     settings,
+		SmartFolders: smartFolders,
+		Stories:      storyGroups,
+		CsrfToken:    middleware.GenerateCSRFToken(userID),
+	})
+}
+
+// buildStoryGroups groups raw stories by author, ordered by story count.
+func buildStoryGroups(stories []models.Story) []StoryGroupJSON {
 	storyMap := make(map[string]*StoryGroupJSON)
 	for _, s := range stories {
 		group, exists := storyMap[s.UserID]
@@ -135,13 +148,5 @@ func GetInit(c *fiber.Ctx) error {
 	sort.Slice(storyGroups, func(i, j int) bool {
 		return len(storyGroups[i].Stories) > len(storyGroups[j].Stories)
 	})
-
-	return c.JSON(InitResponse{
-		User:         user,
-		Chats:        chats,
-		Settings:     settings,
-		SmartFolders: smartFolders,
-		Stories:      storyGroups,
-		CsrfToken:    middleware.GenerateCSRFToken(userID),
-	})
+	return storyGroups
 }

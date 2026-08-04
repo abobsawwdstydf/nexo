@@ -25,6 +25,15 @@ func tgOK(c *fiber.Ctx, result interface{}) error {
 	return c.JSON(fiber.Map{"ok": true, "result": result})
 }
 
+// botParseBody parses the optional JSON body. Empty bodies are valid (Bot API
+// allows passing params via the query string), but a malformed body is a 400.
+func botParseBody(c *fiber.Ctx, dst interface{}) error {
+	if len(c.Body()) == 0 {
+		return nil
+	}
+	return c.BodyParser(dst)
+}
+
 func tgErr(c *fiber.Ctx, code int, description string) error {
 	return c.Status(code).JSON(fiber.Map{
 		"ok":          false,
@@ -641,7 +650,9 @@ func botGetChat(c *fiber.Ctx, bot models.Bot) error {
 		var req struct {
 			ChatID string `json:"chat_id"`
 		}
-		_ = c.BodyParser(&req)
+		if err := botParseBody(c, &req); err != nil {
+			return tgErr(c, 400, "Bad Request: invalid JSON body")
+		}
 		chatID = req.ChatID
 	}
 	if chatID == "" {
@@ -659,7 +670,9 @@ func botGetChatMember(c *fiber.Ctx, bot models.Bot) error {
 		ChatID string `json:"chat_id"`
 		UserID string `json:"user_id"`
 	}
-	_ = c.BodyParser(&req)
+	if err := botParseBody(c, &req); err != nil {
+		return tgErr(c, 400, "Bad Request: invalid JSON body")
+	}
 	if req.ChatID == "" {
 		req.ChatID = c.Query("chat_id")
 	}
@@ -699,7 +712,9 @@ func botGetChatAdministrators(c *fiber.Ctx, bot models.Bot) error {
 	var req struct {
 		ChatID string `json:"chat_id"`
 	}
-	_ = c.BodyParser(&req)
+	if err := botParseBody(c, &req); err != nil {
+		return tgErr(c, 400, "Bad Request: invalid JSON body")
+	}
 	if req.ChatID == "" {
 		req.ChatID = c.Query("chat_id")
 	}
@@ -711,7 +726,11 @@ func botGetChatAdministrators(c *fiber.Ctx, bot models.Bot) error {
 	}
 
 	var members []models.ChatMember
-	db.GetDB().Where("chat_id = ? AND role IN ?", req.ChatID, []string{"owner", "admin"}).Find(&members)
+	if err := db.GetDB().Preload("User").
+		Where("chat_id = ? AND role IN ?", req.ChatID, []string{"owner", "admin"}).
+		Find(&members).Error; err != nil {
+		return tgErr(c, 500, "Internal server error")
+	}
 	result := make([]map[string]interface{}, 0, len(members))
 	for _, m := range members {
 		status := "administrator"
@@ -730,7 +749,9 @@ func botLeaveChat(c *fiber.Ctx, bot models.Bot) error {
 	var req struct {
 		ChatID string `json:"chat_id"`
 	}
-	_ = c.BodyParser(&req)
+	if err := botParseBody(c, &req); err != nil {
+		return tgErr(c, 400, "Bad Request: invalid JSON body")
+	}
 	if req.ChatID == "" {
 		req.ChatID = c.Query("chat_id")
 	}
@@ -912,7 +933,9 @@ func botGetFile(c *fiber.Ctx, bot models.Bot) error {
 	var req struct {
 		FileID string `json:"file_id"`
 	}
-	_ = c.BodyParser(&req)
+	if err := botParseBody(c, &req); err != nil {
+		return tgErr(c, 400, "Bad Request: invalid JSON body")
+	}
 	if req.FileID == "" {
 		req.FileID = c.Query("file_id")
 	}

@@ -502,11 +502,7 @@ nexo_up 1
 	auth.Post("/anonymous/rate", handlers.RateAnonymousChat)
 	auth.Get("/anonymous/chats", handlers.GetAnonymousChats)
 
-	// ─── Feature 6: Gamification ─────────────────────────────────────────
-	auth.Get("/gamification/xp", handlers.GetUserXP)
-	auth.Get("/gamification/leaderboard", handlers.GetUserLeaderboard)
-
-	// ─── Feature 7: E2E Encryption ──────────────────────────────────────
+	// ─── Feature 6: E2E Encryption ──────────────────────────────────────
 	auth.Post("/e2e/keybundle", handlers.UploadKeyBundle)
 	auth.Get("/e2e/keybundle/:userId", handlers.FetchKeyBundle)
 	auth.Post("/e2e/keybundle/:userId/consume", handlers.ConsumeOneTimePreKey)
@@ -514,9 +510,7 @@ nexo_up 1
 	auth.Get("/e2e/session/:chatId", handlers.GetSession)
 	auth.Delete("/e2e/session/:chatId", handlers.DeleteSession)
 
-	// ─── Feature 8: AI Commands ──────────────────────────────────────────
-
-	// ─── Feature 10: Webhooks ────────────────────────────────────────────
+	// ─── Feature 7: Webhooks ─────────────────────────────────────────────
 	auth.Get("/webhooks", handlers.GetWebhookConfigs)
 	auth.Post("/webhooks", handlers.CreateWebhookConfig)
 	auth.Delete("/webhooks/:webhookId", handlers.DeleteWebhookConfig)

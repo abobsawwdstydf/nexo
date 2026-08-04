@@ -15,11 +15,10 @@ type Client struct {
 
 // HubMetrics tracks connection statistics
 type HubMetrics struct {
-	TotalConnections    int64
-	CurrentConnections  int
-	TotalMessages       int64
-	TotalBroadcasts     int64
-	mu                  sync.RWMutex
+	TotalConnections   int64
+	CurrentConnections int
+	TotalMessages      int64
+	mu                 sync.RWMutex
 }
 
 type Hub struct {
@@ -184,16 +183,6 @@ func (h *Hub) IsOnline(userID string) bool {
 	return ok && len(clients) > 0
 }
 
-func (h *Hub) GetOnlineUsers() []string {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	users := make([]string, 0, len(h.clients))
-	for userID := range h.clients {
-		users = append(users, userID)
-	}
-	return users
-}
-
 // getUserCountLocked returns the number of connections for a user.
 // Caller must hold h.mu.
 func (h *Hub) getUserCountLocked(userID string) int {
@@ -201,22 +190,6 @@ func (h *Hub) getUserCountLocked(userID string) int {
 		return len(clients)
 	}
 	return 0
-}
-
-func (h *Hub) Broadcast(data []byte) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for _, clients := range h.clients {
-		for client := range clients {
-			select {
-			case client.Send <- data:
-			default:
-			}
-		}
-	}
-	h.Metrics.mu.Lock()
-	h.Metrics.TotalBroadcasts++
-	h.Metrics.mu.Unlock()
 }
 
 // SendToClient sends data to a single specific client (for RPC responses).

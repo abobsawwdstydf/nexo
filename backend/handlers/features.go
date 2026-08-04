@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/models"
@@ -26,19 +28,30 @@ func SetMoodStatus(c *fiber.Ctx) error {
 
 	// If mood is empty string → clear mood
 	if req.MoodStatus == "" {
-		database.Model(&models.User{}).Where("id = ?", userID).
+		if err := database.Model(&models.User{}).Where("id = ?", userID).
 			Updates(map[string]interface{}{
 				"mood_status":     "",
 				"mood_expires_at": nil,
-			})
+			}).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update mood"})
+		}
 		return c.JSON(fiber.Map{"moodStatus": "", "moodExpiresAt": nil})
 	}
 
-	database.Model(&models.User{}).Where("id = ?", userID).
-		Update("mood_status", req.MoodStatus)
+	// Cap length (mirrors the WS handler limit)
+	if utf8.RuneCountInString(req.MoodStatus) > 140 {
+		return c.Status(400).JSON(fiber.Map{"error": "Mood status is too long (max 140 characters)"})
+	}
+
+	if err := database.Model(&models.User{}).Where("id = ?", userID).
+		Update("mood_status", req.MoodStatus).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update mood"})
+	}
 
 	var user models.User
-	database.Where("id = ?", userID).First(&user)
+	if err := database.Where("id = ?", userID).First(&user).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load user"})
+	}
 
 	return c.JSON(fiber.Map{
 		"moodStatus":    user.MoodStatus,
@@ -489,6 +502,12 @@ func JoinPublicRoom(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Public room not found"})
 	}
 
+	// Ensure the underlying chat still exists (prevents orphan memberships)
+	var chat models.Chat
+	if err := database.Where("id = ?", room.ChatID).First(&chat).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Public room chat not found"})
+	}
+
 	// Check not already member
 	var existingMember models.ChatMember
 	if err := database.Where("chat_id = ? AND user_id = ?", room.ChatID, userID).First(&existingMember).Error; err == nil {
@@ -503,10 +522,15 @@ func JoinPublicRoom(c *fiber.Ctx) error {
 		Role:     "member",
 		JoinedAt: time.Now(),
 	}
-	database.Create(&member)
+	if err := database.Create(&member).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to join room"})
+	}
 
-	// Increment count
-	database.Model(&room).Update("members_count", room.MembersCount+1)
+	// Increment count atomically (safe under concurrent joins)
+	if err := database.Model(&models.PublicRoom{}).Where("id = ?", roomID).
+		Update("members_count", gorm.Expr("members_count + 1")).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to join room"})
+	}
 
 	return c.JSON(fiber.Map{"ok": true, "chatId": room.ChatID})
 }
@@ -529,12 +553,11 @@ func LeavePublicRoom(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "You are not a member"})
 	}
 
-	// Decrement count (but not below 0)
-	newCount := room.MembersCount - 1
-	if newCount < 0 {
-		newCount = 0
+	// Decrement count atomically, never below 0
+	if err := database.Model(&models.PublicRoom{}).Where("id = ?", roomID).
+		Update("members_count", gorm.Expr("CASE WHEN members_count > 0 THEN members_count - 1 ELSE 0 END")).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to leave room"})
 	}
-	database.Model(&room).Update("members_count", newCount)
 
 	return c.JSON(fiber.Map{"ok": true})
 }

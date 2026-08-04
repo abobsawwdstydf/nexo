@@ -132,6 +132,18 @@ func NotifyUser(userID string, title string, body string, data map[string]interf
 		return 0
 	}
 
+	// Do Not Disturb: suppress notifications entirely while active.
+	if user.DNDUntil != nil && user.DNDUntil.After(time.Now()) {
+		return 0
+	}
+
+	// Chat snooze: suppress notifications for the snoozed chat.
+	if chatID, ok := data["chatId"].(string); ok && chatID != "" {
+		if snoozed, _ := IsChatSnoozed(userID, chatID); snoozed {
+			return 0
+		}
+	}
+
 	notifType, _ := data["type"].(string)
 	switch notifType {
 	case "call", "incoming_call", "call_offer":

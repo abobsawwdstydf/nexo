@@ -1,0 +1,71 @@
+
+06:59:09: INFO: FH_LOADER WAS CALLED EXACTLY LIKE THIS
+************************************************
+C:\Program Files (x86)\Qualcomm\QPST\bin\fh_loader.exe --port=\\.\COM1 --files=C:\Users\haker_one\Downloads\oppo_decrypt\output\rawprogram0.xml --search_path=C:\Users\haker_one\Downloads\oppo_decrypt\output --memoryname=emmc --zlpawarehost=1 --noprompt 
+************************************************
+
+06:59:09: DEBUG: Binary build date: Jun 25 2019 @ 03:16:10
+
+06:59:09: DEBUG: Build Version: 19.06.25.03.16.10
+
+06:59:09: INFO: Current working dir (cwd): E:\яЁюхъЄ√ яххях °эхщэх тЄЇрррр\═хъёю\═хъёю\
+06:59:09: INFO: Showing network mappings to allow debugging
+06:59:09: DEBUG: Новые подключения будут запомнены.
+
+06:59:09: DEBUG: 
+
+06:59:09: DEBUG: В списке нет элементов.
+
+06:59:09: DEBUG: 
+
+06:59:09: DEBUG: User set ZLPAWAREHOST to 1
+
+06:59:09: INFO: User wants to talk to port '\\.\COM1'
+06:59:09: DEBUG: port_fd=0x18C
+
+06:59:09: INFO: Took       0.00000000 seconds to open port
+06:59:09: INFO: Sorting TAGS to ensure order is <configure>,<erase>, others, <patch>,<power>
+06:59:09: INFO: Sending <configure>
+06:59:09: DEBUG: CHANNEL DATA (P0000) (H00202) (    228 bytes) - HOST TO TARGET -->
+===========================================================================================================
+<?xml version="1.0" encoding="UTF-8" ?>
+<data>
+<configure MemoryName="emmc" Verbose="0" AlwaysValidate="0" MaxDigestTableSizeInBytes="8192" MaxPayloadSizeToTargetInBytes="1048576" ZlpAwareHost="1" SkipStorageInit="0" />
+</data>
+
+============================================================================================================
+
+06:59:09: DEBUG: Only 42 bytes written of 228 requested, attempt 1 of 100
+06:59:09: DEBUG: Only 28 bytes written of 186 requested, attempt 2 of 100
+06:59:10: DEBUG: Only 14 bytes written of 158 requested, attempt 3 of 100
+06:59:10: DEBUG: Only 28 bytes written of 144 requested, attempt 4 of 100
+06:59:10: DEBUG: Only 14 bytes written of 116 requested, attempt 5 of 100
+06:59:10: DEBUG: Only 14 bytes written of 102 requested, attempt 6 of 100
+06:59:10: DEBUG: Only 14 bytes written of 88 requested, attempt 7 of 100
+06:59:10: DEBUG: Only 14 bytes written of 74 requested, attempt 8 of 100
+06:59:10: DEBUG: Only 14 bytes written of 60 requested, attempt 9 of 100
+06:59:10: DEBUG: Only 14 bytes written of 46 requested, attempt 10 of 100
+06:59:10: DEBUG: Only 0 bytes written of 32 requested, attempt 11 of 100
+06:59:11: DEBUG: Only 14 bytes written of 32 requested, attempt 12 of 100
+06:59:11: DEBUG: Only 0 bytes written of 18 requested, attempt 13 of 100
+06:59:11: DEBUG: Only 0 bytes written of 18 requested, attempt 14 of 100
+06:59:11: DEBUG: Only 0 bytes written of 18 requested, attempt 15 of 100
+06:59:11: DEBUG: Only 14 bytes written of 18 requested, attempt 16 of 100
+06:59:11: DEBUG: Only 0 bytes written of 4 requested, attempt 17 of 100
+06:59:11: DEBUG: Only 0 bytes written of 4 requested, attempt 18 of 100
+06:59:11: DEBUG: Only 0 bytes written of 4 requested, attempt 19 of 100
+06:59:11: DEBUG: Only 0 bytes written of 4 requested, attempt 20 of 100
+06:59:11: DEBUG: Only 0 bytes written of 4 requested, attempt 21 of 100
+06:59:11: DEBUG: CharsInBuffer=0 Trying to read from USB 8192 bytes
+
+
+	 _____                    
+	|  ___|                   
+	| |__ _ __ _ __ ___  _ __ 
+	|  __| '__| '__/ _ \| '__|
+	| |__| |  | | | (_) | |   
+	\____/_|  |_|  \___/|_|  
+
+
+07:00:56: {ERROR: ReadPort:5915 Could not read from '\\.\COM1', Windows API ReadFile failed! Your device is probably *not* on this port
+

@@ -28,7 +28,6 @@ declare module './core' {
     fetchKeyBundle(userId: string): Promise<{ bundles: E2EKeyBundleResponse[] }>;
     consumeOneTimePreKey(userId: string): Promise<{ oneTimePreKey: string }>;
     initE2ESession(data: { chatId: string; encryptedKey: string }): Promise<{ ok: boolean; sessionId: string; existed: boolean }>;
-    getE2ESession(chatId: string): Promise<{ sessionId: string; chatId: string; isActive: boolean; createdAt: string }>;
   }
 }
 
@@ -74,9 +73,5 @@ export function installFeatures(api: ApiClient): void {
       method: 'POST',
       body: JSON.stringify(data),
     });
-  };
-
-  api.getE2ESession = async (chatId) => {
-    return api.request<{ sessionId: string; chatId: string; isActive: boolean; createdAt: string }>(`/e2e/session/${chatId}`);
   };
 }

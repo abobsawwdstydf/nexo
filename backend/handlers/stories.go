@@ -58,15 +58,14 @@ func CreateStory(c *fiber.Ctx) error {
 	return c.Status(201).JSON(story)
 }
 
-func GetStories(c *fiber.Ctx) error {
-	userID := c.Locals("userId").(string)
-
+// getFriendIDs returns IDs of users with an accepted friendship with userID.
+func getFriendIDs(userID string) []string {
 	var friendships []models.Friendship
 	db.GetDB().
 		Where("(user_id = ? OR friend_id = ?) AND status = 'accepted'", userID, userID).
 		Find(&friendships)
-	// If friendship query fails, still return empty stories (user may have no friends)
-	friendIDs := make([]string, 0)
+	// If friendship query fails, still return empty slice (user may have no friends)
+	friendIDs := make([]string, 0, len(friendships))
 	for _, f := range friendships {
 		if f.UserID == userID {
 			friendIDs = append(friendIDs, f.FriendID)
@@ -74,13 +73,18 @@ func GetStories(c *fiber.Ctx) error {
 			friendIDs = append(friendIDs, f.UserID)
 		}
 	}
+	return friendIDs
+}
+
+func GetStories(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
 
 	// Get active (non-expired) stories from friends
 	var stories []models.Story
 	db.GetDB().
 		Preload("User").
 		Preload("Views").
-		Where("user_id IN ? AND expires_at > ?", friendIDs, time.Now()).
+		Where("user_id IN ? AND expires_at > ?", getFriendIDs(userID), time.Now()).
 		Order("created_at DESC").
 		Find(&stories)
 
