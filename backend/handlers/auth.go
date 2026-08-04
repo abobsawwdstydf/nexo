@@ -168,11 +168,6 @@ func Register(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check reserved usernames
-	if reserved, reason := isUsernameReserved(req.Username); reserved {
-		return c.Status(409).JSON(fiber.Map{"error": reason})
-	}
-
 	// Email is required for registration
 	if req.Email == "" || !emailRegex.MatchString(req.Email) {
 		return c.Status(400).JSON(fiber.Map{"error": "Valid email is required for registration"})

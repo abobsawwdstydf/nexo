@@ -225,16 +225,6 @@ func (a *Agent) ModerateContent(text string) (string, float64, string, error) {
 	return a.LLM.ModerateContent(text)
 }
 
-// SuggestReplies suggests replies for a message
-func (a *Agent) SuggestReplies(messageContext string) ([]string, error) {
-	return a.LLM.SuggestReplies(messageContext)
-}
-
-// Summarize summarizes chat messages
-func (a *Agent) Summarize(messages string) (string, error) {
-	return a.LLM.Summarize(messages, 500)
-}
-
 // AnswerQuestion answers a question about content
 func (a *Agent) AnswerQuestion(content, question string) (string, error) {
 	return a.LLM.AnswerQuestion(content, question)

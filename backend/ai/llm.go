@@ -214,59 +214,6 @@ func (c *LLMClient) TranscribeFile(filePath, contentType string) (string, string
 
 // ─── High-level LLM functions ─────────────────────────────────────────
 
-// AnalyzePage analyzes page content for a user query
-func (c *LLMClient) AnalyzePage(content, query string) (string, error) {
-	system := `Ты — AI-ассистент для анализа веб-страниц. 
-Проанализируй содержимое страницы и ответь на вопрос пользователя.
-Отвечай на русском языке. Будь конкретным и точным.
-Если информации недостаточно, скажи об этом.`
-
-	if len(content) > 15000 {
-		content = content[:15000] + "\n\n[...контент обрезан...]"
-	}
-
-	prompt := fmt.Sprintf("Содержимое страницы:\n%s\n\nВопрос: %s", content, query)
-	response, _, err := c.Simple(system, prompt)
-	return response, err
-}
-
-// Summarize summarizes content
-func (c *LLMClient) Summarize(content string, maxTokens int) (string, error) {
-	if len(content) > 20000 {
-		content = content[:20000] + "\n\n[...контент обрезан...]"
-	}
-
-	system := "Ты — AI для суммаризации. Сделай краткое содержание (3-5 абзацев). Отвечай на русском."
-	response, _, err := c.Simple(system, content)
-	return response, err
-}
-
-// SuggestReplies suggests chat replies based on context
-func (c *LLMClient) SuggestReplies(context string) ([]string, error) {
-	system := `Ты — AI-ассистент для мессенджера. 
-Предложи 3 варианта ответа на сообщение. 
-Отвечай на русском. Формат: просто текст ответа, каждый с новой строки.
-Не нумеруй и не используй маркеры.`
-
-	response, _, err := c.Simple(system, context)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(strings.TrimSpace(response), "\n")
-	var suggestions []string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			suggestions = append(suggestions, line)
-		}
-	}
-	if len(suggestions) == 0 {
-		suggestions = append(suggestions, response)
-	}
-	return suggestions, nil
-}
-
 // Translate translates text to target language
 func (c *LLMClient) Translate(text, targetLang string) (string, string, error) {
 	langNames := map[string]string{
@@ -338,16 +285,6 @@ func (c *LLMClient) ModerateContent(text string) (verdict string, score float64,
 	}
 
 	return result.Verdict, result.Score, result.Reason, nil
-}
-
-// GenerateTitle generates a title for a chat based on messages
-func (c *LLMClient) GenerateTitle(messages string) (string, error) {
-	system := "Придумай короткий заголовок (2-5 слов) для чата на основе последних сообщений. Отвечай только заголовком."
-	response, _, err := c.Simple(system, messages)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(response), nil
 }
 
 // AnswerQuestion answers a question about page content

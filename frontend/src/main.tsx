@@ -10,7 +10,12 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Load base URL from base-url.json (for mobile/desktop apps)
 loadBaseUrlConfig();
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('[main] #root element not found — cannot mount the app');
+}
+
+ReactDOM.createRoot(rootElement).render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>

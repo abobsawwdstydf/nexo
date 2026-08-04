@@ -12,7 +12,7 @@ export function getApiUrl(): string {
     if (custom) return custom;
   }
 
-  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl && typeof envUrl === 'string' && envUrl !== '') {
     return envUrl.replace(/\/+$/, '');
   }

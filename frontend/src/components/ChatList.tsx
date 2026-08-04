@@ -9,7 +9,6 @@ import {
   Settings,
   Bookmark,
   Users,
-  UserPlus,
   Plus,
   X,
   Clock,

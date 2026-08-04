@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -477,15 +476,7 @@ func SearchMessages(c *fiber.Ctx) error {
 		query = string([]rune(query)[:100])
 	}
 
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "20"))
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 50 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
+	pag := helpers.ParsePagination(c, 20, 50)
 
 	// Optional filters
 	fromDate := c.Query("from")
@@ -493,12 +484,14 @@ func SearchMessages(c *fiber.Ctx) error {
 	msgType := c.Query("type")
 
 	var memberChatIDs []string
-	db.GetDB().Model(&models.ChatMember{}).
+	if err := db.GetDB().Model(&models.ChatMember{}).
 		Where("user_id = ?", userID).
-		Pluck("chat_id", &memberChatIDs)
+		Pluck("chat_id", &memberChatIDs).Error; err != nil {
+		log.Printf("[SearchMessages] failed to load chat memberships for user=%s: %v", userID, err)
+	}
 
 	if len(memberChatIDs) == 0 {
-		return c.JSON(fiber.Map{"items": []models.Message{}, "total": 0, "page": page, "pageSize": pageSize})
+		return c.JSON(fiber.Map{"items": []models.Message{}, "total": 0, "page": pag.Page, "pageSize": pag.PageSize})
 	}
 
 	// SECURITY FIX: Escape % and _ LIKE wildcards to prevent pattern injection.
@@ -523,10 +516,16 @@ func SearchMessages(c *fiber.Ctx) error {
 	q = q.Order("created_at DESC")
 
 	var total int64
-	q.Model(&models.Message{}).Count(&total)
+	if err := q.Model(&models.Message{}).Count(&total).Error; err != nil {
+		log.Printf("[SearchMessages] count failed for user=%s: %v", userID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "search failed"})
+	}
 
 	var messages []models.Message
-	q.Offset(offset).Limit(pageSize).Find(&messages)
+	if err := q.Offset(pag.Offset).Limit(pag.PageSize).Find(&messages).Error; err != nil {
+		log.Printf("[SearchMessages] query failed for user=%s: %v", userID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "search failed"})
+	}
 	sanitizeMessages(messages)
 
 	// Save search history
@@ -537,25 +536,22 @@ func SearchMessages(c *fiber.Ctx) error {
 		Type:        msgType,
 		ResultCount: int(total),
 	}
-	db.GetDB().Create(&history)
+	if err := db.GetDB().Create(&history).Error; err != nil {
+		log.Printf("[SearchMessages] failed to save history for user=%s: %v", userID, err)
+	}
 
 	// Cap search history at 200 entries per user (unbounded growth otherwise)
 	var historyCount int64
-	db.GetDB().Model(&models.SearchHistory{}).Where("user_id = ?", userID).Count(&historyCount)
-	if historyCount > 200 {
-		db.GetDB().Exec(
+	if err := db.GetDB().Model(&models.SearchHistory{}).Where("user_id = ?", userID).Count(&historyCount).Error; err == nil && historyCount > 200 {
+		if err := db.GetDB().Exec(
 			"DELETE FROM search_histories WHERE id IN (SELECT id FROM search_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET 200)",
 			userID,
-		)
+		).Error; err != nil {
+			log.Printf("[SearchMessages] failed to trim history for user=%s: %v", userID, err)
+		}
 	}
 
-	return c.JSON(fiber.Map{
-		"items":    messages,
-		"total":    total,
-		"page":     page,
-		"pageSize": pageSize,
-		"hasMore":  int64(offset+pageSize) < total,
-	})
+	return c.JSON(helpers.NewPaginatedResponse(messages, total, pag))
 }
 
 func GetSearchHistory(c *fiber.Ctx) error {

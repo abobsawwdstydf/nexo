@@ -86,28 +86,6 @@ export function playSend() {
   } catch {}
 }
 
-/** Warm ascending arpeggio for success. */
-export function playSuccess() {
-  if (!getSoundsEnabled()) return;
-  try {
-    const notes = [130.81, 196.0, 261.63, 329.63];
-    notes.forEach((freq, i) => {
-      sweep(freq, 'sine', 0.09, 0.3, 0.01, freq * 0.99);
-      sweep(freq * 2, 'sine', 0.02, 0.2, 0.01);
-    });
-    sweep(523.25, 'sine', 0.07, 0.5, 0.01, 520);
-  } catch {}
-}
-
-/** Soft warm error — low thud, no harsh buzz. */
-export function playError() {
-  if (!getSoundsEnabled()) return;
-  try {
-    sweep(130, 'sine', 0.16, 0.3, 0.006, 82);
-    sweep(196, 'triangle', 0.05, 0.22, 0.01, 147);
-  } catch {}
-}
-
 /** Deep pleasant ringing for calls (file-based loop handled by caller). */
 export function playRingtone() {
   if (!getSoundsEnabled()) return;

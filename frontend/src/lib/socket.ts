@@ -147,13 +147,6 @@ function emitStatus(status: ConnectionStatusType) {
   statusListeners.forEach(fn => fn(status));
 }
 
-function getConnectionStatus(): ConnectionStatusType {
-  if (!ws) return 'idle';
-  if (ws.readyState === WebSocket.OPEN) return 'connected';
-  if (isReconnecting) return 'reconnecting';
-  return 'connecting';
-}
-
 function onConnectionStatusChange(cb: (status: ConnectionStatusType) => void): () => void {
   statusListeners.push(cb);
   return () => {
@@ -380,5 +373,3 @@ export function disconnectSocket() {
     emitStatus('idle');
   }
 }
-
-export { socket };

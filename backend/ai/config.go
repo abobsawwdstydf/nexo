@@ -15,10 +15,6 @@ type Config struct {
 	MaxPagesPerQuery int
 	AllowedDomains   []string
 	ScreenshotDir    string
-
-	// Rate limiting
-	MaxConcurrentBrowsers int
-	RequestsPerMinute     int
 }
 
 var AppConfig *Config
@@ -32,9 +28,6 @@ func InitConfig() {
 		MaxPagesPerQuery: getEnvInt("MAX_PAGES_PER_QUERY", 5),
 		AllowedDomains:   []string{},
 		ScreenshotDir:    getEnv("SCREENSHOT_DIR", "../uploads/screenshots"),
-
-		MaxConcurrentBrowsers: getEnvInt("MAX_CONCURRENT_BROWSERS", 3),
-		RequestsPerMinute:     getEnvInt("REQUESTS_PER_MINUTE", 30),
 	}
 
 	if domains := getEnv("ALLOWED_DOMAINS", ""); domains != "" {

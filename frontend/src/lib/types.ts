@@ -130,6 +130,28 @@ export interface MediaItem {
   height?: number | null;
 }
 
+/** Result of POST /api/upload — a single media item (fields may vary by endpoint). */
+export interface UploadedMedia {
+  id?: string;
+  fileId?: string;
+  type?: string;
+  url?: string;
+  filename?: string | null;
+  thumbnail?: string | null;
+  size?: number | null;
+  duration?: number | null;
+  width?: number | null;
+  height?: number | null;
+}
+
+/** A username alias bound to a user account. */
+export interface UserAlias {
+  subjectType: string;
+  subjectId: string;
+  alias: string;
+  isValid: boolean;
+}
+
 export interface Reaction {
   id: string;
   emoji: string;

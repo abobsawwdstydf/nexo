@@ -156,7 +156,6 @@ func main() {
 		"xn--e1akhgo.darkheavens.ru": true,
 		"msg.hakerone.ru":            true,
 		"msg.darkheavens.ru":         true,
-		"neexoobeec.hakerone.ru":     true,
 		"nneexion.darkheavens.ru":    true,
 		"n.hakerone.ru":              true,
 		"n.darkheavens.ru":           true,
@@ -516,7 +515,6 @@ nexo_up 1
 	auth.Delete("/e2e/session/:chatId", handlers.DeleteSession)
 
 	// ─── Feature 8: AI Commands ──────────────────────────────────────────
-	auth.Get("/ai/history", handlers.GetAICommandHistory)
 
 	// ─── Feature 10: Webhooks ────────────────────────────────────────────
 	auth.Get("/webhooks", handlers.GetWebhookConfigs)

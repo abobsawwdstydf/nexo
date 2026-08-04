@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -193,5 +192,3 @@ func GifsSearch(c *fiber.Ctx) error {
 	return c.JSON(items)
 }
 
-// ─── Internal JSON helpers (unused var guard) ────────────────────────────
-var _ = json.Marshal

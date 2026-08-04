@@ -151,7 +151,7 @@ export class ApiClient {
       // one from the public endpoint and retry the mutation once.
       if (response.status === 403 && error.error?.includes('CSRF') && isMutation && !(fetchOptions.headers as Record<string, string>)?.['X-CSRF-Token-Retry']) {
         try {
-          const csrfRes = await fetch(`${getApiBase()}/api/csrf-token`, { credentials: 'include' });
+          const csrfRes = await fetch(`${getApiBase()}/csrf-token`, { credentials: 'include' });
           if (csrfRes.ok) {
             const csrfData = await csrfRes.json();
             if (csrfData.token) {

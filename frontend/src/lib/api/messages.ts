@@ -1,13 +1,18 @@
-import type { Message } from '../types';
+import type { Message, UploadedMedia } from '../types';
 import { ApiClient } from './core';
+
+export interface ReactionResult {
+  ok: boolean;
+  action: 'added' | 'removed';
+}
 
 declare module './core' {
   interface ApiClient {
     getMessages(chatId: string, cursor?: string): Promise<Message[]>;
-    uploadFile(file: File): Promise<any>;
+    uploadFile(file: File): Promise<UploadedMedia>;
     // Reactions
-    addReaction(messageId: string, emoji: string): Promise<any>;
-    removeReaction(messageId: string, emoji: string): Promise<any>;
+    addReaction(messageId: string, emoji: string): Promise<ReactionResult>;
+    removeReaction(messageId: string, emoji: string): Promise<ReactionResult>;
   }
 }
 
@@ -22,14 +27,16 @@ export function installMessages(api: ApiClient): void {
     const formData = new FormData();
     formData.append('file', file, file.name);
 
-    const result = await api.request<any>('/upload', {
+    type UploadResponse = Partial<UploadedMedia> & { files?: UploadedMedia[] };
+
+    const result = await api.request<UploadedMedia[] | UploadResponse>('/upload', {
       method: 'POST',
       body: formData,
       timeout: 300_000,
     });
 
     if (Array.isArray(result)) return result[0];
-    if (result.files && Array.isArray(result.files)) return result.files[0];
+    if (result.files && result.files.length) return result.files[0];
     if (result.fileId || result.url) return result;
 
     console.error('[uploadFile] Unexpected response:', result);
@@ -38,14 +45,14 @@ export function installMessages(api: ApiClient): void {
 
   // ─── Reactions ────────────────────────────────────────────────────
   api.addReaction = async (messageId: string, emoji: string) => {
-    return api.request(`/reactions/${messageId}`, {
+    return api.request<ReactionResult>(`/reactions/${messageId}`, {
       method: 'POST',
       body: JSON.stringify({ emoji }),
     });
   };
 
   api.removeReaction = async (messageId: string, emoji: string) => {
-    return api.request(`/reactions/${messageId}/${encodeURIComponent(emoji)}`, {
+    return api.request<ReactionResult>(`/reactions/${messageId}/${encodeURIComponent(emoji)}`, {
       method: 'DELETE',
     });
   };

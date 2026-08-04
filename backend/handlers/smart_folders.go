@@ -1242,21 +1242,6 @@ func HandleAICommand(userID, chatID, messageID, content string) {
 	}
 }
 
-// GetAICommandHistory returns AI command history for a chat
-func GetAICommandHistory(c *fiber.Ctx) error {
-	userID := c.Locals("userId").(string)
-	chatID := c.Query("chatId")
-
-	var logs []models.AICommandLog
-	query := db.GetDB().Where("user_id = ?", userID)
-	if chatID != "" {
-		query = query.Where("chat_id = ?", chatID)
-	}
-	query.Order("created_at DESC").Limit(50).Find(&logs)
-
-	return c.JSON(fiber.Map{"items": logs})
-}
-
 // ─── Webhooks / Backend Hooks (Feature 10) ─────────────────────────────
 
 // GetWebhookConfigs returns webhook configurations for the user

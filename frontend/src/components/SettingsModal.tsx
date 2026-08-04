@@ -652,7 +652,9 @@ function PremiumSettings() {
           <h3 className="text-sm font-semibold text-white/90">Премиум</h3>
           <p className="text-[10px] text-white/40">
             {isPremium
-              ? `Действует до ${new Date(premiumStatus!.premiumUntil!).toLocaleDateString('ru-RU')}`
+              ? premiumStatus?.premiumUntil
+                ? `Действует до ${new Date(premiumStatus.premiumUntil).toLocaleDateString('ru-RU')}`
+                : 'Премиум активен'
               : 'Разблокируйте все возможности'}
           </p>
         </div>

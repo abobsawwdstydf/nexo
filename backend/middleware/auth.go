@@ -235,34 +235,6 @@ func AuthenticateToken(c *fiber.Ctx) error {
 	return c.Next()
 }
 
-func OptionalAuth(c *fiber.Ctx) error {
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return c.Next()
-	}
-
-	parts := strings.SplitN(authHeader, " ", 2)
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return c.Next()
-	}
-
-	tokenString := parts[1]
-	claims := &Claims{}
-
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
-		}
-		return JWTSecret, nil
-	})
-	if err == nil && token.Valid {
-		c.Locals("userId", claims.UserID)
-		c.Locals("username", claims.Username)
-	}
-
-	return c.Next()
-}
-
 // BotAuthenticateToken validates bot token from X-Bot-Token header
 func BotAuthenticateToken(c *fiber.Ctx) error {
 	botToken := c.Get("X-Bot-Token")
