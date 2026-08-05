@@ -1,4 +1,4 @@
-import { Component, type ReactNode, type ErrorInfo } from 'react';
+import { Component, Fragment, type ReactNode, type ErrorInfo } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 // React error boundaries cannot catch errors from async code (event handlers,
@@ -21,13 +21,14 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  resetKey: number;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null };
+  state: State = { hasError: false, error: null, resetKey: 0 };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, resetKey: 0 };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -36,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState(prev => ({ hasError: false, error: null, resetKey: prev.resetKey + 1 }));
   };
 
   render() {
@@ -81,6 +82,7 @@ export class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-    return this.props.children;
+    // Remount the subtree on reset (via key) so broken state is discarded.
+    return <Fragment key={this.state.resetKey}>{this.props.children}</Fragment>;
   }
 }

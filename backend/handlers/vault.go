@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"nexo/db"
@@ -15,6 +16,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+// vaultLocks serializes quota check + insert per user so concurrent uploads
+// cannot jointly exceed the per-user quota (TOCTOU).
+var vaultLocks sync.Map // userID -> *sync.Mutex
 
 // POST /vault/upload
 func VaultUpload(c *fiber.Ctx) error {
@@ -29,6 +34,13 @@ func VaultUpload(c *fiber.Ctx) error {
 	if file.Size > maxVaultFileSize {
 		return c.Status(413).JSON(fiber.Map{"error": "File too large (max 100 MB)"})
 	}
+
+	// Serialize quota check + insert per user (prevents over-quota on
+	// concurrent uploads).
+	lockAny, _ := vaultLocks.LoadOrStore(userID, &sync.Mutex{})
+	lock := lockAny.(*sync.Mutex)
+	lock.Lock()
+	defer lock.Unlock()
 
 	// Enforce per-user storage quota (5 GB)
 	var totalSize int64

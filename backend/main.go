@@ -121,6 +121,12 @@ func main() {
 	// Start reminder checker (checks every 30 seconds)
 	handlers.StartReminderLoop()
 
+	// Start scheduled messages delivery (checks every 15 seconds)
+	handlers.StartScheduledMessagesLoop()
+
+	// Start dead man switch checker (checks every 60 seconds)
+	handlers.StartDeadManSwitchLoop()
+
 	ws.HubInstance = ws.NewHub()
 	go ws.HubInstance.Run()
 

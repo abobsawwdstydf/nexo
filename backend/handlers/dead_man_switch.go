@@ -2,10 +2,14 @@
 
 import (
 	"encoding/json"
+	"log"
 	"time"
+
+	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/ws"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -45,7 +49,10 @@ func CreateDeadManSwitch(c *fiber.Ctx) error {
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
-	db.GetDB().Create(&switch_)
+	if err := db.GetDB().Create(&switch_).Error; err != nil {
+		log.Printf("[dms] failed to create switch for user %s: %v", userID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create dead man switch"})
+	}
 
 	return c.Status(201).JSON(switch_)
 }
@@ -96,7 +103,10 @@ func UpdateDeadManSwitch(c *fiber.Ctx) error {
 		updates["recipient_ids"] = string(b)
 	}
 
-	db.GetDB().Model(&models.DeadManSwitch{}).Where("user_id = ?", userID).Updates(updates)
+	if err := db.GetDB().Model(&models.DeadManSwitch{}).Where("user_id = ?", userID).Updates(updates).Error; err != nil {
+		log.Printf("[dms] failed to update switch for user %s: %v", userID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update dead man switch"})
+	}
 
 	return c.JSON(fiber.Map{"success": true})
 }
@@ -104,7 +114,10 @@ func UpdateDeadManSwitch(c *fiber.Ctx) error {
 // DELETE /dead-man-switch
 func DeleteDeadManSwitch(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
-	db.GetDB().Where("user_id = ?", userID).Delete(&models.DeadManSwitch{})
+	if err := db.GetDB().Where("user_id = ?", userID).Delete(&models.DeadManSwitch{}).Error; err != nil {
+		log.Printf("[dms] failed to delete switch for user %s: %v", userID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete dead man switch"})
+	}
 	return c.JSON(fiber.Map{"success": true})
 }
 
@@ -112,7 +125,174 @@ func DeleteDeadManSwitch(c *fiber.Ctx) error {
 func DeadManSwitchCheckIn(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
-	db.GetDB().Model(&models.DeadManSwitch{}).Where("user_id = ?", userID).Update("last_check_in", time.Now())
+	if err := db.GetDB().Model(&models.DeadManSwitch{}).Where("user_id = ?", userID).Update("last_check_in", time.Now()).Error; err != nil {
+		log.Printf("[dms] failed to check in for user %s: %v", userID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to check in"})
+	}
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+// ─── Background check ───────────────────────────────────────────────────────
+
+// ProcessDeadManSwitches checks enabled, not-yet-triggered switches for
+// inactivity and delivers the fallback message to the configured recipients.
+// Intended to be called from a background goroutine.
+func ProcessDeadManSwitches() {
+	database := db.GetDB()
+	now := time.Now()
+
+	var switches []models.DeadManSwitch
+	if err := database.Where("is_enabled = ? AND is_triggered = ?", true, false).Find(&switches).Error; err != nil {
+		log.Printf("[dms] query failed: %v", err)
+		return
+	}
+
+	for i := range switches {
+		s := &switches[i]
+		cutoff := s.LastCheckIn.AddDate(0, 0, s.InactivityDays)
+		if now.Before(cutoff) {
+			continue
+		}
+		triggerDeadManSwitch(database, s, now)
+	}
+}
+
+func triggerDeadManSwitch(database *gorm.DB, s *models.DeadManSwitch, now time.Time) {
+	var recipients []string
+	if err := json.Unmarshal([]byte(s.RecipientIDs), &recipients); err != nil {
+		recipients = nil
+	}
+
+	template := s.MessageTemplate
+	if template == "" {
+		template = "⚠️ Владелец этого аккаунта не выходит на связь. Пожалуйста, проверьте, всё ли в порядке."
+	}
+
+	for _, recipientID := range recipients {
+		if recipientID == "" || recipientID == s.UserID {
+			continue
+		}
+		chatID := findOrCreatePersonalChat(database, s.UserID, recipientID)
+		if chatID == "" {
+			continue
+		}
+
+		msg := models.Message{
+			ID:        generateID(),
+			ChatID:    chatID,
+			SenderID:  s.UserID,
+			Content:   template,
+			Type:      "text",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		if err := database.Create(&msg).Error; err != nil {
+			log.Printf("[dms] failed to create message to %s for switch %s: %v", recipientID, s.ID, err)
+			continue
+		}
+		if err := database.Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now).Error; err != nil {
+			log.Printf("[dms] failed to bump chat %s updated_at: %v", chatID, err)
+		}
+
+		database.Preload("Sender").First(&msg, "id = ?", msg.ID)
+		msgJSON := messageToJSON(msg)
+		ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
+		notifyBotsOfMessage(chatID, msg, msg.Sender)
+
+		if err := database.Create(&models.DeadManSwitchRecipient{
+			ID:       generateID(),
+			SwitchID: s.ID,
+			UserID:   recipientID,
+			SentAt:   now,
+		}).Error; err != nil {
+			log.Printf("[dms] failed to record recipient for switch %s: %v", s.ID, err)
+		}
+	}
+
+	// Triggered once — the user can re-arm the switch manually.
+	if err := database.Model(s).Updates(map[string]interface{}{
+		"is_triggered": true,
+		"triggered_at": now,
+		"is_enabled":   false,
+	}).Error; err != nil {
+		log.Printf("[dms] failed to mark switch %s as triggered: %v", s.ID, err)
+	}
+}
+
+// findOrCreatePersonalChat returns the existing personal chat between the two
+// users or creates one, returning its ID ("" on failure).
+func findOrCreatePersonalChat(database *gorm.DB, userA, userB string) string {
+	var myChatIDs []string
+	if err := database.Model(&models.ChatMember{}).Where("user_id = ?", userA).Pluck("chat_id", &myChatIDs).Error; err != nil {
+		return ""
+	}
+	if len(myChatIDs) > 0 {
+		var sharedIDs []string
+		if err := database.Model(&models.ChatMember{}).
+			Where("chat_id IN ? AND user_id = ?", myChatIDs, userB).
+			Pluck("chat_id", &sharedIDs).Error; err != nil {
+			return ""
+		}
+		for _, cid := range sharedIDs {
+			var chat models.Chat
+			if err := database.First(&chat, "id = ? AND type = ?", cid, "personal").Error; err == nil {
+				return chat.ID
+			}
+		}
+	}
+
+	chatID := generateID()
+	err := database.Transaction(func(tx *gorm.DB) error {
+		chat := models.Chat{
+			ID:               chatID,
+			Type:             "personal",
+			CanMembersPost:   true,
+			CanMembersInvite: true,
+		}
+		if err := tx.Create(&chat).Error; err != nil {
+			return err
+		}
+		for _, uid := range []string{userA, userB} {
+			member := models.ChatMember{
+				ID:     generateID(),
+				ChatID: chatID,
+				UserID: uid,
+				Role:   "member",
+			}
+			if err := tx.Create(&member).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("[dms] failed to create personal chat: %v", err)
+		return ""
+	}
+
+	var created models.Chat
+	database.Preload("Members").Preload("Members.User").First(&created, "id = ?", chatID)
+	for _, uid := range []string{userA, userB} {
+		chatJSON := chatToJSON(created, uid)
+		ws.HubInstance.SendToUser(uid, []byte(`{"type":"chat:created","chat":`+chatJSON+`}`))
+	}
+	return chatID
+}
+
+// StartDeadManSwitchLoop runs a background goroutine that checks dead man
+// switches every 60 seconds.
+func StartDeadManSwitchLoop() {
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				ProcessDeadManSwitches()
+			case <-StopCh:
+				return
+			}
+		}
+	}()
 }

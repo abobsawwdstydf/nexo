@@ -36,7 +36,6 @@ interface ChatListProps {
   onOpenSettings: () => void;
   onOpenFriends: () => void;
   onNewChat: () => void;
-  onNewChannel: () => void;
   onOpenAccountManager: () => void;
   onOpenFeedback: () => void;
 }
@@ -208,7 +207,6 @@ export function ChatList({
   onOpenSettings,
   onOpenFriends,
   onNewChat,
-  onNewChannel,
   onOpenAccountManager,
   onOpenFeedback,
 }: ChatListProps) {

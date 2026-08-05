@@ -157,44 +157,6 @@ func (b *BrowserAgent) Search(query string) ([]SearchResult, error) {
 	return results, nil
 }
 
-// ExtractContent extracts text content from a URL
-func (b *BrowserAgent) ExtractContent(targetURL string) (string, error) {
-	page, err := b.Navigate(targetURL)
-	if err != nil {
-		return "", err
-	}
-	if page.Error != "" {
-		return "", fmt.Errorf("%s", page.Error)
-	}
-	return page.Content, nil
-}
-
-// Screenshot captures a screenshot of a URL
-func (b *BrowserAgent) Screenshot(targetURL string) ([]byte, error) {
-	if err := b.validateURL(targetURL); err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := chromedp.NewContext(b.allocator, chromedp.WithLogf(nil))
-	defer cancel()
-
-	timeout := time.Duration(b.config.BrowserTimeout) * time.Second
-	ctx, cancel = context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	var buf []byte
-	err := chromedp.Run(ctx,
-		chromedp.Navigate(targetURL),
-		chromedp.WaitReady("body"),
-		chromedp.CaptureScreenshot(&buf),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("screenshot failed: %w", err)
-	}
-
-	return buf, nil
-}
-
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 func (b *BrowserAgent) validateURL(targetURL string) error {

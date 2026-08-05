@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import type { UserBasic } from './types';
 
 interface CallContextType {
@@ -8,8 +8,6 @@ interface CallContextType {
   callChatId: string;
   startCall: (target: UserBasic, type: 'voice' | 'video', chatId?: string) => void;
   endCall: () => void;
-  minimizeCall: boolean;
-  setMinimizeCall: (v: boolean) => void;
 }
 
 const CallContext = createContext<CallContextType>({
@@ -19,8 +17,6 @@ const CallContext = createContext<CallContextType>({
   callChatId: '',
   startCall: () => {},
   endCall: () => {},
-  minimizeCall: false,
-  setMinimizeCall: () => {},
 });
 
 export function CallProvider({ children }: { children: ReactNode }) {
@@ -28,28 +24,32 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [callType, setCallType] = useState<'voice' | 'video'>('voice');
   const [callTarget, setCallTarget] = useState<UserBasic | null>(null);
   const [callChatId, setCallChatId] = useState('');
-  const [minimizeCall, setMinimizeCall] = useState(false);
 
   const startCall = useCallback((target: UserBasic, type: 'voice' | 'video', chatId?: string) => {
     setCallTarget(target);
     setCallType(type);
     setCallChatId(chatId || '');
     setActiveCall(true);
-    setMinimizeCall(false);
   }, []);
 
   const endCall = useCallback(() => {
     setActiveCall(false);
     setCallTarget(null);
     setCallChatId('');
-    setMinimizeCall(false);
   }, []);
 
+  // Memoize so consumers only re-render when call state actually changes.
+  const value = useMemo<CallContextType>(() => ({
+    activeCall,
+    callType,
+    callTarget,
+    callChatId,
+    startCall,
+    endCall,
+  }), [activeCall, callType, callTarget, callChatId, startCall, endCall]);
+
   return (
-    <CallContext.Provider value={{
-      activeCall, callType, callTarget, callChatId,
-      startCall, endCall, minimizeCall, setMinimizeCall,
-    }}>
+    <CallContext.Provider value={value}>
       {children}
     </CallContext.Provider>
   );

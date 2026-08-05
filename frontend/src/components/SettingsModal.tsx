@@ -123,7 +123,13 @@ function VersionInfo() {
 }
 
 function NotificationSettings() {
-  const [pushEnabled, setPushEnabled] = useState(() => Notification.permission === 'granted');
+  const [pushEnabled, setPushEnabled] = useState(() => {
+    try {
+      return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    } catch {
+      return false;
+    }
+  });
   const [pushLoading, setPushLoading] = useState(false);
 
   const handlePushToggle = async () => {
@@ -144,7 +150,12 @@ function NotificationSettings() {
   };
 
   const handleTestNotification = async () => {
-    await sendTestNotification();
+    try {
+      await sendTestNotification();
+    } catch (err) {
+      console.error('[Push] Test notification failed:', err);
+      toast.error('Не удалось отправить тестовое уведомление');
+    }
   };
 
   return (
@@ -765,7 +776,7 @@ function PremiumSettings() {
             disabled={!selected || paying}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {paying ? 'Создание платежа...' : selected ? `Купить за ${Math.round(prices[selected]).toLocaleString('ru-RU')} НуЧе` : 'Выберите тариф'}
+            {paying ? 'Создание платежа...' : selected && prices[selected] ? `Купить за ${Math.round(prices[selected]).toLocaleString('ru-RU')} НуЧе` : 'Выберите тариф'}
           </button>
         </>
       )}
@@ -778,8 +789,6 @@ function SettingRow({
   label,
   value,
   toggle,
-  radio,
-  selected,
   checked,
   onChange,
 }: {
@@ -787,8 +796,6 @@ function SettingRow({
   label: string;
   value: string;
   toggle?: boolean;
-  radio?: boolean;
-  selected?: boolean;
   checked?: boolean;
   onChange?: (v: boolean) => void;
 }) {
@@ -824,19 +831,10 @@ function SettingRow({
             />
           </div>
         )}
-        {radio && (
-          <div
-            className={`w-4 h-4 rounded-full border-2 transition-colors ${
-              selected ? 'border-white/60' : 'border-white/20'
-            }`}
-          >
-            {selected && <div className="w-2 h-2 rounded-full bg-white/60 m-[3px]" />}
-          </div>
-        )}
-        {value && !toggle && !radio && (
+        {value && !toggle && (
           <span className="text-xs text-white/30">{value}</span>
         )}
-        {!toggle && !radio && value && (
+        {!toggle && value && (
           <ChevronRight size={12} className="text-white/15" />
         )}
       </div>

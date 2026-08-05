@@ -338,8 +338,13 @@ func handleUserStatus(client *ws.Client, env *wsEnvelope) error {
 		return errWSInvalidField("text (max 140 characters)")
 	}
 
-	database.Model(&models.User{}).Where("id = ?", userID).
-		Update("mood_status", payload.Text)
+	updates := map[string]interface{}{
+		"mood_status": payload.Text,
+	}
+	if payload.Duration > 0 {
+		updates["mood_expires_at"] = time.Now().Add(time.Duration(payload.Duration * float64(time.Second)))
+	}
+	database.Model(&models.User{}).Where("id = ?", userID).Updates(updates)
 
 	// Notify online users about status change
 	ws.HubInstance.SendToChat("__friends:"+userID, mustWSMap("user:status_changed", map[string]string{

@@ -155,7 +155,7 @@ function onConnectionStatusChange(cb: (status: ConnectionStatusType) => void): (
 }
 
 // Socket interface for compatibility
-interface SocketInterface {
+export interface SocketInterface {
   on: (event: string, handler: EventHandler) => void;
   off: (event: string, handler?: EventHandler) => void;
   emit: (event: string, ...args: any[]) => void;
@@ -369,7 +369,9 @@ export function disconnectSocket() {
     clearReconnectState();
     ws.close();
     ws = null;
-    socket = null;
-    emitStatus('idle');
   }
+  socket = null;
+  eventListeners.clear();
+  statusListeners = [];
+  emitStatus('idle');
 }

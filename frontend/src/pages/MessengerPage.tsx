@@ -144,6 +144,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   selectedChatIdRef.current = selectedChatId;
   const chatsRef = useRef(chats);
   chatsRef.current = chats;
+  const confettiFiredRef = useRef(false);
 
   useEffect(() => {
     const socket = getSocket();
@@ -158,8 +159,11 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
         // Deep Nexo notification thump
         playNotification();
       }
-      // Trigger confetti on first received message
-      setConfettiTrigger(t => t + 1);
+      // Trigger confetti on first received message only (one-time celebration)
+      if (!confettiFiredRef.current) {
+        confettiFiredRef.current = true;
+        setConfettiTrigger(t => t + 1);
+      }
     };
 
     socket.on('message:new', onMessage);
@@ -221,7 +225,6 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
 
   const handleOpenFriends = useCallback(() => setShowFriends(true), []);
   const handleOpenNewChat = useCallback(() => setCreateTab('personal'), []);
-  const handleOpenNewChannel = useCallback(() => setCreateTab('channel'), []);
   const handleOpenAccountManager = useCallback(() => setShowAccountManager(true), []);
   const handleOpenFeedback = useCallback(() => {
     if (!user) return;
@@ -313,7 +316,6 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
               onOpenSettings={() => handleOpenSettings('general')}
               onOpenFriends={handleOpenFriends}
               onNewChat={handleOpenNewChat}
-              onNewChannel={handleOpenNewChannel}
               onOpenAccountManager={handleOpenAccountManager}
               onOpenFeedback={handleOpenFeedback}
             />

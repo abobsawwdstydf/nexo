@@ -48,6 +48,7 @@ export const useInitStore = create<InitState>((set, get) => ({
   },
 
   addChat: (chat) => {
+    if (get().chats.some(c => c.id === chat.id)) return;
     set({ chats: [chat, ...get().chats] });
   },
 }));

@@ -105,21 +105,6 @@ export function saveAIMessage(msg: Message) {
   notifyAIChanged();
 }
 
-/** Clears history locally and on the server. */
-export async function clearAIMessages() {
-  try {
-    localStorage.removeItem(AI_KEY);
-  } catch {}
-  try {
-    await api.delete('/ai/history');
-  } catch {}
-  notifyAIChanged();
-}
-
-export function isAIHistoryLoaded() {
-  return historyLoaded;
-}
-
 /** Builds the message history payload for the backend (last 20 messages). */
 export function buildAIHistory(messages: Message[]): Array<{ role: string; content: string }> {
   return messages

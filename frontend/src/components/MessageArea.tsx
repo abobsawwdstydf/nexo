@@ -49,6 +49,7 @@ import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/no
 import { AI_CHAT_ID, AI_SENDER, loadAIHistory, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import type { Chat, Message, Reaction, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup } from '../lib/types';
+import type { SocketInterface } from '../lib/socket';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
 import { LinkPreview, extractUrls, renderTextWithLinks } from './LinkPreview';
@@ -233,7 +234,9 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
     if (playing) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(() => {
+        // Autoplay can be blocked by the browser (no user gesture) — ignore.
+      });
     }
     setPlaying(!playing);
   };
@@ -2786,105 +2789,117 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   useEffect(() => {
     if (chat.id === NOTES_CHAT_ID || chat.id === AI_CHAT_ID) return;
     let cancelled = false;
+    let socketInstance: SocketInterface | null = null;
+    let connectHandler: (() => void) | null = null;
     const listeners: { event: string; handler: (...args: any[]) => void }[] = [];
 
     function addListener(event: string, handler: (...args: any[]) => void) {
       listeners.push({ event, handler });
     }
 
+    function register(socket: SocketInterface) {
+      if (cancelled) return;
+      socketInstance = socket;
+      for (const { event, handler } of listeners) {
+        socket.on(event, handler);
+      }
+    }
+
+    const typingHandler = (data: { chatId: string; userId: string; username: string }) => {
+      if (cancelled || data.chatId !== chat.id || data.userId === user?.id) return;
+      setTypingUsers(prev => prev.includes(data.username) ? prev : [...prev, data.username]);
+      const t = setTimeout(() => {
+        typingResetTimersRef.current.delete(t);
+        setTypingUsers(prev => prev.filter(u => u !== data.username));
+      }, 3000);
+      typingResetTimersRef.current.add(t);
+    };
+    addListener('typing', typingHandler);
+
+    const stopTypingHandler = (data: { chatId: string; userId: string }) => {
+      if (cancelled || data.chatId !== chat.id) return;
+      setTypingUsers([]);
+    };
+    addListener('stop_typing', stopTypingHandler);
+
+    const newMessageHandler = (data: { message?: Message }) => {
+      if (cancelled) return;
+      const msg = data.message;
+      if (!msg || msg.chatId !== chat.id) return;
+
+      // Bot API: reply-клавиатура приходит с сообщением бота
+      const rm = msg.replyMarkup as ReplyKeyboardMarkup | null;
+      if (rm?.keyboard) {
+        setReplyKeyboard(rm);
+      } else if (rm && 'remove_keyboard' in rm) {
+        setReplyKeyboard(null);
+      }
+
+      (async () => {
+        let decryptedMsg = { ...msg };
+        if (msg.isEncrypted && msg.encryptedContent && msg.encryptedIv && e2eReadyRef.current) {
+          const plaintext = await e2eManager.decryptChatMessage(chat.id, msg.encryptedContent, msg.encryptedIv);
+          if (plaintext) {
+            decryptedMsg.content = plaintext;
+          }
+        }
+
+        // Decrypt media for encrypted media messages
+        if (msg.isEncrypted && msg.media?.[0]?.url && msg.encryptedContent) {
+          decryptMessageMedia(decryptedMsg);
+        }
+
+        setMessages(prev => {
+          if (prev.some(m => m.id === decryptedMsg.id)) return prev;
+          const now = Date.now();
+          const isDuplicateOptimistic = prev.some(m =>
+            m.id.startsWith('opt_') &&
+            m.senderId === decryptedMsg.senderId &&
+            m.content === decryptedMsg.content &&
+            now - new Date(m.createdAt).getTime() < 5000
+          );
+          if (isDuplicateOptimistic) {
+            return prev.map(m =>
+              m.id.startsWith('opt_') &&
+              m.senderId === decryptedMsg.senderId &&
+              m.content === decryptedMsg.content &&
+              now - new Date(m.createdAt).getTime() < 5000
+                ? decryptedMsg
+                : m
+            );
+          }
+          return [...prev, decryptedMsg];
+        });
+        setAutoScroll(true);
+      })();
+    };
+    addListener('message:new', newMessageHandler);
+
     async function initTyping() {
       try {
         const { getSocket } = await import('../lib/socket');
         const socket = getSocket();
-        if (!socket?.connected) return;
-
-        const typingHandler = (data: { chatId: string; userId: string; username: string }) => {
-          if (cancelled || data.chatId !== chat.id || data.userId === user?.id) return;
-          setTypingUsers(prev => prev.includes(data.username) ? prev : [...prev, data.username]);
-          const t = setTimeout(() => {
-            typingResetTimersRef.current.delete(t);
-            setTypingUsers(prev => prev.filter(u => u !== data.username));
-          }, 3000);
-          typingResetTimersRef.current.add(t);
-        };
-        socket.on('typing', typingHandler);
-        addListener('typing', typingHandler);
-
-        const stopTypingHandler = (data: { chatId: string; userId: string }) => {
-          if (cancelled || data.chatId !== chat.id) return;
-          setTypingUsers([]);
-        };
-        socket.on('stop_typing', stopTypingHandler);
-        addListener('stop_typing', stopTypingHandler);
-
-        const newMessageHandler = (data: { message?: Message }) => {
-          if (cancelled) return;
-          const msg = data.message;
-          if (!msg || msg.chatId !== chat.id) return;
-
-          // Bot API: reply-клавиатура приходит с сообщением бота
-          const rm = msg.replyMarkup as ReplyKeyboardMarkup | null;
-          if (rm?.keyboard) {
-            setReplyKeyboard(rm);
-          } else if (rm && 'remove_keyboard' in rm) {
-            setReplyKeyboard(null);
-          }
-
-          (async () => {
-            let decryptedMsg = { ...msg };
-            if (msg.isEncrypted && msg.encryptedContent && msg.encryptedIv && e2eReadyRef.current) {
-              const plaintext = await e2eManager.decryptChatMessage(chat.id, msg.encryptedContent, msg.encryptedIv);
-              if (plaintext) {
-                decryptedMsg.content = plaintext;
-              }
-            }
-
-            // Decrypt media for encrypted media messages
-            if (msg.isEncrypted && msg.media?.[0]?.url && msg.encryptedContent) {
-              decryptMessageMedia(decryptedMsg);
-            }
-
-            setMessages(prev => {
-              if (prev.some(m => m.id === decryptedMsg.id)) return prev;
-              const now = Date.now();
-              const isDuplicateOptimistic = prev.some(m =>
-                m.id.startsWith('opt_') &&
-                m.senderId === decryptedMsg.senderId &&
-                m.content === decryptedMsg.content &&
-                now - new Date(m.createdAt).getTime() < 5000
-              );
-              if (isDuplicateOptimistic) {
-                return prev.map(m =>
-                  m.id.startsWith('opt_') &&
-                  m.senderId === decryptedMsg.senderId &&
-                  m.content === decryptedMsg.content &&
-                  now - new Date(m.createdAt).getTime() < 5000
-                    ? decryptedMsg
-                    : m
-                );
-              }
-              return [...prev, decryptedMsg];
-            });
-            setAutoScroll(true);
-          })();
-        };
-        socket.on('message:new', newMessageHandler);
-        addListener('message:new', newMessageHandler);
+        if (!socket) return;
+        // Register once the socket connects (it may still be connecting when
+        // this chat opens, or reconnect later — otherwise incoming messages
+        // and typing events would be silently dropped for this chat).
+        connectHandler = () => register(socket);
+        socket.on('connect', connectHandler);
+        register(socket);
       } catch {}
     }
     initTyping();
+
     return () => {
       cancelled = true;
       for (const t of typingResetTimersRef.current) clearTimeout(t);
       typingResetTimersRef.current.clear();
-      import('../lib/socket').then(({ getSocket }) => {
-        const socket = getSocket();
-        if (socket) {
-          for (const { event, handler } of listeners) {
-            socket.off(event, handler);
-          }
+      if (socketInstance) {
+        if (connectHandler) socketInstance.off('connect', connectHandler);
+        for (const { event, handler } of listeners) {
+          socketInstance.off(event, handler);
         }
-      });
+      }
     };
   }, [chat.id, user?.id]);
 
@@ -3289,7 +3304,6 @@ function PremiumPurchaseModal({ onClose }: { onClose: () => void }) {
   };
 
   const months = [1, 3, 6, 12];
-  const currencySymbol = 'НуЧе';
 
   return (
     <motion.div
@@ -3382,7 +3396,7 @@ function PremiumPurchaseModal({ onClose }: { onClose: () => void }) {
                 disabled={!selected || paying}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {paying ? 'Создание платежа...' : selected ? `Купить за ${Math.round(prices[selected]).toLocaleString('ru-RU')} НуЧе` : 'Выберите тариф'}
+                {paying ? 'Создание платежа...' : selected && prices[selected] ? `Купить за ${Math.round(prices[selected]).toLocaleString('ru-RU')} НуЧе` : 'Выберите тариф'}
               </button>
             </>
           )}

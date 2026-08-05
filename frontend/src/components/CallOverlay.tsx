@@ -341,6 +341,16 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
     };
   }, [callState]);
 
+  // Keep the latest callbacks in refs so this effect only reacts to
+  // open/incoming changes. Re-running on startCall change would restart the
+  // call (e.g. toggling video mid-call re-fires startCall after cleanup).
+  const startCallRef = useRef(startCall);
+  const cleanupCallRef = useRef(cleanupCall);
+  useEffect(() => {
+    startCallRef.current = startCall;
+    cleanupCallRef.current = cleanupCall;
+  });
+
   useEffect(() => {
     if (open) {
       if (incoming) {
@@ -348,13 +358,13 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
         ringtoneRef.current = playSoundFile('/sounds/call_sound.mp3', true);
         playRingtone();
       } else {
-        startCall();
+        startCallRef.current();
       }
     }
     return () => {
-      cleanupCall();
+      cleanupCallRef.current();
     };
-  }, [open, incoming, startCall, cleanupCall]);
+  }, [open, incoming]);
 
   const toggleMic = useCallback(() => {
     if (localStreamRef.current) {
