@@ -57,7 +57,7 @@ const tabs: { id: SettingsTab; label: string; icon: typeof Bell }[] = [
   { id: 'notifications', label: 'Уведомления', icon: Bell },
   { id: 'appearance', label: 'Внешний вид', icon: Palette },
   { id: 'privacy', label: 'Конфиденциальность', icon: Shield },
-  { id: 'premium', label: 'Премиум', icon: Crown },
+  { id: 'premium', label: 'НуЧе', icon: Crown },
   { id: 'profile', label: 'Профиль', icon: User },
 ];
 
@@ -79,7 +79,7 @@ function GeneralSettings({ onInfoClick }: { onInfoClick?: () => void }) {
             onClick={onInfoClick}
             className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/60 hover:text-white/90 hover:bg-white/[0.04] rounded-lg transition-colors"
           >
-            <Globe size={16} className="text-violet-400 shrink-0" />
+            <Globe size={16} className="text-white/50 shrink-0" />
             <span>Страница о проекте</span>
           </button>
         </div>
@@ -660,14 +660,14 @@ function PremiumSettings() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 px-1 pb-2">
-        <img src="/beaver-coin.png" alt="" className="w-9 h-9 object-contain" />
+        <img src="/НуЧе.png" alt="" className="w-9 h-9 object-contain" />
         <div>
-          <h3 className="text-sm font-semibold text-white/90">Премиум</h3>
+          <h3 className="text-sm font-semibold text-white/90">НуЧе</h3>
           <p className="text-[10px] text-white/40">
             {isPremium
               ? premiumStatus?.premiumUntil
                 ? `Действует до ${new Date(premiumStatus.premiumUntil).toLocaleDateString('ru-RU')}`
-                : 'Премиум активен'
+                : 'НуЧе активен'
               : 'Разблокируйте все возможности'}
           </p>
         </div>
@@ -723,12 +723,12 @@ function PremiumSettings() {
               value={newAlias}
               onChange={(e) => { setNewAlias(e.target.value); setError(''); }}
               placeholder="Новый юзернейм..."
-              className="flex-1 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none focus:border-violet-500/50"
+              className="flex-1 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none focus:border-white/40"
             />
             <button
               onClick={handleAddAlias}
               disabled={adding || !newAlias.trim() || aliases.length >= 10}
-              className="px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-medium hover:bg-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.12] text-white/80 text-sm font-medium hover:bg-white/[0.14] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {adding ? '...' : 'Добавить'}
             </button>
@@ -760,7 +760,7 @@ function PremiumSettings() {
                   {roundedPrice && (
                     <div className="mt-1 flex items-center gap-1">
                       <span className="text-lg font-bold text-white/90">{roundedPrice.toLocaleString('ru-RU')}</span>
-                      <img src="/beaver-coin.png" alt="" className="w-4 h-4 object-contain" />
+                      <span className="text-sm font-semibold text-white/50">₽</span>
                       {monthlyPrice && (
                         <span className="text-[10px] text-white/30 ml-0.5">
                           {monthlyPrice.toLocaleString('ru-RU')}/мес

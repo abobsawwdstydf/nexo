@@ -40,7 +40,7 @@ function InlineMarkdownParser({ text, isOwn }: { text: string; isOwn?: boolean }
     blocks.push(
       <div
         key={`code-${match.index}`}
-        className="my-1.5 p-3 rounded-xl bg-black/40 border border-white/10 font-mono text-xs text-blue-200 overflow-x-auto select-text"
+        className="my-1.5 p-3 rounded-xl bg-black/40 border border-white/10 font-mono text-xs text-accent/90 overflow-x-auto select-text"
       >
         <pre className="whitespace-pre-wrap break-words">{codeContent}</pre>
       </div>

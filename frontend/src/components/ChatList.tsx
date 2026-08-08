@@ -90,9 +90,9 @@ function ChatAvatar({ chat }: { chat: Chat }) {
   }
   if (chat.id === AI_CHAT_ID) {
     return (
-      <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border border-violet-500/25 shadow-[0_0_20px_rgba(139,92,246,0.25)] bg-violet-500/15">
+      <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border border-white/[0.08] bg-white/[0.05]">
         <img
-          src="/НуЧе.png"
+          src="/no_bg.png"
           alt="AI"
           className="w-full h-full object-cover"
         />

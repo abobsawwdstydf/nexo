@@ -54,7 +54,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
 
   const premiumColor = user.isPremium
     ? 'from-amber-400 via-yellow-300 to-orange-400'
-    : 'from-violet-600 via-indigo-700 to-blue-800';
+    : 'from-zinc-800 via-zinc-900 to-black';
 
   return (
     <motion.div

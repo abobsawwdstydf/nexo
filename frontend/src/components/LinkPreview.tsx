@@ -126,7 +126,7 @@ function ConfirmDialog({ url, onConfirm, onCancel }: { url: string; onConfirm: (
             <button
               onClick={onConfirm}
               className={`flex-1 py-2.5 rounded-xl text-xs text-white font-medium transition-colors ${
-                safe ? 'bg-blue-500/80 hover:bg-blue-500' : 'bg-red-500/80 hover:bg-red-500'
+                safe ? 'bg-accent/80 hover:bg-accent' : 'bg-red-500/80 hover:bg-red-500'
               }`}
             >
               Открыть
@@ -299,7 +299,7 @@ export function renderTextWithLinks(text: string, isOwn: boolean): React.ReactNo
             window.dispatchEvent(event);
           }}
           className={`inline-flex items-center gap-0.5 font-medium underline underline-offset-2 decoration-1 ${
-            isOwn ? 'text-blue-300 decoration-blue-300/40 hover:decoration-blue-300' : 'text-blue-400 decoration-blue-400/40 hover:decoration-blue-400'
+            isOwn ? 'text-white/70 decoration-white/30 hover:decoration-white/70' : 'text-accent decoration-accent/40 hover:decoration-accent'
           } transition-all`}
           target="_blank"
           rel="noopener noreferrer"

@@ -120,7 +120,7 @@ export function MyStickersPanel({ onPick, packType, onClose }: MyStickersPanelPr
         <button
           onClick={handleCreatePack}
           disabled={creating || !newPackName.trim()}
-          className="h-8 px-3 rounded-xl bg-blue-500/80 hover:bg-blue-500 disabled:opacity-40 flex items-center gap-1 text-xs font-medium text-white transition-colors"
+          className="h-8 px-3 rounded-xl bg-accent hover:bg-accent/90 disabled:opacity-40 flex items-center gap-1 text-xs font-medium text-white transition-colors"
         >
           {creating ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
           {packType === 'emoji' ? 'Эмодзи-пак' : 'Стикер-пак'}
@@ -171,7 +171,7 @@ export function MyStickersPanel({ onPick, packType, onClose }: MyStickersPanelPr
               </div>
 
               {uploading === pack.id && (
-                <div className="flex items-center gap-1.5 text-[10px] text-blue-300/70 mb-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-accent/70 mb-1.5">
                   <Loader2 size={11} className="animate-spin" /> Обработка фото...
                 </div>
               )}

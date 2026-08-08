@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { toast, type ToastItem } from '../lib/toast';
@@ -12,7 +12,7 @@ const icons = {
 const colors = {
   success: 'bg-green-500/15 border-green-500/25 text-green-400',
   error: 'bg-red-500/15 border-red-500/25 text-red-400',
-  info: 'bg-blue-500/15 border-blue-500/25 text-blue-400',
+  info: 'bg-accent/15 border-accent/25 text-accent',
 };
 
 function ToastItemView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) => void }) {

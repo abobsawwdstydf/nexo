@@ -97,7 +97,7 @@ export function EncryptionBadge({ isE2E, isSecret, isChannel, e2eReady, e2eFinge
                     </div>
                     <button
                       onClick={handleCopy}
-                      className="flex items-center gap-1 text-[10px] text-blue-400/60 hover:text-blue-400 transition-colors"
+                      className="flex items-center gap-1 text-[10px] text-accent/60 hover:text-accent transition-colors"
                     >
                       {copied ? <><Check size={10} /> Скопировано</> : <><Copy size={10} /> Копировать отпечаток</>}
                     </button>

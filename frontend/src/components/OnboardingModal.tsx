@@ -11,9 +11,9 @@ interface OnboardingModalProps {
 const STEPS = [
   {
     title: 'Добро пожаловать в Нексо!',
-    subtitle: 'Защищённый и молниеносный мессенджер нового поколения',
+    subtitle: 'Быстрый и защищённый мессенджер',
     icon: Sparkles,
-    color: 'from-violet-500 to-fuchsia-600',
+    color: 'from-zinc-600 to-zinc-800',
     content: (
       <div className="text-center py-4 space-y-3">
         <div className="flex justify-center gap-2 my-2">

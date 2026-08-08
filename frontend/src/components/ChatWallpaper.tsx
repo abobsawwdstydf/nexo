@@ -177,7 +177,7 @@ export function WallpaperPicker({ chatId, currentWallpaper, onClose, onApply }: 
                   onClick={() => applyWallpaper(w)}
                   className={`relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${
                     selected?.value === w.value
-                      ? 'border-blue-400/60 shadow-lg shadow-blue-400/20'
+                      ? 'border-accent shadow-lg shadow-accent/20'
                       : 'border-white/[0.06] hover:border-white/20'
                   }`}
                 >
@@ -189,8 +189,8 @@ export function WallpaperPicker({ chatId, currentWallpaper, onClose, onApply }: 
                     }}
                   />
                   {selected?.value === w.value && (
-                    <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                      <Check size={16} className="text-blue-400" />
+                    <div className="absolute inset-0 bg-accent/20 flex items-center justify-center">
+                      <Check size={16} className="text-accent" />
                     </div>
                   )}
                   <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent">

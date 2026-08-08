@@ -400,7 +400,7 @@ function GroupTab({ onClose, onChatCreated }: { onClose: () => void; onChatCreat
         <motion.button
           onClick={handleCreate}
           disabled={!isValid || submitting}
-          className="px-5 py-2 text-xs font-medium bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/20 text-blue-300/80 rounded-xl transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="px-5 py-2 text-xs font-medium bg-accent/15 hover:bg-accent/25 border border-accent/20 text-accent rounded-xl transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
           whileHover={isValid ? { scale: 1.03 } : {}}
           whileTap={isValid ? { scale: 0.97 } : {}}
         >

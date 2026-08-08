@@ -87,7 +87,7 @@ interface StickerPack {
 const ATTACHMENT_OPTIONS = [
   { icon: Image, label: 'Галерея', color: 'text-blue-400' },
   { icon: Camera, label: 'Камера', color: 'text-green-400' },
-  { icon: FileText, label: 'Файл', color: 'text-purple-400' },
+  { icon: FileText, label: 'Файл', color: 'text-zinc-400' },
   { icon: MapPin, label: 'Геопозиция', color: 'text-red-400' },
   { icon: Circle, label: 'Кружок', color: 'text-cyan-400' },
 ];
@@ -288,7 +288,7 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
                 style={{ height: `${Math.round(8 + v * 18)}px` }}
                 className={`w-[3px] rounded-full transition-colors duration-150 ${
                   active
-                    ? isOwn ? 'bg-white/85' : 'bg-blue-400/90'
+                    ? isOwn ? 'bg-white/85' : 'bg-accent/90'
                     : 'bg-white/20'
                 }`}
               />
@@ -470,7 +470,7 @@ const InlineKeyboard = memo(function InlineKeyboard({
         <div key={ri} className="flex gap-1">
           {row.map((btn, bi) => {
             const baseClass =
-              'flex-1 px-3 py-2 rounded-xl bg-blue-500/15 border border-blue-500/25 text-xs font-medium text-blue-300 hover:bg-blue-500/25 active:scale-[0.98] transition-all whitespace-nowrap overflow-hidden text-ellipsis';
+              'flex-1 px-3 py-2 rounded-xl bg-accent/15 border border-accent/25 text-xs font-medium text-accent hover:bg-accent/25 active:scale-[0.98] transition-all whitespace-nowrap overflow-hidden text-ellipsis';
             if (btn.url) {
               return (
                 <a key={bi} href={btn.url} target="_blank" rel="noopener noreferrer" className={baseClass + ' text-center'}>
@@ -584,7 +584,7 @@ const MessageBubble = memo(function MessageBubble({
           `}
         >
           {showSender && (
-            <p className="flex items-center gap-1 text-[11px] font-semibold text-blue-400/70 mb-0.5">
+            <p className="flex items-center gap-1 text-[11px] font-semibold text-white/60 mb-0.5">
               <span>{message.sender.displayName || message.sender.username}</span>
               <VerifiedBadge
                 isVerified={message.sender?.isVerified}
@@ -627,7 +627,7 @@ const MessageBubble = memo(function MessageBubble({
                       href={location.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="absolute bottom-0 inset-x-0 py-1.5 px-3 text-[10px] font-medium bg-black/60 backdrop-blur-sm text-blue-300 hover:text-blue-200"
+                      className="absolute bottom-0 inset-x-0 py-1.5 px-3 text-[10px] font-medium bg-black/60 backdrop-blur-sm text-white/80 hover:text-white"
                     >
                       📍 Открыть в картах
                     </a>
@@ -650,7 +650,7 @@ const MessageBubble = memo(function MessageBubble({
           {isChannel && (
             <button
               onClick={() => onReply?.(message)}
-              className="mt-2 w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] transition-colors text-xs text-blue-300 font-medium"
+              className="mt-2 w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] transition-colors text-xs text-white/70 font-medium"
             >
               <span className="flex items-center gap-1.5">
                 <Reply size={14} />
@@ -665,7 +665,7 @@ const MessageBubble = memo(function MessageBubble({
             <span className="text-[10px] text-white/30">{time}</span>
             {isOwn && !isChannel && (
               message.readBy && message.readBy.length > 1 ? (
-                <span className="text-[10px] text-blue-400/60 flex items-center gap-0.5">
+                <span className="text-[10px] text-white/40 flex items-center gap-0.5">
                   <CheckCheck size={12} />
                 </span>
               ) : message._isFailed ? (
@@ -673,7 +673,7 @@ const MessageBubble = memo(function MessageBubble({
               ) : message._isSending ? (
                 <span className="text-[10px] text-white/20">...</span>
               ) : (
-                <span className="text-[10px] text-blue-400/50"><CheckCheck size={12} /></span>
+                <span className="text-[10px] text-white/30"><CheckCheck size={12} /></span>
               )
             )}
           </div>
@@ -753,6 +753,7 @@ function ChatHeader({
   e2eFingerprint?: string | null;
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [callMenuOpen, setCallMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { startCall } = useCallContext();
   const isAIChat = chat.id === AI_CHAT_ID;
@@ -828,8 +829,8 @@ function ChatHeader({
                 className="w-8 h-8 rounded-full object-cover flex-shrink-0"
               />
             ) : isAIChat ? (
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-violet-500/25 flex-shrink-0 bg-violet-500/15">
-                <img src="/НуЧе.png" alt="AI" className="w-full h-full object-cover" />
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/[0.08] flex-shrink-0 bg-white/[0.05]">
+                <img src="/no_bg.png" alt="AI" className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/[0.05] flex items-center justify-center flex-shrink-0">
@@ -877,17 +878,52 @@ function ChatHeader({
           </motion.button>
 
           {!isAIChat && chat.type === 'personal' && (
-            <>
+            <div
+              className="relative flex items-center rounded-full hover:bg-white/[0.06] transition-colors"
+              onMouseEnter={() => setCallMenuOpen(true)}
+              onMouseLeave={() => setCallMenuOpen(false)}
+              onFocus={() => setCallMenuOpen(true)}
+              onBlur={() => setCallMenuOpen(false)}
+            >
+              {/* Видеозвонок — выезжает при наведении (как в Telegram) */}
+              <AnimatePresence initial={false}>
+                {callMenuOpen && (
+                  <motion.button
+                    key="call-video"
+                    initial={{ opacity: 0, x: 12, scale: 0.7 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 12, scale: 0.7 }}
+                    transition={{ duration: 0.16, ease: 'easeOut' }}
+                    onClick={() => { setCallMenuOpen(false); handleCall('video'); }}
+                    className="p-2 rounded-full transition-colors text-white/60 hover:text-green-400"
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    title="Видеозвонок"
+                  >
+                    <Video size={17} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {/* Голосовой звонок — основная кнопка */}
               <motion.button
-                onClick={() => handleCall('voice')}
-                className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-white/60 hover:text-green-400"
+                onClick={() => {
+                  const touch = window.matchMedia?.('(hover: none)').matches;
+                  if (touch && !callMenuOpen) {
+                    setCallMenuOpen(true);
+                    return;
+                  }
+                  setCallMenuOpen(false);
+                  handleCall('voice');
+                }}
+                className="p-2 rounded-full transition-colors text-white/60 hover:text-green-400"
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
-                title="Звонок"
+                title="Голосовой звонок"
               >
                 <Phone size={17} />
               </motion.button>
-            </>
+            </div>
           )}
 
           <div className="relative" ref={menuRef}>
@@ -929,10 +965,10 @@ function ChatHeader({
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
-          className="flex items-center justify-between px-3.5 py-2 rounded-[20px] liquid-glass-strong border border-white/[0.08] border-l-4 border-l-blue-400 shadow-md"
+          className="flex items-center justify-between px-3.5 py-2 rounded-[20px] liquid-glass-strong border border-white/[0.08] border-l-4 border-l-accent shadow-md"
         >
           <div className="min-w-0 flex-1 pr-2">
-            <p className="text-[11px] font-bold text-blue-400 flex items-center gap-1 font-display">
+            <p className="text-[11px] font-bold text-accent flex items-center gap-1 font-display">
               Закреплённое сообщение
             </p>
             <p className="text-xs text-white/70 truncate mt-0.5">
@@ -1664,7 +1700,7 @@ function MessageInput({
             <div className="flex justify-end mt-2">
               <button
                 onClick={sendImages}
-                className="px-4 py-1.5 rounded-xl bg-blue-500/80 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+                className="px-4 py-1.5 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-medium transition-colors"
               >
                 Отправить ({selectedFiles.length})
               </button>
@@ -1758,7 +1794,7 @@ function MessageInput({
               {/* Send button */}
               <motion.button
                 onClick={stopRecording}
-                className="w-11 h-11 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center transition-all flex-shrink-0 shadow-[0_4px_16px_rgba(59,130,246,0.35)]"
+                className="w-11 h-11 rounded-full bg-accent hover:bg-accent/90 flex items-center justify-center transition-all flex-shrink-0 shadow-[0_4px_16px_rgba(163,163,163,0.35)]"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.92 }}
                 title="Отправить"
@@ -1780,7 +1816,7 @@ function MessageInput({
             className="px-3 py-2 border-b border-white/[0.04]"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-4 h-4 rounded-full border-2 border-blue-400/30 border-t-blue-400 animate-spin flex-shrink-0" />
+              <div className="w-4 h-4 rounded-full border-2 border-white/25 border-t-accent animate-spin flex-shrink-0" />
               <span className="text-xs text-white/60">
                 {chatId === AI_CHAT_ID ? 'Нексо AI распознаёт голосовое...' : 'Обработка...'}
               </span>
@@ -1805,7 +1841,7 @@ function MessageInput({
               </span>
               <button
                 onClick={() => finishBrowserSTT(true)}
-                className="px-2.5 py-1 rounded-lg bg-blue-500/80 hover:bg-blue-500 text-white text-[11px] font-medium transition-colors flex-shrink-0"
+                className="px-2.5 py-1 rounded-lg bg-accent hover:bg-accent/90 text-white text-[11px] font-medium transition-colors flex-shrink-0"
               >
                 Готово
               </button>
@@ -1831,7 +1867,7 @@ function MessageInput({
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
             >
-              <Smile size={19} className={showEmojiPanel ? 'text-blue-400' : 'text-white/35'} />
+              <Smile size={19} className={showEmojiPanel ? 'text-accent' : 'text-white/35'} />
             </motion.button>
 
             {/* Text Input */}
@@ -1856,7 +1892,7 @@ function MessageInput({
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
               >
-                <Paperclip size={19} className={showAttach ? 'text-blue-400 rotate-45' : 'text-white/35'} />
+                <Paperclip size={19} className={showAttach ? 'text-accent rotate-45' : 'text-white/35'} />
               </motion.button>
 
               {/* Attachment Panel */}
@@ -1902,7 +1938,7 @@ function MessageInput({
             {text.trim() || selectedFiles.length > 0 ? (
               <motion.button
                 onClick={() => selectedFiles.length > 0 ? sendImages() : handleSubmit()}
-                className="w-9 h-9 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-[0_2px_12px_rgba(59,130,246,0.35)] transition-colors mb-px"
+                className="w-9 h-9 rounded-full bg-accent hover:bg-accent/90 flex items-center justify-center flex-shrink-0 shadow-[0_2px_12px_rgba(163,163,163,0.35)] transition-colors mb-px"
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
               >
@@ -1936,7 +1972,7 @@ function MessageInput({
                   onPointerLeave={handleRecordPointerUp}
                   className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all select-none mb-px ${
                     recordingType === 'video'
-                      ? 'bg-purple-500/15 hover:bg-purple-500/25 text-purple-300/80'
+                      ? 'bg-white/[0.1] hover:bg-white/[0.16] text-white/60'
                       : 'bg-white/[0.06] hover:bg-white/[0.1] text-white/45'
                   }`}
                   style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
@@ -3340,8 +3376,8 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
               onClick={e => e.stopPropagation()}
             >
               <div className="p-5 text-center">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-blue-500/20 border border-blue-500/20 flex items-center justify-center">
-                  <ExternalLink size={22} className="text-blue-400" />
+                <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center">
+                  <ExternalLink size={22} className="text-accent" />
                 </div>
                 <h3 className="text-sm font-semibold text-white/90 mb-1">Открыть ссылку?</h3>
                 <p className="text-xs text-white/50 mb-4 break-all">{linkConfirmUrl}</p>
@@ -3357,7 +3393,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
                       window.open(linkConfirmUrl, '_blank', 'noopener,noreferrer');
                       setLinkConfirmUrl(null);
                     }}
-                    className="flex-1 py-2.5 rounded-xl bg-blue-500/80 hover:bg-blue-500 text-xs text-white font-medium transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-accent hover:bg-accent/90 text-xs text-white font-medium transition-colors"
                   >
                     Открыть
                   </button>
@@ -3423,9 +3459,9 @@ function PremiumPurchaseModal({ onClose }: { onClose: () => void }) {
         <div className="px-5 pt-5 pb-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <img src="/beaver-coin.png" alt="" className="w-9 h-9 object-contain" />
+              <img src="/НуЧе.png" alt="" className="w-9 h-9 object-contain" />
               <div>
-                <h3 className="text-base font-semibold text-white/90">Нексо Премиум</h3>
+                <h3 className="text-base font-semibold text-white/90">Нексо НуЧе</h3>
                 <p className="text-xs text-white/40 mt-0.5">Разблокируйте все возможности</p>
               </div>
             </div>
@@ -3470,7 +3506,7 @@ function PremiumPurchaseModal({ onClose }: { onClose: () => void }) {
                       onClick={() => setSelected(m)}
                       className={`relative p-3 rounded-xl border transition-all text-left ${
                         isSelected
-                          ? 'border-blue-500/50 bg-blue-500/10'
+                          ? 'border-accent/50 bg-accent/10'
                           : 'border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]'
                       }`}
                     >
@@ -3478,7 +3514,7 @@ function PremiumPurchaseModal({ onClose }: { onClose: () => void }) {
                       {roundedPrice && (
                         <div className="mt-1 flex items-center gap-1">
                           <span className="text-lg font-bold text-white/90">{roundedPrice.toLocaleString('ru-RU')}</span>
-                          <img src="/beaver-coin.png" alt="" className="w-4 h-4 object-contain" />
+                          <span className="text-sm font-semibold text-white/50">₽</span>
                           {monthlyPrice && (
                             <span className="text-[10px] text-white/30 ml-0.5">
                               {monthlyPrice.toLocaleString('ru-RU')}/мес
@@ -3494,7 +3530,7 @@ function PremiumPurchaseModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={handlePurchase}
                 disabled={!selected || paying}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full py-3 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.1] text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {paying ? 'Создание платежа...' : selected && prices[selected] ? `Купить за ${Math.round(prices[selected]).toLocaleString('ru-RU')} НуЧе` : 'Выберите тариф'}
               </button>

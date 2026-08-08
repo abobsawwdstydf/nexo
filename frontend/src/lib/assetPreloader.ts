@@ -27,8 +27,6 @@ const PREWARM_ASSETS: ReadonlyArray<string> = [
   '/no_bg.png',
   '/no_bg1.png',
   '/galochcka.png',
-  '/beaver-coin.png',
-  '/beaver-coin.svg',
   '/НуЧе.png',
   '/favicon.ico',
   '/sounds/computer-keyboard.ogg',
