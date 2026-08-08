@@ -15,7 +15,7 @@ import (
 const EarlyAccessEmail = "nexo.su.support@gmail.com"
 
 // StartMessage — сообщение до старта беты (время указано по МСК)
-const StartMessage = "Нексо откроется 6 августа в 6:00 (МСК)"
+const StartMessage = "Нексо откроется 10 августа в 6:00 (МСК)"
 
 // publicPrefixes — маршруты, необходимые для входа и публичных статусов
 var publicPrefixes = []string{

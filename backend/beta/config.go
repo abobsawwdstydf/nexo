@@ -19,11 +19,11 @@ func Init() {
 
 	startStr := os.Getenv("BETA_START")
 	if startStr == "" {
-		startStr = "2026-08-06T03:00:00Z"
+		startStr = "2026-08-10T03:00:00Z"
 	}
 	start, err := time.Parse(time.RFC3339, startStr)
 	if err != nil {
-		start = time.Date(2026, 8, 6, 3, 0, 0, 0, time.UTC)
+		start = time.Date(2026, 8, 10, 3, 0, 0, 0, time.UTC)
 	}
 	StartTime = start
 

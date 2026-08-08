@@ -25,15 +25,18 @@ import {
   Loader,
   Crown,
   Download,
-  Trash2,
   AlertTriangle,
-  Share2,
   Paperclip,
   Trophy,
   Gamepad2,
   Cloud,
   PenLine,
 } from 'lucide-react';
+import {
+  ShareIcon as Share2,
+  TrashIcon as Trash2,
+  ChevronRightIcon as ChevronRight,
+} from '../lib/appleIcons';
 import type { User as UserType } from '../lib/types';
 import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotification } from '../lib/notifications';
 import { api } from '../lib/api';

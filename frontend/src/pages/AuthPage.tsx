@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
-import { ArrowRight, Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
+import { ArrowRightIcon } from '../lib/appleIcons';
 import { AnimatedOtpInput } from '../components/AnimatedOtpInput';
 import { getSoundsEnabled, setSoundsEnabled } from '../lib/soundSettings';
 
@@ -849,7 +850,7 @@ export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?:
                   }}
                 >
                   Продолжить
-                  <ArrowRight size={18} />
+                  <ArrowRightIcon size={18} />
                 </motion.button>
 
                 {error && (
@@ -1377,7 +1378,7 @@ export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?:
                   }}
                 >
                   Продолжить
-                  <ArrowRight size={18} />
+                  <ArrowRightIcon size={18} />
                 </motion.button>
 
                 {error && (

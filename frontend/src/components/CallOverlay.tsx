@@ -1,24 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Phone,
-  PhoneOff,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  Monitor,
-  MonitorOff,
-  X,
-  Maximize2,
-  Minimize2,
-  Bluetooth,
-  Copy,
-  Check,
-  Fingerprint,
-  ShieldCheck,
-  Shield,
-} from 'lucide-react';
+  PhoneIcon as Phone,
+  PhoneOffIcon as PhoneOff,
+  MicIcon as Mic,
+  MicOffIcon as MicOff,
+  VideoIcon as Video,
+  VideoOffIcon as VideoOff,
+  MonitorIcon as Monitor,
+  MaximizeIcon as Maximize2,
+  MinimizeIcon as Minimize2,
+  BluetoothIcon as Bluetooth,
+  CopyIcon as Copy,
+  CheckCircleIcon as Check,
+  ShieldCheckIcon as ShieldCheck,
+  ShieldIcon as Shield,
+  CloseIcon as X,
+} from '../lib/appleIcons';
+import { MonitorOff, Fingerprint } from 'lucide-react';
 import { getSocket, wsRequest } from '../lib/socket';
 import type { UserBasic } from '../lib/types';
 import { getSessionInfo } from '../lib/e2e';
