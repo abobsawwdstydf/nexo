@@ -773,6 +773,19 @@ function ChatHeader({
     }
   };
 
+  const handleReportChat = async () => {
+    setShowMenu(false);
+    try {
+      await api.request(`/chats/${chat.id}/report`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'Жалоба от пользователя' }),
+      });
+      toast.success('Жалоба отправлена модераторам');
+    } catch {
+      toast.error('Не удалось отправить жалобу');
+    }
+  };
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -863,7 +876,7 @@ function ChatHeader({
             <Search size={17} />
           </motion.button>
 
-          {!isAIChat && (
+          {!isAIChat && chat.type === 'personal' && (
             <>
               <motion.button
                 onClick={() => handleCall('voice')}
@@ -901,7 +914,7 @@ function ChatHeader({
                   <ChatMenuItem icon={Image} label="Медиафайлы" />
                   {chat.type === 'group' && <ChatMenuItem icon={Users} label="Участники" />}
                   <div className="mx-3 my-1 h-px bg-white/[0.06]" />
-                  <ChatMenuItem icon={Flag} label="Пожаловаться" className="text-red-400" />
+                  <ChatMenuItem icon={Flag} label="Пожаловаться" className="text-red-400" onClick={handleReportChat} />
                   <ChatMenuItem icon={Trash2} label="Удалить чат" className="text-red-400" />
                 </motion.div>
               )}

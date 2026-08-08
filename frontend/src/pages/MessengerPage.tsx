@@ -397,11 +397,10 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
       {/* ─── Mobile bottom nav (TG 2026) ───────────────────────────── */}
       {mobileView === 'list' && !showProfile && !showSettings && !createTab && !showAccountManager && (
         <MobileBottomNav
-          active={showFriends ? 'friends' : 'chats'}
+          active={showFriends ? 'friends' : showProfile ? 'profile' : 'chats'}
           onChats={() => { setShowFriends(false); setMobileView('list'); }}
           onFriends={() => { setShowFriends(true); setMobileView('list'); }}
           onSettings={() => handleOpenSettings('general')}
-          onSearch={handleSearch}
           onProfile={handleOpenProfile}
         />
       )}

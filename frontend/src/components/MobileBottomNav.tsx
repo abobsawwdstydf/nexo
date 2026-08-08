@@ -1,13 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChatBubbleIcon, UsersIcon, GearIcon, MagnifierIcon, PersonIcon } from '../lib/appleIcons';
+import { ChatBubbleIcon, UsersIcon, GearIcon, PersonIcon } from '../lib/appleIcons';
 
 interface MobileBottomNavProps {
-  active: 'chats' | 'friends' | 'settings' | 'search' | 'profile';
+  active: 'chats' | 'friends' | 'settings' | 'profile';
   onChats: () => void;
   onFriends: () => void;
   onSettings: () => void;
-  onSearch: () => void;
   onProfile?: () => void;
 }
 
@@ -16,14 +15,13 @@ export function MobileBottomNav({
   onChats,
   onFriends,
   onSettings,
-  onSearch,
   onProfile,
 }: MobileBottomNavProps) {
   const items = [
     { id: 'friends' as const, label: 'Контакты', icon: UsersIcon, onClick: onFriends },
     { id: 'chats' as const, label: 'Чаты', icon: ChatBubbleIcon, onClick: onChats },
+    { id: 'profile' as const, label: 'Профиль', icon: PersonIcon, onClick: onProfile },
     { id: 'settings' as const, label: 'Настройки', icon: GearIcon, onClick: onSettings },
-    { id: 'search' as const, label: 'Поиск', icon: MagnifierIcon, onClick: onSearch },
   ];
 
   return (

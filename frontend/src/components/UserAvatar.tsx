@@ -1,3 +1,5 @@
+import { normalizeMediaUrl } from '../lib/mediaUrl';
+
 interface UserAvatarProps {
   user: { avatar: string | null; displayName: string };
   size?: 'sm' | 'md';
@@ -9,9 +11,9 @@ export function UserAvatar({ user, size = 'md' }: UserAvatarProps) {
   if (user.avatar) {
     return (
       <img
-        src={user.avatar}
+        src={normalizeMediaUrl(user.avatar)}
         alt={user.displayName}
-        className={`${sizeClass} rounded-xl object-cover flex-shrink-0`}
+        className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
       />
     );
   }
@@ -25,7 +27,7 @@ export function UserAvatar({ user, size = 'md' }: UserAvatarProps) {
 
   return (
     <div
-      className={`${sizeClass} rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0`}
+      className={`${sizeClass} rounded-full bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0`}
     >
       <span className="text-xs font-medium text-white/50">{initials}</span>
     </div>
