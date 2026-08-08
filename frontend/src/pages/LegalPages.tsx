@@ -132,7 +132,7 @@ function PrivacyContent() {
           По вопросам, связанным с обработкой персональных данных, вы можете обратиться:
         </p>
         <p className="text-white/60">
-          Email: privacy@nexo.app<br />
+          Email: privacy@{window.location.hostname}<br />
           Или через форму обратной связи в настройках приложения
         </p>
       </Section>

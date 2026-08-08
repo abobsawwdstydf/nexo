@@ -29,8 +29,6 @@ export interface AIHistoryMessage {
   createdAt: string;
 }
 
-let historyLoaded = false;
-
 export function notifyAIChanged() {
   try {
     window.dispatchEvent(new CustomEvent(AI_CHANGED_EVENT));
@@ -47,11 +45,9 @@ export async function loadAIHistory(): Promise<Message[]> {
         localStorage.setItem(AI_KEY, JSON.stringify(serverMsgs.slice(-100)));
       } catch {}
     }
-    historyLoaded = true;
     notifyAIChanged();
     return serverMsgs;
   } catch {
-    historyLoaded = true;
     return getAIMessages();
   }
 }

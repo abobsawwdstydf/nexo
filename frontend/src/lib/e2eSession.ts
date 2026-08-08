@@ -8,7 +8,6 @@ import {
   saveSession,
   signData, getActiveSessionKey, setActiveSessionKey,
   saveSignedPreKey, loadSignedPreKey,
-  type E2EKeyPair, type EncryptedPayload,
 } from './e2e';
 
 interface E2EInitOptions {

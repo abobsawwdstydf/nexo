@@ -156,6 +156,7 @@ func CreateChat(c *fiber.Ctx) error {
 			Type:            req.Type,
 			Name:            req.Name,
 			Username:        req.Username,
+			Description:     req.Description,
 			IsSecret:        req.IsSecret,
 			IsE2E:           req.IsE2E,
 			WelcomeMessage:  req.WelcomeMessage,

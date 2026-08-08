@@ -2,9 +2,7 @@
 
 let ws: WebSocket | null = null;
 let connectAttempts = 0;
-let isReconnecting = false;
 const MAX_CONNECT_ATTEMPTS = 15;
-const CONNECT_TIMEOUT = 30000;
 const RECONNECT_KEY = 'nexo_ws_reconnect_state';
 const RPC_TIMEOUT = 15000; // 15 seconds for RPC responses
 
@@ -233,7 +231,6 @@ function setupWebSocketHandlers() {
   ws.onopen = () => {
     const prev = connectAttempts;
     connectAttempts = 0;
-    isReconnecting = false;
     emitStatus('connected');
     emitEvent('connect', {});
     
@@ -328,7 +325,6 @@ function scheduleReconnect() {
 
   const delay = Math.min(1000 * Math.pow(2, connectAttempts), 30000);
   connectAttempts++;
-  isReconnecting = true;
   emitStatus('reconnecting');
   refreshTokenThenReconnect(delay);
 }

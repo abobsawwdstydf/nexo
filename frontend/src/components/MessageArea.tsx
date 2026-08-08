@@ -16,13 +16,11 @@ import {
   Reply,
   Forward,
   Pin,
-  Check,
   CheckCheck,
   Camera,
   Video,
   MapPin,
   FileText,
-  Wallet,
   Circle,
   Play,
   Pause,
@@ -48,7 +46,7 @@ import { VerifiedBadge } from './VerifiedBadge';
 import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/noteChat';
 import { AI_CHAT_ID, AI_SENDER, loadAIHistory, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
-import type { Chat, Message, Reaction, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup } from '../lib/types';
+import type { Chat, Message, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup } from '../lib/types';
 import type { SocketInterface } from '../lib/socket';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
@@ -58,6 +56,10 @@ import { tryInitE2EForChat } from '../lib/e2eStore';
 import { EncryptionBadge } from './EncryptionBadge';
 import { playSend } from '../lib/sounds';
 import { MyStickersPanel } from './MyStickersPanel';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { AnimatedEmoji, ANIMATED_EMOJI_MAP } from './AnimatedEmoji';
+import { QuickReactions } from './QuickReactions';
+import { MessageContextMenu } from './MessageContextMenu';
 
 const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Лица', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🫨', '🤗', '🫡', '🤔', '🫣', '🤫', '😶', '😏'] },
@@ -87,7 +89,6 @@ const ATTACHMENT_OPTIONS = [
   { icon: Camera, label: 'Камера', color: 'text-green-400' },
   { icon: FileText, label: 'Файл', color: 'text-purple-400' },
   { icon: MapPin, label: 'Геопозиция', color: 'text-red-400' },
-  { icon: Wallet, label: 'Кошелёк', color: 'text-yellow-400' },
   { icon: Circle, label: 'Кружок', color: 'text-cyan-400' },
 ];
 
@@ -303,7 +304,7 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
   );
 }
 
-function VideoNotePlayer({ url, thumbnail, decryptedUrl }: { url: string; thumbnail?: string | null; decryptedUrl?: string }) {
+function VideoNotePlayer({ thumbnail, decryptedUrl }: { thumbnail?: string | null; decryptedUrl?: string }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -391,7 +392,7 @@ function VideoNotePlayer({ url, thumbnail, decryptedUrl }: { url: string; thumbn
   );
 }
 
-function ImageGallery({ media, isOwn }: { media: Array<{ url: string; thumbnail?: string | null }>; isOwn: boolean }) {
+function ImageGallery({ media }: { media: Array<{ url: string; thumbnail?: string | null }> }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   return (
@@ -502,6 +503,7 @@ const MessageBubble = memo(function MessageBubble({
   isChannel,
   onReply,
   onReact,
+  onContextMenu,
   onCallback,
   onWebApp,
   decryptedMediaUrl,
@@ -511,6 +513,7 @@ const MessageBubble = memo(function MessageBubble({
   isChannel?: boolean;
   onReply?: (message: Message) => void;
   onReact?: (messageId: string) => void;
+  onContextMenu?: (message: Message, position: { x: number; y: number }) => void;
   onCallback?: (messageId: string, data: string) => void;
   onWebApp?: (url: string) => void;
   decryptedMediaUrl?: string;
@@ -528,6 +531,13 @@ const MessageBubble = memo(function MessageBubble({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
       className={`group relative flex ${isOwn && !isChannel ? 'justify-end' : 'justify-start'} mb-1`}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(message, { x: e.clientX, y: e.clientY });
+      }}
+      onDoubleClick={() => {
+        if (onReact) onReact(message.id);
+      }}
     >
       <div className={`max-w-[75%] ${hasVideoNote ? 'max-w-[160px]' : ''}`}>
         {/* Reply quote */}
@@ -557,7 +567,6 @@ const MessageBubble = memo(function MessageBubble({
         {hasVideoNote && (
           <div className="mb-1">
             <VideoNotePlayer
-              url={message.videoUrl || message.media?.[0]?.url || ''}
               thumbnail={message.thumbnail || message.media?.[0]?.thumbnail}
               decryptedUrl={decryptedMediaUrl}
             />
@@ -589,7 +598,7 @@ const MessageBubble = memo(function MessageBubble({
           {/* Image Gallery */}
           {hasMedia && !hasVoice && !hasVideoNote && (
             <div className="mb-1 -mx-1 -mt-0.5">
-              <ImageGallery media={message.media} isOwn={isOwn} />
+              <ImageGallery media={message.media} />
             </div>
           )}
 
@@ -626,15 +635,29 @@ const MessageBubble = memo(function MessageBubble({
                 </div>
               )}
               {!location && (
-                <p className={`text-sm leading-relaxed word-break ${isOwn && !isChannel ? 'text-white/90' : 'text-white/85'}`}>
-                  {renderTextWithLinks(message.content, isOwn && !isChannel)}
-                </p>
+                <div className={`text-sm leading-relaxed word-break ${isOwn && !isChannel ? 'text-white/90' : 'text-white/85'}`}>
+                  <MarkdownRenderer content={message.content} isOwn={isOwn && !isChannel} />
+                </div>
               )}
               {/* Link Previews */}
               {!location && extractUrls(message.content).slice(0, 2).map((url) => (
                 <LinkPreview key={url} url={url} isOwn={isOwn && !isChannel} />
               ))}
             </div>
+          )}
+
+          {/* Channel Comments Button (TG Style) */}
+          {isChannel && (
+            <button
+              onClick={() => onReply?.(message)}
+              className="mt-2 w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] transition-colors text-xs text-blue-300 font-medium"
+            >
+              <span className="flex items-center gap-1.5">
+                <Reply size={14} />
+                Комментарии
+              </span>
+              <span className="text-[10px] text-white/40">Ответить</span>
+            </button>
           )}
 
           {/* Time & Read Status */}
@@ -713,20 +736,23 @@ function DateSeparator({ dateStr }: { dateStr: string }) {
 function ChatHeader({
   chat,
   onBack,
+  onOpenProfile,
   onSearchToggle,
   pinnedMessages,
+  onUnpinMessage,
   e2eReady,
   e2eFingerprint,
 }: {
   chat: Chat;
   onBack: () => void;
+  onOpenProfile?: () => void;
   onSearchToggle?: () => void;
   pinnedMessages?: Array<{ id: string; message: Message }>;
+  onUnpinMessage?: (id: string) => void;
   e2eReady?: boolean;
   e2eFingerprint?: string | null;
 }) {
   const [showMenu, setShowMenu] = useState(false);
-  const [showPinned, setShowPinned] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { startCall } = useCallContext();
   const isAIChat = chat.id === AI_CHAT_ID;
@@ -759,49 +785,58 @@ function ChatHeader({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showMenu]);
 
+  const latestPinned = pinnedMessages && pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
+
   return (
-    <>
-      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2 min-w-0">
+    <div className="flex-shrink-0 p-2.5 space-y-2 z-20">
+      {/* ─── Top Floating Pill Header Bar (Screenshot 1 TG Style) ────── */}
+      <div className="flex items-center justify-between px-3 py-2 rounded-[24px] liquid-glass-strong border border-white/[0.1] shadow-lg backdrop-blur-xl">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <motion.button
             onClick={onBack}
-            className="md:hidden p-2 -ml-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] transition-colors flex-shrink-0 z-10"
+            className="md:hidden p-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] transition-colors flex-shrink-0"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <ArrowLeft size={20} className="text-white/70" />
+            <ArrowLeft size={18} className="text-white/80" />
           </motion.button>
 
-          {chat.avatar ? (
-            <img
-              src={chat.avatar}
-              alt={chat.name || ''}
-              className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
-            />
-          ) : isAIChat ? (
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/25 to-fuchsia-500/25 border border-violet-500/25 flex items-center justify-center flex-shrink-0 shadow-[0_0_16px_rgba(139,92,246,0.3)]">
-              <Sparkles size={15} className="text-violet-300/90" />
-            </div>
-          ) : (
-            <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-medium text-white/50">{initials}</span>
-            </div>
-          )}
+          {/* Profile Capsule Button (Clicking avatar/name opens profile!) */}
+          <motion.button
+            onClick={onOpenProfile}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-2.5 px-2 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all text-left min-w-0 flex-1 max-w-fit"
+          >
+            {chat.avatar ? (
+              <img
+                src={chat.avatar}
+                alt={chat.name || ''}
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              />
+            ) : isAIChat ? (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/25 to-fuchsia-500/25 border border-violet-500/25 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={14} className="text-violet-300" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-semibold text-white/70">{initials}</span>
+              </div>
+            )}
 
-          <div className="min-w-0">
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-white/90 truncate">
-              <span className="truncate">{chat.name || 'Без названия'}</span>
-              {chat.isVerified && (
-                <VerifiedBadge
-                  isVerified
-                  badgeUrl={chat.verifiedBadgeUrl}
-                  badgeType={chat.verifiedBadgeType}
-                  size={15}
-                />
-              )}
-            </h2>
-            <div className="flex items-center gap-2">
-              <p className="text-[11px] text-white/30">
+            <div className="min-w-0 pr-1">
+              <h2 className="flex items-center gap-1 text-xs font-bold text-white/90 truncate font-display">
+                <span className="truncate">{chat.name || 'Без названия'}</span>
+                {chat.isVerified && (
+                  <VerifiedBadge
+                    isVerified
+                    badgeUrl={chat.verifiedBadgeUrl}
+                    badgeType={chat.verifiedBadgeType}
+                    size={13}
+                  />
+                )}
+              </h2>
+              <p className="text-[10px] text-white/40 truncate leading-none mt-0.5">
                 {isAIChat
                   ? '@nexo_ai'
                   : chat.type === 'personal'
@@ -810,62 +845,34 @@ function ChatHeader({
                   ? `${chat.members?.length || 0} участников`
                   : chat.type === 'channel'
                   ? 'Канал'
-                  : chat.type === 'secret'
-                  ? 'Секретный чат'
-                  : chat.type === 'system'
-                  ? 'Поддержка Нексо'
                   : ''}
               </p>
-              {!isAIChat && (
-                <EncryptionBadge
-                  chatId={chat.id}
-                  isE2E={chat.isE2E}
-                  isSecret={chat.isSecret}
-                  isChannel={chat.type === 'channel'}
-                  e2eReady={e2eReady}
-                  e2eFingerprint={e2eFingerprint}
-                />
-              )}
             </div>
-          </div>
+          </motion.button>
         </div>
 
+        {/* Right actions */}
         <div className="flex items-center gap-1">
-          {/* Pinned indicator */}
-          {pinnedMessages && pinnedMessages.length > 0 && (
-            <motion.button
-              onClick={() => setShowPinned(v => !v)}
-              className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors relative"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title="Закреплённые сообщения"
-            >
-              <Pin size={14} className="text-white/30" />
-              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white/15 flex items-center justify-center">
-                <span className="text-[8px] text-white/60">{pinnedMessages.length}</span>
-              </span>
-            </motion.button>
-          )}
+          <motion.button
+            onClick={onSearchToggle}
+            className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-white/60 hover:text-white"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            title="Поиск"
+          >
+            <Search size={17} />
+          </motion.button>
 
           {!isAIChat && (
             <>
               <motion.button
                 onClick={() => handleCall('voice')}
-                className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors relative group/callbtn"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Голосовой звонок"
+                className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-white/60 hover:text-green-400"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                title="Звонок"
               >
-                <Phone size={16} className="text-white/40 group-hover/callbtn:text-green-400 transition-colors" />
-              </motion.button>
-              <motion.button
-                onClick={() => handleCall('video')}
-                className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors relative group/callbtn"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Видеозвонок"
-              >
-                <Video size={16} className="text-white/40 group-hover/callbtn:text-blue-400 transition-colors" />
+                <Phone size={17} />
               </motion.button>
             </>
           )}
@@ -873,11 +880,11 @@ function ChatHeader({
           <div className="relative" ref={menuRef}>
             <motion.button
               onClick={() => setShowMenu(v => !v)}
-              className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-white/60 hover:text-white"
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
             >
-              <Menu size={16} className="text-white/40" />
+              <Menu size={17} />
             </motion.button>
 
             <AnimatePresence>
@@ -887,15 +894,15 @@ function ChatHeader({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -5 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-1 w-48 py-1.5 rounded-xl liquid-glass-strong z-50"
+                  className="absolute right-0 top-full mt-2 w-48 py-1.5 rounded-2xl liquid-glass-strong border border-white/[0.1] shadow-2xl z-50 text-xs"
                 >
                   <ChatMenuItem icon={Search} label="Поиск" onClick={onSearchToggle} />
                   <ChatMenuItem icon={BellOff} label="Отключить звук" />
                   <ChatMenuItem icon={Image} label="Медиафайлы" />
                   {chat.type === 'group' && <ChatMenuItem icon={Users} label="Участники" />}
                   <div className="mx-3 my-1 h-px bg-white/[0.06]" />
-                  <ChatMenuItem icon={Flag} label="Пожаловаться" className="text-red-400/70" />
-                  <ChatMenuItem icon={Trash2} label="Удалить чат" className="text-red-400/70" />
+                  <ChatMenuItem icon={Flag} label="Пожаловаться" className="text-red-400" />
+                  <ChatMenuItem icon={Trash2} label="Удалить чат" className="text-red-400" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -903,38 +910,33 @@ function ChatHeader({
         </div>
       </div>
 
-      {/* Pinned messages bar */}
-      <AnimatePresence>
-        {showPinned && pinnedMessages && pinnedMessages.length > 0 && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="flex-shrink-0 overflow-hidden border-b border-white/[0.06]"
-          >
-            <div className="px-3 py-2 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-[10px] text-white/30">
-                <Pin size={10} />
-                <span>Закреплённые сообщения</span>
-              </div>
-              {pinnedMessages.map(pm => (
-                <div key={pm.id} className="flex items-start gap-2 px-2 py-1 rounded-lg bg-white/[0.03]">
-                  <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Pin size={8} className="text-white/30" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] text-white/50 font-medium truncate">
-                      {pm.message.sender.displayName}
-                    </p>
-                    <p className="text-xs text-white/40 truncate">{pm.message.content}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+      {/* ─── Pinned Message Sub-Header Pill (Screenshot 1 TG Style) ───── */}
+      {latestPinned && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          className="flex items-center justify-between px-3.5 py-2 rounded-[20px] liquid-glass-strong border border-white/[0.08] border-l-4 border-l-blue-400 shadow-md"
+        >
+          <div className="min-w-0 flex-1 pr-2">
+            <p className="text-[11px] font-bold text-blue-400 flex items-center gap-1 font-display">
+              Закреплённое сообщение
+            </p>
+            <p className="text-xs text-white/70 truncate mt-0.5">
+              {latestPinned.message.content}
+            </p>
+          </div>
+          {onUnpinMessage && (
+            <button
+              onClick={() => onUnpinMessage(latestPinned.id)}
+              className="p-1 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </motion.div>
+      )}
+    </div>
   );
 }
 
@@ -1648,65 +1650,81 @@ function MessageInput({
         )}
       </AnimatePresence>
 
-      {/* Recording UI */}
+      {/* Recording UI — Telegram-style */}
       <AnimatePresence>
         {isRecording && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="px-3 py-3"
+            className="px-4 py-3"
           >
+            {/* Video circle preview */}
             {recordingType === 'video' && (
               <div className="flex justify-center mb-3">
-                <video
-                  ref={videoPreviewRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="w-24 h-24 rounded-full object-cover bg-black/40"
-                />
+                <div className="relative">
+                  <div className="w-[100px] h-[100px] rounded-full overflow-hidden border-[3px] border-white/10 shadow-[0_0_24px_rgba(0,0,0,0.4)]">
+                    <video
+                      ref={videoPreviewRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* Pulsing recording ring */}
+                  <div className="absolute inset-0 rounded-full border-2 border-red-400/60 animate-pulse pointer-events-none" />
+                </div>
               </div>
             )}
+
             <div className="flex items-center gap-3">
+              {/* Cancel (trash) button */}
               <motion.button
                 onClick={cancelRecording}
-                className="p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 transition-colors flex-shrink-0"
+                className="w-11 h-11 rounded-full bg-white/[0.06] hover:bg-red-500/15 border border-white/[0.06] hover:border-red-400/20 flex items-center justify-center transition-all flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.92 }}
                 title="Удалить запись"
               >
-                <Trash size={17} className="text-red-400" />
+                <Trash size={17} className="text-red-400/80" />
               </motion.button>
 
+              {/* Center: waveform + timer + hint */}
               <div className="flex-1 min-w-0 flex flex-col items-center">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse flex-shrink-0" />
-                  <div className="flex items-end gap-[3px] h-11" aria-hidden>
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div className="flex items-center gap-3">
+                  {/* Recording dot */}
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse flex-shrink-0 shadow-[0_0_8px_rgba(248,113,113,0.5)]" />
+                  {/* Waveform bars */}
+                  <div className="flex items-end gap-[3px] h-8" aria-hidden>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(i => (
                       <div
                         key={i}
                         ref={el => { eqBarRefs.current[i] = el; }}
-                        className="w-[3px] rounded-full bg-blue-400/80 transition-[height] duration-75 ease-out"
-                        style={{ height: '8px' }}
+                        className="w-[3px] rounded-full transition-[height] duration-75 ease-out"
+                        style={{
+                          height: '6px',
+                          background: recordSliding
+                            ? 'rgba(248, 113, 113, 0.8)'
+                            : `rgba(96, 165, 250, ${0.5 + (i / 12) * 0.5})`,
+                        }}
                       />
                     ))}
                   </div>
-                  <span className="text-sm text-white/80 font-mono min-w-[40px] tabular-nums">
+                  {/* Timer */}
+                  <span className="text-sm text-white/90 font-mono tabular-nums min-w-[36px]">
                     {formatDuration(recordingDuration)}
                   </span>
                 </div>
-                <span className={`flex items-center gap-1 text-[10px] mt-1 transition-colors ${recordSliding ? 'text-red-400' : 'text-white/40'}`}>
+                {/* Hint text */}
+                <span className={`flex items-center gap-1 text-[10px] mt-1.5 transition-all ${recordSliding ? 'text-red-400 opacity-100' : 'text-white/35'}`}>
                   {recordSliding ? (
                     <>
                       <ArrowLeft size={10} />
-                      Отпустите, чтобы отменить
+                      <span>Отпустите для отмены</span>
                     </>
                   ) : (
-                    <>
-                      {recordingType === 'video' ? <Camera size={10} /> : <Mic size={10} />}
-                      {recordingType === 'video' ? 'Видеокружок' : 'Голосовое'} · свайп влево — отмена
-                    </>
+                    <span>{recordingType === 'video' ? 'Видеокружок' : 'Голосовое сообщение'} · свайп влево — отмена</span>
                   )}
                 </span>
                 {recordingError && (
@@ -1714,14 +1732,15 @@ function MessageInput({
                 )}
               </div>
 
+              {/* Send button */}
               <motion.button
                 onClick={stopRecording}
-                className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors flex-shrink-0"
+                className="w-11 h-11 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center transition-all flex-shrink-0 shadow-[0_4px_16px_rgba(59,130,246,0.35)]"
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.92 }}
                 title="Отправить"
               >
-                <Send size={18} className="text-white" />
+                <Send size={18} className="text-white ml-0.5" />
               </motion.button>
             </div>
           </motion.div>
@@ -1781,21 +1800,19 @@ function MessageInput({
       {/* Main Input Area */}
       {!isRecording && (
         <div className="px-3 pb-3 pt-1">
-          <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-[28px] bg-white/[0.05] border border-white/[0.08] liquid-glass-strong shadow-[0_8px_32px_rgba(0,0,0,0.35)]">
-            {/* Emoji/Attach Button */}
-            <div className="relative">
-              <motion.button
-                onClick={() => setShowEmojiPanel(!showEmojiPanel)}
-                className="p-2 rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Smile size={18} className={showEmojiPanel ? 'text-blue-400' : 'text-white/40'} />
-              </motion.button>
-            </div>
+          <div className="flex items-end gap-1 bg-white/[0.04] border border-white/[0.08] rounded-[22px] px-1.5 py-1.5 liquid-glass-strong shadow-[0_4px_24px_rgba(0,0,0,0.3)]">
+            {/* Emoji Button */}
+            <motion.button
+              onClick={() => setShowEmojiPanel(!showEmojiPanel)}
+              className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/[0.06] transition-colors mb-px"
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+            >
+              <Smile size={19} className={showEmojiPanel ? 'text-blue-400' : 'text-white/35'} />
+            </motion.button>
 
             {/* Text Input */}
-            <div className="flex-1 relative">
+            <div className="flex-1 min-w-0 flex items-center">
               <textarea
                 ref={inputRef}
                 rows={1}
@@ -1803,20 +1820,20 @@ function MessageInput({
                 onChange={e => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Сообщение..."
-                className="w-full max-h-[132px] py-2.5 px-3 pr-9 text-sm bg-transparent border border-transparent rounded-full text-white/80 placeholder:text-white/25 outline-none resize-none leading-[1.35]"
+                className="w-full max-h-[120px] py-2 px-1 text-[15px] bg-transparent border-none text-white/90 placeholder:text-white/25 outline-none resize-none leading-[1.4]"
                 style={{ height: '40px', overflowY: 'auto' }}
               />
             </div>
 
             {/* Attach Button */}
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <motion.button
                 onClick={() => setShowAttach(!showAttach)}
-                className="p-2 rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/[0.06] transition-colors mb-px"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
               >
-                <Paperclip size={18} className={showAttach ? 'text-blue-400 rotate-45' : 'text-white/40'} />
+                <Paperclip size={19} className={showAttach ? 'text-blue-400 rotate-45' : 'text-white/35'} />
               </motion.button>
 
               {/* Attachment Panel */}
@@ -1827,7 +1844,7 @@ function MessageInput({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute bottom-full right-0 mb-2 p-2 rounded-xl liquid-glass-strong z-50 min-w-[200px]"
+                    className="absolute bottom-full right-0 mb-2 p-2 rounded-2xl liquid-glass-strong z-50 min-w-[200px]"
                   >
                     {ATTACHMENT_OPTIONS.map((opt, i) => (
                       <button
@@ -1842,17 +1859,15 @@ function MessageInput({
                             startRecording('video');
                           } else if (opt.label === 'Геопозиция') {
                             shareLocation();
-                          } else if (opt.label === 'Кошелёк') {
-                            setShowPremium(true);
                           }
                           setShowAttach(false);
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.06] transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.06] transition-colors"
                       >
                         <div className={`w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center ${opt.color}`}>
-                          <opt.icon size={16} />
+                          <opt.icon size={15} />
                         </div>
-                        <span className="text-xs text-white/70">{opt.label}</span>
+                        <span className="text-[13px] text-white/65">{opt.label}</span>
                       </button>
                     ))}
                   </motion.div>
@@ -1864,54 +1879,53 @@ function MessageInput({
             {text.trim() || selectedFiles.length > 0 ? (
               <motion.button
                 onClick={() => selectedFiles.length > 0 ? sendImages() : handleSubmit()}
-                className="p-2.5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-[0_4px_16px_rgba(59,130,246,0.4)] transition-all duration-200 flex-shrink-0"
+                className="w-9 h-9 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-[0_2px_12px_rgba(59,130,246,0.35)] transition-colors mb-px"
                 whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.94 }}
+                whileTap={{ scale: 0.92 }}
               >
-                <Send size={16} className="text-white" />
+                <Send size={15} className="text-white ml-0.5" />
               </motion.button>
             ) : (
               <>
-                {/* Mode toggle: voice ↔ video circle (hidden in AI chat — voice only) */}
+                {/* Mode toggle: voice ↔ video circle */}
                 {chatId !== AI_CHAT_ID && (
                   <motion.button
                     onClick={toggleRecType}
-                    className="p-2 rounded-full hover:bg-white/[0.06] transition-colors flex-shrink-0"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/[0.06] transition-colors mb-px"
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
                     title={recordingType === 'voice'
                       ? 'Переключить на видеокружок'
                       : 'Переключить на голосовое'}
                   >
                     {recordingType === 'voice'
-                      ? <Camera size={16} className="text-white/35" />
-                      : <Mic size={16} className="text-white/35" />}
+                      ? <Camera size={17} className="text-white/35" />
+                      : <Mic size={17} className="text-white/35" />}
                   </motion.button>
                 )}
 
-                {/* Record button — Telegram-style: hold to record, release to send,
-                    slide left to cancel */}
+                {/* Record button — hold to record */}
                 <motion.button
                   onPointerDown={handleRecordPointerDown}
                   onPointerMove={handleRecordPointerMove}
                   onPointerUp={handleRecordPointerUp}
                   onPointerCancel={handleRecordPointerCancel}
                   onPointerLeave={handleRecordPointerUp}
-                  className={`p-2.5 rounded-full transition-colors select-none flex-shrink-0 ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all select-none mb-px ${
                     recordingType === 'video'
-                      ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300'
-                      : 'bg-white/[0.06] hover:bg-white/10 text-white/50'
+                      ? 'bg-purple-500/15 hover:bg-purple-500/25 text-purple-300/80'
+                      : 'bg-white/[0.06] hover:bg-white/[0.1] text-white/45'
                   }`}
                   style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
                   title={chatId === AI_CHAT_ID
                     ? 'Зажать и говорить — Нексо AI распознает'
                     : recordingType === 'voice' ? 'Зажать — записать голосовое' : 'Зажать — записать видеокружок'}
                 >
                   {recordingType === 'voice'
-                    ? <Mic size={16} />
-                    : <Camera size={16} />}
+                    ? <Mic size={17} />
+                    : <Camera size={17} />}
                 </motion.button>
               </>
             )}
@@ -2408,7 +2422,6 @@ function TypingDots({ names }: { names: string[] }) {
 
 export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const { user } = useAuthStore();
-  const { startCall } = useCallContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -2448,6 +2461,10 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [aiTyping, setAiTyping] = useState(false);
   const typingResetTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  // Quick reactions & context menu
+  const [showQuickReactions, setShowQuickReactions] = useState<string | null>(null);
+  const [showContextMenu, setShowContextMenu] = useState<{ message: Message; position: { x: number; y: number } } | null>(null);
 
   // Bot API: reply-клавиатура и web app
   const [replyKeyboard, setReplyKeyboard] = useState<ReplyKeyboardMarkup | null>(null);
@@ -2785,6 +2802,36 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
     setShowEmojiPicker(null);
   }, [messages, user, chat.id]);
 
+  // Context menu handlers
+  const handleContextMenu = useCallback((message: Message, position: { x: number; y: number }) => {
+    setShowContextMenu({ message, position });
+    setShowQuickReactions(null);
+  }, []);
+
+  const handlePinMessage = useCallback(async (messageId: string) => {
+    try {
+      await api.post(`/chats/${chat.id}/pin`, { messageId });
+      toast.info('Закреплено', 'Сообщение закреплено в чате');
+    } catch (err) {
+      console.error('[Pin] Failed:', err);
+    }
+  }, [chat.id]);
+
+  const handleCopyText = useCallback((content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.info('Скопировано', 'Текст скопирован в буфер обмена');
+  }, []);
+
+  const handleDeleteMessage = useCallback(async (messageId: string, forEveryone: boolean) => {
+    try {
+      await api.delete(`/messages/${messageId}?forEveryone=${forEveryone}`);
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      toast.info('Удалено', forEveryone ? 'Сообщение удалено для всех' : 'Сообщение удалено');
+    } catch (err) {
+      console.error('[Delete] Failed:', err);
+    }
+  }, []);
+
   // Typing indicator
   useEffect(() => {
     if (chat.id === NOTES_CHAT_ID || chat.id === AI_CHAT_ID) return;
@@ -3079,10 +3126,22 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
                       isChannel={isChannel}
                       onReply={handleReplyTo}
                       onReact={handleToggleEmojiPicker}
+                      onContextMenu={handleContextMenu}
                       onCallback={handleBotCallback}
                       onWebApp={setWebAppUrl}
                       decryptedMediaUrl={decryptedMediaUrls[msg.id]}
                     />
+                    {/* Quick reactions for this message */}
+                    <AnimatePresence>
+                      {showQuickReactions === msg.id && (
+                        <div className={`absolute z-40 ${msg.senderId === user?.id ? 'left-0 -translate-x-full pl-2' : 'right-0 translate-x-full pr-2'}`}>
+                          <QuickReactions
+                            onSelect={(emoji) => handleReact(msg.id, emoji)}
+                            onClose={() => setShowQuickReactions(null)}
+                          />
+                        </div>
+                      )}
+                    </AnimatePresence>
                     {/* Emoji picker for this message */}
                     <AnimatePresence>
                       {showEmojiPicker === msg.id && (
@@ -3218,6 +3277,24 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
           <ForwardModal
             onClose={() => { setShowForward(null); setForwardingMsg(null); }}
             onForward={handleForward}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Message context menu */}
+      <AnimatePresence>
+        {showContextMenu && (
+          <MessageContextMenu
+            message={showContextMenu.message}
+            isOwn={showContextMenu.message.senderId === user?.id}
+            position={showContextMenu.position}
+            onClose={() => setShowContextMenu(null)}
+            onReply={handleReplyTo}
+            onForward={(msg) => { setShowForward(msg); setShowContextMenu(null); }}
+            onPin={handlePinMessage}
+            onCopy={handleCopyText}
+            onEdit={(msg) => { setReplyTo({ id: msg.id, content: msg.content || '', sender: msg.sender?.displayName || '' }); setShowContextMenu(null); }}
+            onDelete={handleDeleteMessage}
           />
         )}
       </AnimatePresence>

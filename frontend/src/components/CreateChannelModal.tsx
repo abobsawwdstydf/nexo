@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Radio, Hash, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
+import { getDomain } from '../lib/getDomain';
 
 interface CreateChannelModalProps {
   onClose: () => void;
@@ -104,7 +105,7 @@ export default function CreateChannelModal({ onClose, onCreated }: CreateChannel
             </div>
             {username.length >= 3 && (
               <p className="text-[10px] text-white/20 mt-1">
-                nexo.app/@{username}
+                {getDomain()}/@{username}
               </p>
             )}
           </div>

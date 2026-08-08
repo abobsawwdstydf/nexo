@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Lock, Globe, Server, Heart, Users, Zap, Mail, User, Video, Shield } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Lock, Globe, Server, Heart, Zap, Mail, User, Video, Shield } from 'lucide-react';
 
 export default function InfoPage({ onBack }: { onBack: () => void }) {
   const [mounted, setMounted] = useState(false);

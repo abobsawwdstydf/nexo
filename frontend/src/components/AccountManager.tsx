@@ -32,7 +32,6 @@ interface AccountManagerProps {
 }
 
 const ACCOUNTS_STORAGE_KEY = 'nexo_accounts';
-const CURRENT_ACCOUNT_KEY = 'nexo_current_account';
 
 function loadAccounts(): Account[] {
   try {
@@ -52,7 +51,7 @@ function generateAccountId(): string {
 }
 
 export default function AccountManager({ onClose }: AccountManagerProps) {
-  const { user, loginWithToken, logout } = useAuthStore();
+  const { user, loginWithToken } = useAuthStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [email, setEmail] = useState('');

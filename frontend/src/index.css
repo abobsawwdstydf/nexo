@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 
@@ -4184,51 +4184,6 @@ em-emoji-picker .Search {
 .animate-pop-in { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 .animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 .animate-fade-in-down { animation: fadeInDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-.animate-skeleton-pulse { animation: skeletonPulse 1.5s ease-in-out infinite; }
-
-
-/* ================================================================
-   MICRO-INTERACTIONS
-   ================================================================ */
-
-/* ── Interactive Lift ── */
-.interactive-lift {
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.2s ease;
-}
-.interactive-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-.interactive-lift:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* ── Glass Card Lift ── */
-.glass-card-lift {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.glass-card-lift:hover {
-  transform: translateY(-3px);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(255, 255, 255, 0.04),
-    var(--glass-shadow-inset);
-  border-color: var(--glass-border-hover);
-}
-
-/* ── Input Focus Glow ── */
-.input-glow {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.input-glow:focus {
-  border-color: rgba(163, 163, 163, 0.4);
-  box-shadow:
-    0 0 0 3px rgba(163, 163, 163, 0.1),
-    0 0 20px rgba(163, 163, 163, 0.05);
-  transform: translateY(-1px);
-}
 
 /* ── Button Pulse ── */
 .btn-pulse {
@@ -4359,5 +4314,55 @@ em-emoji-picker .Search {
 .bubble-sent-glow:hover { box-shadow: 0 4px 20px rgba(33,130,255,0.25), 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12); }
 .bubble-received-glow { box-shadow: 0 2px 12px rgba(139,92,246,0.1), 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06); }
 .bubble-received-glow:hover { box-shadow: 0 4px 20px rgba(139,92,246,0.18), 0 6px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08); }
-.bubble-received-glow { box-shadow: 0 2px 12px rgba(139,92,246,0.1), 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06); }
-.bubble-received-glow:hover { box-shadow: 0 4px 20px rgba(139,92,246,0.18), 0 6px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08); }
+
+/* ================================================================
+   PERFORMANCE MODE - Disable heavy effects on weak devices
+   ================================================================ */
+
+.perf-mode .liquid-glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(15, 15, 25, 0.95) !important;
+}
+
+.perf-mode .liquid-glass-strong {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(12, 12, 20, 0.98) !important;
+}
+
+.perf-mode .liquid-glass-subtle {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(18, 18, 30, 0.9) !important;
+}
+
+.perf-mode .liquid-glass-mega {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(10, 10, 18, 0.99) !important;
+}
+
+.perf-mode * {
+  will-change: auto !important;
+}
+
+.perf-mode .liquid-glass,
+.perf-mode .liquid-glass-strong,
+.perf-mode .liquid-glass-subtle,
+.perf-mode .liquid-glass-mega {
+  transform: translateZ(0);
+}
+
+/* Safe area padding for mobile bottom nav */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

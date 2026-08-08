@@ -4,10 +4,10 @@ import { ApiClient } from './core';
 declare module './core' {
   interface ApiClient {
     getChats(): Promise<Chat[]>;
-    createChat(data: { type: string; name?: string; username?: string; memberIds?: string[]; welcomeMessage?: string }): Promise<Chat>;
+    createChat(data: { type: string; name?: string; username?: string; description?: string; memberIds?: string[]; welcomeMessage?: string }): Promise<Chat>;
     createPersonalChat(userId: string): Promise<Chat>;
     createGroup(name: string, memberIds: string[], username?: string): Promise<Chat>;
-    createChannel(name: string, username: string, description?: string, avatarUrl?: string): Promise<Chat>;
+    createChannel(name: string, username: string, description?: string): Promise<Chat>;
     addChatMember(chatId: string, userId: string): Promise<{ id: string }>;
     getOrCreateFeedbackChat(): Promise<Chat>;
     adminListFeedback(): Promise<{ items: Array<{ chatId: string; name: string; avatar: string; members: number; messageCount: number; lastMessage: { content: string } | null; lastAt: string }>; total: number }>;
@@ -39,8 +39,8 @@ export function installChats(api: ApiClient): void {
     return api.createChat({ type: 'group', name, memberIds, username: username || undefined });
   };
 
-  api.createChannel = async (name: string, username: string, description?: string, avatarUrl?: string) => {
-    return api.createChat({ type: 'channel', name, username });
+  api.createChannel = async (name: string, username: string, description?: string) => {
+    return api.createChat({ type: 'channel', name, username, description: description || undefined });
   };
 
   api.addChatMember = async (chatId: string, userId: string) => {

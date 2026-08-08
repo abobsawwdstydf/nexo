@@ -103,8 +103,6 @@ export default function App() {
       {beta?.active && (
         <BetaBanner
           daysLeft={beta.daysLeft}
-          contactTg={beta.contactTg}
-          contactTt={beta.contactTt}
           message={beta.message}
         />
       )}

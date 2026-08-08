@@ -515,6 +515,7 @@ type CreateChatRequest struct {
 	Type           string   `json:"type"`
 	Name           string   `json:"name"`
 	Username       string   `json:"username"`
+	Description    string   `json:"description"`
 	MemberIDs      []string `json:"memberIds"`
 	IsSecret       bool     `json:"isSecret"`
 	IsE2E          bool     `json:"isE2E"`

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, ShieldCheck, ShieldAlert, Fingerprint, Lock, Copy, Check, Info } from 'lucide-react';
 
 interface EncryptionBadgeProps {
-  chatId: string;
   isE2E?: boolean;
   isSecret?: boolean;
   isChannel?: boolean;
@@ -11,7 +10,7 @@ interface EncryptionBadgeProps {
   e2eFingerprint?: string | null;
 }
 
-export function EncryptionBadge({ chatId, isE2E, isSecret, isChannel, e2eReady, e2eFingerprint }: EncryptionBadgeProps) {
+export function EncryptionBadge({ isE2E, isSecret, isChannel, e2eReady, e2eFingerprint }: EncryptionBadgeProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -24,7 +23,6 @@ export function EncryptionBadge({ chatId, isE2E, isSecret, isChannel, e2eReady, 
   const hasE2EPending = (isE2E || isSecret) && !e2eReady;
 
   const fingerprintPairs = (e2eFingerprint || '').match(/.{1,8}/g) || [];
-  const displayFingerprint = e2eFingerprint || '⏳ Установка соединения...';
 
   const handleCopy = useCallback(() => {
     if (!e2eFingerprint) return;

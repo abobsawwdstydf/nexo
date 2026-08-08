@@ -15,7 +15,6 @@ interface LinkMeta {
 
 interface LinkPreviewProps {
   url: string;
-  onOpen?: (url: string) => void;
   isOwn?: boolean;
 }
 
@@ -81,7 +80,6 @@ function isProbablySafe(url: string): boolean {
 
 function ConfirmDialog({ url, onConfirm, onCancel }: { url: string; onConfirm: () => void; onCancel: () => void }) {
   const safe = isProbablySafe(url);
-  const domain = extractDomain(url);
 
   return (
     <motion.div
@@ -140,7 +138,7 @@ function ConfirmDialog({ url, onConfirm, onCancel }: { url: string; onConfirm: (
   );
 }
 
-export function LinkPreview({ url, onOpen, isOwn }: LinkPreviewProps) {
+export function LinkPreview({ url, isOwn }: LinkPreviewProps) {
   const [meta, setMeta] = useState<LinkMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);

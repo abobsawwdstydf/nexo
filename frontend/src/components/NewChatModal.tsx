@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Search, UserPlus, Loader2, Users, Radio, MessageCircle, Hash, Check } from 'lucide-react';
 import { api } from '../lib/api';
 import { UserAvatar, OnlineDot } from './UserAvatar';
+import { getDomain } from '../lib/getDomain';
 import type { Chat, UserPresence } from '../lib/types';
 
 type CreateTab = 'personal' | 'group' | 'channel';
@@ -304,7 +305,7 @@ function GroupTab({ onClose, onChatCreated }: { onClose: () => void; onChatCreat
         </div>
         {username.length >= 3 && (
           <p className="text-[10px] text-white/20 mt-1">
-            nexo.app/@{username}
+            {getDomain()}/@{username}
           </p>
         )}
       </div>
@@ -478,7 +479,7 @@ function ChannelTab({ onClose, onChatCreated }: { onClose: () => void; onChatCre
         </div>
         {username.length >= 3 && (
           <p className="text-[10px] text-white/20 mt-1">
-            nexo.app/@{username}
+            {getDomain()}/@{username}
           </p>
         )}
       </div>

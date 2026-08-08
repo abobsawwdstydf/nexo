@@ -21,6 +21,8 @@ import { getNotesMessages, NOTES_CHAT_ID, NOTES_CHANGED_EVENT } from '../lib/api
 import { getAIMessages, AI_CHAT_ID, AI_CHANGED_EVENT } from '../lib/api/aiChat';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { playNotification } from '../lib/sounds';
+import { OnboardingModal } from '../components/OnboardingModal';
+import { usePerformanceMode } from '../hooks/usePerformanceMode';
 
 const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
@@ -60,6 +62,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const { user, logout } = useAuthStore();
   const { chats: initChats, loaded: initLoaded } = useInitStore();
   const callContext = useCallContext();
+  const isLowPerf = usePerformanceMode();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +76,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [showAccountManager, setShowAccountManager] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
+  const chatListRef = useRef<HTMLDivElement>(null);
 
   // Saved Messages virtual chat — memoized so it is not recreated (and notes are
   // not re-read from localStorage) on every render. Refreshes on notes changes.
@@ -207,6 +211,15 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   }, []);
 
   // ─── Handlers ─────────────────────────────────────────────────────────
+  const handleSearch = useCallback(() => {
+    setSearchQuery('');
+    const input = chatListRef.current?.querySelector('input[type="text"]') as HTMLInputElement | null;
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }, []);
+
   const handleSelectChat = useCallback((chatId: string) => {
     setSelectedChatId(chatId);
     setMobileView('chat');
@@ -291,6 +304,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
         <div className="flex-1 flex overflow-hidden rounded-[26px] border border-white/[0.08] liquid-glass-strong shadow-[0_0_60px_rgba(0,0,0,0.45)]">
         {/* ─── Chat List Sidebar ────────────────────────────────────── */}
         <div
+          ref={chatListRef}
           className={`
             w-full md:w-[360px] md:min-w-[320px] flex-shrink-0
             ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}
@@ -387,6 +401,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
           onChats={() => { setShowFriends(false); setMobileView('list'); }}
           onFriends={() => { setShowFriends(true); setMobileView('list'); }}
           onSettings={() => handleOpenSettings('general')}
+          onSearch={handleSearch}
           onProfile={handleOpenProfile}
         />
       )}
