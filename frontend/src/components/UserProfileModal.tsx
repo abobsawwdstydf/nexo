@@ -31,9 +31,10 @@ interface UserProfileModalProps {
   onClose: () => void;
   onOpenSettings: (tab?: string) => void;
   onLogout: () => void;
+  onOpenAdmin?: () => void;
 }
 
-export default function UserProfileModal({ user, onClose, onOpenSettings, onLogout }: UserProfileModalProps) {
+export default function UserProfileModal({ user, onClose, onOpenSettings, onLogout, onOpenAdmin }: UserProfileModalProps) {
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -149,6 +150,15 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
 
           {/* Quick Action buttons */}
           <div className="grid grid-cols-2 gap-2 mt-6">
+            {user.isAdmin && onOpenAdmin && (
+              <button
+                onClick={() => { onClose(); onOpenAdmin(); }}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-accent/15 hover:bg-accent/25 border border-accent/20 text-xs font-medium text-accent transition-all col-span-2"
+              >
+                <Shield size={15} />
+                Панель модерации
+              </button>
+            )}
             <button
               onClick={() => { onClose(); onOpenSettings('general'); }}
               className="flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-xs font-medium text-white/80 transition-all"

@@ -18,6 +18,7 @@ interface InitState extends InitData {
   loaded: boolean;
   setInit: (data: InitData) => void;
   addChat: (chat: Chat) => void;
+  setStories: (stories: StoryGroup[]) => void;
 }
 
 const defaults: InitData = {
@@ -50,5 +51,9 @@ export const useInitStore = create<InitState>((set, get) => ({
   addChat: (chat) => {
     if (get().chats.some(c => c.id === chat.id)) return;
     set({ chats: [chat, ...get().chats] });
+  },
+
+  setStories: (stories) => {
+    set({ stories });
   },
 }));

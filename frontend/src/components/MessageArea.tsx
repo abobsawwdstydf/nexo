@@ -828,8 +828,8 @@ function ChatHeader({
                 className="w-8 h-8 rounded-full object-cover flex-shrink-0"
               />
             ) : isAIChat ? (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/25 to-fuchsia-500/25 border border-violet-500/25 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={14} className="text-violet-300" />
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-violet-500/25 flex-shrink-0 bg-violet-500/15">
+                <img src="/НуЧе.png" alt="AI" className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/[0.05] flex items-center justify-center flex-shrink-0">

@@ -62,6 +62,7 @@ export interface User extends UserPresence {
   subscribersCount?: number;
   postsCount?: number;
   profileMusic?: string | null;
+  isAdmin?: boolean;
 }
 
 // ─── Premium types ─────────────────────────────────────────────────────

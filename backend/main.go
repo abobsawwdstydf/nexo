@@ -440,6 +440,7 @@ nexo_up 1
 	// ─── Admin Badges ────────────────────────────────────────────────────
 	auth.Post("/admin/badges", handlers.SetUserBadge)
 	auth.Delete("/admin/badges", handlers.ClearUserBadge)
+	auth.Get("/admin/reports", handlers.AdminListReports)
 
 	// ─── System Feedback Chat ────────────────────────────────────────────
 	auth.Post("/feedback/chat", handlers.GetOrCreateFeedbackChat)

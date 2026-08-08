@@ -366,3 +366,66 @@ func ReportChat(c *fiber.Ctx) error {
 
 	return c.Status(201).JSON(fiber.Map{"ok": true, "action": "report_chat"})
 }
+
+// AdminListReports returns recent moderation logs (reports, bans, mutes) for
+// the platform admin dashboard. Admin only.
+func AdminListReports(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+	if !isPlatformAdmin(userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Admin only"})
+	}
+
+	var logs []models.ModerationLog
+	if result := db.GetDB().
+		Order("created_at DESC").
+		Limit(100).
+		Find(&logs); result.Error != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load moderation logs"})
+	}
+
+	// Enrich with actor / target names for display.
+	type reportJSON struct {
+		ID        string `json:"id"`
+		ChatID    string `json:"chatId"`
+		TargetID  string `json:"targetId"`
+		ActorID   string `json:"actorId"`
+		Action    string `json:"action"`
+		Reason    string `json:"reason"`
+		Duration  int    `json:"duration"`
+		CreatedAt string `json:"createdAt"`
+		ActorName string `json:"actorName"`
+		ChatName  string `json:"chatName"`
+	}
+	items := make([]reportJSON, 0, len(logs))
+	for _, l := range logs {
+		item := reportJSON{
+			ID:        l.ID,
+			ChatID:    l.ChatID,
+			TargetID:  l.TargetID,
+			ActorID:   l.ActorID,
+			Action:    l.Action,
+			Reason:    l.Reason,
+			Duration:  l.Duration,
+			CreatedAt: l.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		}
+		var actor models.User
+		if err := db.GetDB().Select("display_name, username").First(&actor, "id = ?", l.ActorID).Error; err == nil {
+			item.ActorName = actor.DisplayName
+			if item.ActorName == "" {
+				item.ActorName = actor.Username
+			}
+		}
+		if l.ChatID != "" {
+			var chat models.Chat
+			if err := db.GetDB().Select("name, username").First(&chat, "id = ?", l.ChatID).Error; err == nil {
+				item.ChatName = chat.Name
+				if item.ChatName == "" {
+					item.ChatName = chat.Username
+				}
+			}
+		}
+		items = append(items, item)
+	}
+
+	return c.JSON(fiber.Map{"items": items, "total": len(items)})
+}

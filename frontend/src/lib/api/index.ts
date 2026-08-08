@@ -9,6 +9,8 @@ import { installFeatures } from './features';
 import { installRealtime } from './realtime';
 import { installBots } from './bots';
 import { installUserStickers } from './userStickers';
+import { installStories } from './stories';
+import { installAdmin } from './admin';
 
 const api = new ApiClient();
 
@@ -23,6 +25,8 @@ installFeatures(api);
 installRealtime(api);
 installBots(api);
 installUserStickers(api);
+installStories(api);
+installAdmin(api);
 
 export { api };
 export default api;

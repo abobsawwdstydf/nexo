@@ -23,6 +23,10 @@ import { MobileBottomNav } from '../components/MobileBottomNav';
 import { playNotification } from '../lib/sounds';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { usePerformanceMode } from '../hooks/usePerformanceMode';
+import { StoriesViewer } from '../components/StoryViewer';
+import { StoryCreateModal } from '../components/StoryCreateModal';
+import AdminPanel from '../components/AdminPanel';
+import type { StoryGroup } from '../lib/types';
 
 const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
@@ -61,6 +65,7 @@ function MessengerBackground() {
 export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => void }) {
   const { user, logout } = useAuthStore();
   const { chats: initChats, loaded: initLoaded } = useInitStore();
+  const storyGroups = useInitStore(s => s.stories);
   const callContext = useCallContext();
   const isLowPerf = usePerformanceMode();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -74,6 +79,9 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [showFriends, setShowFriends] = useState(false);
   const [createTab, setCreateTab] = useState<null | 'personal' | 'group' | 'channel'>(null);
   const [showAccountManager, setShowAccountManager] = useState(false);
+  const [showStoryCreate, setShowStoryCreate] = useState(false);
+  const [storyViewerGroup, setStoryViewerGroup] = useState<number | null>(null);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
   const chatListRef = useRef<HTMLDivElement>(null);
@@ -332,6 +340,8 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
               onNewChat={handleOpenNewChat}
               onOpenAccountManager={handleOpenAccountManager}
               onOpenFeedback={handleOpenFeedback}
+              onCreateStory={() => setShowStoryCreate(true)}
+              onOpenStory={(idx) => setStoryViewerGroup(idx)}
             />
           )}
         </div>
@@ -413,7 +423,15 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
             onClose={() => setShowProfile(false)}
             onOpenSettings={handleOpenSettings}
             onLogout={logout}
+            onOpenAdmin={() => setShowAdmin(true)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Admin panel (platform admins only) */}
+      <AnimatePresence>
+        {showAdmin && (
+          <AdminPanel onClose={() => setShowAdmin(false)} />
         )}
       </AnimatePresence>
 
@@ -442,6 +460,27 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
         {showAccountManager && (
           <AccountManager
             onClose={() => setShowAccountManager(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Story creator */}
+      <AnimatePresence>
+        {showStoryCreate && (
+          <StoryCreateModal
+            onClose={() => setShowStoryCreate(false)}
+            onCreated={() => {}}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Story viewer */}
+      <AnimatePresence>
+{storyViewerGroup !== null && storyGroups.length > 0 && (
+              <StoriesViewer
+            groups={storyGroups}
+            initialGroupIndex={Math.min(storyViewerGroup, storyGroups.length - 1)}
+            onClose={() => setStoryViewerGroup(null)}
           />
         )}
       </AnimatePresence>

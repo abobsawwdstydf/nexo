@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+﻿import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -29,6 +29,7 @@ import { AI_CHAT_ID } from '../lib/api/aiChat';
 import { VerifiedBadge } from './VerifiedBadge';
 import { AnimatedEmoji } from './AnimatedEmoji';
 import { StoriesBar } from './StoriesBar';
+import { useInitStore } from '../stores/initStore';
 
 interface ChatListProps {
   chats: Chat[];
@@ -45,6 +46,8 @@ interface ChatListProps {
   onNewChat: () => void;
   onOpenAccountManager: () => void;
   onOpenFeedback: () => void;
+  onCreateStory: () => void;
+  onOpenStory: (groupIndex: number) => void;
 }
 
 const CATEGORIES = [
@@ -87,8 +90,12 @@ function ChatAvatar({ chat }: { chat: Chat }) {
   }
   if (chat.id === AI_CHAT_ID) {
     return (
-      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500/25 to-fuchsia-500/25 border border-violet-500/25 flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_rgba(139,92,246,0.25)]">
-        <Sparkles size={18} className="text-violet-300" />
+      <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border border-violet-500/25 shadow-[0_0_20px_rgba(139,92,246,0.25)] bg-violet-500/15">
+        <img
+          src="/НуЧе.png"
+          alt="AI"
+          className="w-full h-full object-cover"
+        />
       </div>
     );
   }
@@ -233,6 +240,8 @@ export function ChatList({
   onNewChat,
   onOpenAccountManager,
   onOpenFeedback,
+  onCreateStory,
+  onOpenStory,
 }: ChatListProps) {
   const [activeFolder, setActiveFolder] = useState('all');
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
@@ -242,6 +251,7 @@ export function ChatList({
     try { return JSON.parse(localStorage.getItem('nexo_muted_chats') || '[]'); } catch { return []; }
   });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
+  const storyGroups = useInitStore(s => s.stories);
 
   const togglePin = (chatId: string) => {
     setPinnedIds(prev => {
@@ -284,14 +294,6 @@ export function ChatList({
     });
   }, [chats, searchQuery, activeFolder, pinnedIds]);
 
-  // Mock Stories List for TG 2026 header experience
-  const stories = [
-    { id: 'me', name: 'Моя история', avatar: user?.avatar, isMe: true },
-    { id: '1', name: 'АСТ-54', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' },
-    { id: '2', name: 'Лысый из...', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' },
-    { id: '3', name: 'Новосиб...', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
-  ];
-
   return (
     <div className="flex flex-col h-full bg-[#0a0a0f] border-r border-white/[0.06] relative">
       {/* ─── Top Header Bar (Screenshot 2 TG Style) ──────────────── */}
@@ -318,31 +320,13 @@ export function ChatList({
       </div>
 
       {/* ─── Stories Horizontal Scroll (Screenshot 2) ──────────────── */}
-      <div className="flex-shrink-0 px-3 py-2 border-b border-white/[0.04] overflow-x-auto no-scrollbar flex items-center gap-3">
-        {stories.map(story => (
-          <button
-            key={story.id}
-            onClick={onOpenProfile}
-            className="flex flex-col items-center gap-1 min-w-[54px] group"
-          >
-            <div className={`relative w-12 h-12 rounded-full p-0.5 ${story.isMe ? 'bg-gradient-to-tr from-accent to-accent-dark' : 'bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500'}`}>
-              <img
-                src={story.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                alt={story.name}
-                className="w-full h-full rounded-full object-cover border-2 border-[#0a0a0f]"
-              />
-              {story.isMe && (
-                <span className="absolute bottom-0 right-0 p-0.5 rounded-full bg-accent text-white border border-[#0a0a0f]">
-                  <Plus size={10} strokeWidth={3} />
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] text-white/50 group-hover:text-white/80 truncate w-14 text-center">
-              {story.name}
-            </span>
-          </button>
-        ))}
-      </div>
+      <StoriesBar
+        myAvatar={user?.avatar ?? null}
+        myName={user?.displayName || user?.username || ''}
+        groups={storyGroups}
+        onCreate={onCreateStory}
+        onOpenGroup={onOpenStory}
+      />
 
       {/* ─── Search Bar Pill Widget (Screenshot 2) ────────────────── */}
       <div className="flex-shrink-0 px-3 py-2">
