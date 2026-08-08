@@ -969,7 +969,7 @@ function MessageInput({
   chatId,
   e2eReady,
 }: {
-  onSend: (text: string, options?: { replyToId?: string; media?: any[]; isEncrypted?: boolean; encryptedContent?: string }) => void;
+  onSend: (text: string, options?: { replyToId?: string; media?: any[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string }) => void;
   replyTo?: { id: string; content: string; sender: string } | null;
   onCancelReply?: () => void;
   chatId: string;
@@ -1237,11 +1237,21 @@ function MessageInput({
     try {
       const gifUrl = gif.url || gif.originalUrl;
       if (!gifUrl) return;
-      const response = await fetch(gifUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `gif_${Date.now()}.gif`, { type: 'image/gif' });
-      const media = await api.uploadFile(file);
-      onSend('', { media: [media] });
+      // Мгновенная отправка: сервер сам скачивает GIF по URL (самохостинг).
+      // Превью показывается сразу в чате, пока сервер импортирует файл.
+      const thumbUrl = gif.thumbnailUrl || gif.previewUrl || gifUrl;
+      onSend('', {
+        gifUrl,
+        media: [{
+          id: `gif_${Date.now()}`,
+          type: 'photo',
+          url: thumbUrl,
+          thumbnail: thumbUrl,
+          filename: 'gif.gif',
+          size: 0,
+          duration: 0,
+        }],
+      });
       setShowEmojiPanel(false);
     } catch (err) {
       console.error('[GIF] Failed to send:', err);
@@ -2616,7 +2626,7 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
   }, []);
 
   // Send message
-  const handleSend = useCallback(async (text: string, options?: { replyToId?: string; media?: any[]; isEncrypted?: boolean; encryptedContent?: string }) => {
+  const handleSend = useCallback(async (text: string, options?: { replyToId?: string; media?: any[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string }) => {
     try {
       const optimisticId = `opt_${Date.now()}`;
       const media = options?.media;

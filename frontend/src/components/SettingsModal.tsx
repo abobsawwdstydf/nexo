@@ -18,7 +18,6 @@ import {
   MessageCircle,
   Phone,
   Users,
-  ChevronRight,
   Check,
   Monitor,
   Radio,

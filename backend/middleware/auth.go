@@ -26,31 +26,32 @@ var (
 	JWTRefreshSecret []byte
 )
 
-// SetRefreshCookie sets an HTTP-only, secure cookie for the refresh token.
-func SetRefreshCookie(c *fiber.Ctx, refreshToken string) {
-	secure := c.Protocol() == "https"
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		Path:     "/api/auth",
-		HTTPOnly: true,
-		Secure:   secure,
-		SameSite: "Strict",
-		MaxAge:   30 * 24 * 60 * 60, // 30 days
+// ValidateAccessTokenString parses and validates an access token without
+// touching the request context (used by token-gated routes like /uploads).
+func ValidateAccessTokenString(tokenString string) bool {
+	if tokenString == "" {
+		return false
+	}
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
+		}
+		return JWTSecret, nil
 	})
-}
+	if err != nil || !token.Valid {
+		return false
+	}
 
-// ClearRefreshCookie clears the refresh token cookie (for logout).
-func ClearRefreshCookie(c *fiber.Ctx) {
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    "",
-		Path:     "/api/auth",
-		HTTPOnly: true,
-		Secure:   c.Protocol() == "https",
-		SameSite: "Strict",
-		MaxAge:   -1,
-	})
+	// Ban check
+	var user models.User
+	if result := db.GetDB().First(&user, "id = ?", claims.UserID); result.Error != nil {
+		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			log.Printf("error: upload token ban check failed for user %s: %v", claims.UserID, result.Error)
+		}
+		return false
+	}
+	return !user.IsBanned
 }
 
 // Refresh token blacklist

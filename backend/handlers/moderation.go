@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -329,4 +330,39 @@ func ClearUserBadge(c *fiber.Ctx) error {
 	})
 
 	return c.JSON(fiber.Map{"ok": true, "action": "clear_badge"})
+}
+
+// ReportChat lets any chat member report a chat to the platform moderators.
+// Logged into ModerationLog with action "report_chat" so admins can review.
+func ReportChat(c *fiber.Ctx) error {
+	chatID := c.Params("id")
+	userID := c.Locals("userId").(string)
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	req.Reason = strings.TrimSpace(req.Reason)
+	if len([]rune(req.Reason)) > 1000 {
+		return c.Status(400).JSON(fiber.Map{"error": "Reason too long (max 1000 characters)"})
+	}
+
+	// Only chat members can report the chat
+	var member models.ChatMember
+	if result := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&member); result.Error != nil {
+		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
+	}
+
+	db.GetDB().Create(&models.ModerationLog{
+		ID:       generateID(),
+		ChatID:   chatID,
+		TargetID: chatID,
+		ActorID:  userID,
+		Action:   "report_chat",
+		Reason:   req.Reason,
+	})
+
+	return c.Status(201).JSON(fiber.Map{"ok": true, "action": "report_chat"})
 }

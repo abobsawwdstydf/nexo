@@ -225,8 +225,6 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate refresh token"})
 	}
 
-	middleware.SetRefreshCookie(c, refreshToken)
-
 	return c.Status(201).JSON(models.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -292,8 +290,6 @@ func LoginConfirm(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate refresh token"})
 	}
-
-	middleware.SetRefreshCookie(c, refreshToken)
 
 	return c.JSON(models.AuthResponse{
 		AccessToken:  accessToken,
@@ -479,11 +475,6 @@ func RefreshToken(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	// Support both body-based and HTTP-only cookie-based refresh tokens
-	if req.RefreshToken == "" {
-		req.RefreshToken = c.Cookies("refresh_token")
-	}
-
 	if req.RefreshToken == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Refresh token required"})
 	}
@@ -516,8 +507,6 @@ func RefreshToken(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate refresh token"})
 	}
-
-	middleware.SetRefreshCookie(c, refreshToken)
 
 	return c.JSON(fiber.Map{
 		"accessToken":  accessToken,
@@ -655,7 +644,6 @@ func SearchUsers(c *fiber.Ctx) error {
 
 func Logout(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
-	middleware.ClearRefreshCookie(c)
 	db.GetDB().Model(&models.User{}).Where("id = ?", userID).Update("is_online", false)
 	return c.JSON(fiber.Map{"ok": true})
 }

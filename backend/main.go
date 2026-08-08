@@ -435,6 +435,7 @@ nexo_up 1
 	auth.Post("/chats/:id/moderation/mute", handlers.MuteUser)
 	auth.Post("/chats/:id/moderation/kick", handlers.KickUser)
 	auth.Post("/chats/:id/moderation/slow-mode", handlers.SetSlowMode)
+	auth.Post("/chats/:id/report", handlers.ReportChat)
 
 	// ─── Admin Badges ────────────────────────────────────────────────────
 	auth.Post("/admin/badges", handlers.SetUserBadge)
@@ -675,8 +676,9 @@ nexo_up 1
 	// WebSocket
 	app.Get("/ws/chat", websocket.New(handlers.HandleWebSocket))
 
-	// Serve uploaded files (avatars, cloud storage, badges)
-	app.Static("/uploads", handlers.UploadDir())
+	// Serve uploaded files (avatars, cloud storage, badges) — token-gated,
+	// so unauthenticated users cannot enumerate or leech uploads
+	app.Get("/uploads/*", handlers.ServeUploadedFile)
 
 	// Frontend - serve from frontend/dist (one level up from backend)
 	frontendDir := "../frontend/dist"

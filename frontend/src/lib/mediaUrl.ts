@@ -27,5 +27,17 @@ export function normalizeMediaUrl(url: string | null | undefined): string {
   // Относительный путь — добавляем API_URL или оставляем как есть (same origin)
   const apiUrl = getApiUrl();
   const base = apiUrl ? apiUrl.replace(/\/$/, '') : '';
+
+  // /uploads/* файлы теперь защищены токеном доступа на сервере —
+  // подставляем его в query, чтобы медиа продолжали загружаться
+  if (path.startsWith('/uploads/')) {
+    try {
+      const token = localStorage.getItem('nexo_access_token');
+      if (token) {
+        path += (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+      }
+    } catch { /* localStorage not available */ }
+  }
+
   return `${base}${path}`;
 }

@@ -431,6 +431,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 		Type             string         `json:"type"`
 		ReplyTo          string         `json:"replyToId"`
 		Media            []MediaPayload `json:"media"`
+		GifURL           string         `json:"gifUrl"`
 		IsEncrypted      bool           `json:"isEncrypted"`
 		EncryptedContent string         `json:"encryptedContent"`
 		EncryptedIV      string         `json:"encryptedIv"`
@@ -443,7 +444,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	if payload.ChatID == "" {
 		return errWSMissingField("chatId")
 	}
-	if payload.Content == "" && payload.Type == "" {
+	if payload.Content == "" && payload.Type == "" && payload.GifURL == "" {
 		return errWSMissingField("content")
 	}
 	if len(payload.Media) > 10 {
@@ -455,7 +456,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	if payload.Type == "" {
 		payload.Type = "text"
 	}
-	if payload.Type == "text" && payload.Content == "" {
+	if payload.Type == "text" && payload.Content == "" && payload.GifURL == "" {
 		return errWSMissingField("content")
 	}
 	if utf8.RuneCountInString(payload.Content) > maxMessageContentLength {
@@ -468,6 +469,19 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	var member models.ChatMember
 	if result := db.GetDB().Where("chat_id = ? AND user_id = ?", payload.ChatID, userID).First(&member); result.Error != nil {
 		return errWSNotMember
+	}
+
+	// Instant GIF import: download the GIF server-side before creating the
+	// message, so recipients get a self-hosted copy and never see hotlinks.
+	if payload.GifURL != "" {
+		gifMedia, err := ImportGifFromURL(payload.GifURL)
+		if err != nil {
+			return &wsError{Code: "gif_import_failed", Message: "Could not import GIF from URL"}
+		}
+		payload.Media = append([]MediaPayload{gifMedia}, payload.Media...)
+		if payload.Type == "text" || payload.Type == "" {
+			payload.Type = "photo"
+		}
 	}
 
 	// Slow mode check � via chat's SlowModeInterval (seconds)

@@ -9,7 +9,7 @@ export interface PushSubscriptionJSON {
 
 declare module './core' {
   interface ApiClient {
-    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string }): Promise<{ messageId: string; createdAt: string }>;
+    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string }): Promise<{ messageId: string; createdAt: string }>;
     // WS RPC data fetchers
     fetchMessagesWS(chatId: string, cursor?: string, limit?: number): Promise<{ messages: Message[]; hasMore: boolean }>;
     fetchFriendsWS(): Promise<FriendWithId[]>;
@@ -26,7 +26,7 @@ export function installRealtime(api: ApiClient): void {
    * Send message via WebSocket.
    * Falls back to HTTP if WS is not connected.
    */
-  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string }): Promise<{ messageId: string; createdAt: string }> => {
+  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string }): Promise<{ messageId: string; createdAt: string }> => {
     const socket = getSocket();
     if (socket?.connected) {
       return wsRequest('send_message', {
@@ -35,6 +35,7 @@ export function installRealtime(api: ApiClient): void {
         type: options?.type,
         replyToId: options?.replyToId,
         media: options?.media,
+        gifUrl: options?.gifUrl,
         isEncrypted: options?.isEncrypted,
         encryptedContent: options?.encryptedContent,
         encryptedIv: options?.encryptedIv,
