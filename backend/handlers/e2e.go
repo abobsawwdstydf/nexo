@@ -218,6 +218,12 @@ func InitSession(c *fiber.Ctx) error {
 
 	database := db.GetDB()
 
+	// Проверяем что вызывающий пользователь — участник чата
+	var membership models.ChatMember
+	if err := database.Where("chat_id = ? AND user_id = ?", req.ChatID, userID).First(&membership).Error; err != nil {
+		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
+	}
+
 	// Проверяем что оба участника в чате
 	var members []models.ChatMember
 	database.Where("chat_id = ?", req.ChatID).Find(&members)

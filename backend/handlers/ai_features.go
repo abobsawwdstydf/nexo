@@ -1,13 +1,15 @@
 ﻿package handlers
 
 import (
-	"nexo/ai"
-	"nexo/db"
-	"nexo/models"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"nexo/ai"
+	"nexo/db"
+	"nexo/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -36,7 +38,7 @@ func TranslateMessage(c *fiber.Ctx) error {
 
 	// Log translation
 	userID := c.Locals("userId").(string)
-	log := models.TranslationLog{
+	transLog := models.TranslationLog{
 		ID:           generateID(),
 		UserID:       userID,
 		MessageID:    req.MessageID,
@@ -46,7 +48,9 @@ func TranslateMessage(c *fiber.Ctx) error {
 		Translated:   translated,
 		CreatedAt:    time.Now(),
 	}
-	db.GetDB().Create(&log)
+	if err := db.GetDB().Create(&transLog).Error; err != nil {
+		log.Printf("[AIFeatures] failed to log translation: %v", err)
+	}
 
 	return c.JSON(fiber.Map{
 		"translated": translated,
@@ -173,7 +177,9 @@ func SetAutoReplyConfig(c *fiber.Ctx) error {
 		req.UserID = userID
 		req.CreatedAt = time.Now()
 		req.UpdatedAt = time.Now()
-		db.GetDB().Create(&req)
+		if err := db.GetDB().Create(&req).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save auto-reply config"})
+		}
 	} else {
 		db.GetDB().Model(&existing).Updates(map[string]interface{}{
 			"is_enabled":   req.IsEnabled,
@@ -270,7 +276,7 @@ func ProcessVoiceCommand(c *fiber.Ctx) error {
 	}
 
 	// Log command
-	log := models.VoiceCommand{
+	voiceLog := models.VoiceCommand{
 		ID:        generateID(),
 		UserID:    userID,
 		Command:   "voice",
@@ -279,7 +285,9 @@ func ProcessVoiceCommand(c *fiber.Ctx) error {
 		Executed:  true,
 		CreatedAt: time.Now(),
 	}
-	db.GetDB().Create(&log)
+	if err := db.GetDB().Create(&voiceLog).Error; err != nil {
+		log.Printf("[AIFeatures] failed to log voice command: %v", err)
+	}
 
 	return c.JSON(fiber.Map{
 		"command":    "voice",
@@ -318,7 +326,9 @@ func CreateSmartReminder(c *fiber.Ctx) error {
 		CreatedBy:   "user",
 		CreatedAt:   time.Now(),
 	}
-	db.GetDB().Create(&reminder)
+	if err := db.GetDB().Create(&reminder).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create reminder"})
+	}
 
 	return c.Status(201).JSON(reminder)
 }
@@ -398,7 +408,9 @@ func RunPrivacyAudit(c *fiber.Ctx) error {
 
 	// Save audit results
 	for i := range issues {
-		db.GetDB().Create(&issues[i])
+		if err := db.GetDB().Create(&issues[i]).Error; err != nil {
+			log.Printf("[AIFeatures] failed to save privacy audit issue: %v", err)
+		}
 	}
 
 	return c.JSON(fiber.Map{

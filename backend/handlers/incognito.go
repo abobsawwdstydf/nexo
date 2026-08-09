@@ -45,7 +45,9 @@ func CreateIncognitoChat(c *fiber.Ctx) error {
 		ExpiresAt:   expiresAt,
 		CreatedAt:   time.Now(),
 	}
-	db.GetDB().Create(&chat)
+	if err := db.GetDB().Create(&chat).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create incognito chat"})
+	}
 
 	// Add creator as member
 	member := models.IncognitoMember{
@@ -55,7 +57,9 @@ func CreateIncognitoChat(c *fiber.Ctx) error {
 		Alias:    generateAlias(),
 		JoinedAt: time.Now(),
 	}
-	db.GetDB().Create(&member)
+	if err := db.GetDB().Create(&member).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create incognito chat"})
+	}
 
 	return c.Status(201).JSON(chat)
 }
@@ -100,7 +104,9 @@ func JoinIncognitoChat(c *fiber.Ctx) error {
 		Alias:    generateAlias(),
 		JoinedAt: time.Now(),
 	}
-	db.GetDB().Create(&member)
+	if err := db.GetDB().Create(&member).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to join incognito chat"})
+	}
 
 	db.GetDB().Model(&chat).Update("message_count", count+1)
 

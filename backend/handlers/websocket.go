@@ -253,7 +253,9 @@ func handleReaction(client *ws.Client, env *wsEnvelope) error {
 	// Toggle reaction
 	var existing models.Reaction
 	if result := db.GetDB().Where("message_id = ? AND user_id = ? AND emoji = ?", payload.MessageID, userID, payload.Emoji).First(&existing); result.Error == nil {
-		db.GetDB().Delete(&existing)
+		if err := db.GetDB().Delete(&existing).Error; err != nil {
+			return errWSServerError
+		}
 		ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("message:reaction_removed", map[string]string{
 			"messageId": payload.MessageID,
 			"userId":    userID,
@@ -540,7 +542,9 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 			if mediaRecord.ID == "" {
 				mediaRecord.ID = generateID()
 			}
-			db.GetDB().Create(&mediaRecord)
+			if err := db.GetDB().Create(&mediaRecord).Error; err != nil {
+				log.Printf("[WS] failed to save media record: %v", err)
+			}
 		}
 	}
 

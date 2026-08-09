@@ -284,7 +284,9 @@ func sendBotMessageToChat(bot models.Bot, chatID, content, msgType string, media
 		m.ID = generateID()
 		m.MessageID = msg.ID
 		m.Order = i
-		db.GetDB().Create(&m)
+		if err := db.GetDB().Create(&m).Error; err != nil {
+			log.Printf("[BotAPI] failed to save media: %v", err)
+		}
 	}
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now)
 
@@ -478,7 +480,9 @@ func parseReplyMarkup(c *fiber.Ctx, bot models.Bot, chatID string) (string, erro
 		var state models.BotChatState
 		if err := db.GetDB().Where("id = ?", stateID).First(&state).Error; err != nil {
 			state = models.BotChatState{ID: stateID, BotID: bot.ID, ChatID: chatID, ReplyMarkup: string(data)}
-			db.GetDB().Create(&state)
+			if err := db.GetDB().Create(&state).Error; err != nil {
+				log.Printf("[BotAPI] failed to save chat state: %v", err)
+			}
 		} else {
 			db.GetDB().Model(&state).Update("reply_markup", string(data))
 		}
@@ -768,7 +772,9 @@ func botLeaveChat(c *fiber.Ctx, bot models.Bot) error {
 		Type:      "system",
 		CreatedAt: time.Now(),
 	}
-	db.GetDB().Create(&msg)
+	if err := db.GetDB().Create(&msg).Error; err != nil {
+		log.Printf("[BotAPI] failed to save leave message: %v", err)
+	}
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(req.ChatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 	return tgOK(c, true)
@@ -797,7 +803,9 @@ func botSetMyCommands(c *fiber.Ctx, bot models.Bot) error {
 			Description: cmd.Description,
 			IsActive:    true,
 		}
-		db.GetDB().Create(&entry)
+		if err := db.GetDB().Create(&entry).Error; err != nil {
+			log.Printf("[BotAPI] failed to save command entry: %v", err)
+		}
 	}
 	return tgOK(c, true)
 }

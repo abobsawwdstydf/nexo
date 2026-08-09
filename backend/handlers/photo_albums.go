@@ -29,7 +29,9 @@ func CreatePhotoAlbum(c *fiber.Ctx) error {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	db.GetDB().Create(&album)
+	if err := db.GetDB().Create(&album).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create album"})
+	}
 
 	return c.Status(201).JSON(album)
 }
@@ -127,7 +129,9 @@ func AddPhotoToAlbum(c *fiber.Ctx) error {
 		Order:     maxOrder + 1,
 		CreatedAt: time.Now(),
 	}
-	db.GetDB().Create(&photo)
+	if err := db.GetDB().Create(&photo).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to add photo"})
+	}
 
 	return c.Status(201).JSON(photo)
 }

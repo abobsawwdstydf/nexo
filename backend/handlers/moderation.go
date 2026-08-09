@@ -56,7 +56,9 @@ func BanUser(c *fiber.Ctx) error {
 		"is_banned":  true,
 		"ban_reason": req.Reason,
 	}
-	db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(updates)
+	if err := db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(updates).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to ban user"})
+	}
 
 	// Log moderation action
 	modLog := models.ModerationLog{
@@ -68,7 +70,9 @@ func BanUser(c *fiber.Ctx) error {
 		Reason:   req.Reason,
 		Duration: req.Duration,
 	}
-	db.GetDB().Create(&modLog)
+	if err := db.GetDB().Create(&modLog).Error; err != nil {
+		log.Printf("[Moderation] failed to log ban: %v", err)
+	}
 
 	ws.HubInstance.SendToChat(chatID, mustWSMsg("moderation:ban",
 		"targetId", req.TargetID,
@@ -192,7 +196,9 @@ func KickUser(c *fiber.Ctx) error {
 		ActorID:  userID,
 		Action:   "kick",
 	}
-	db.GetDB().Create(&modLog)
+	if err := db.GetDB().Create(&modLog).Error; err != nil {
+		log.Printf("[Moderation] failed to log kick: %v", err)
+	}
 
 	ws.HubInstance.SendToChat(chatID, mustWSMap("moderation:kick", map[string]string{
 		"targetId": req.TargetID,
@@ -223,7 +229,9 @@ func SetSlowMode(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "No moderation permissions"})
 	}
 
-	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("slow_mode_interval", req.Interval)
+	if err := db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("slow_mode_interval", req.Interval).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to set slow mode"})
+	}
 
 	ws.HubInstance.SendToChat(chatID, mustWSMsg("moderation:slow_mode",
 		"interval", req.Interval,
@@ -264,11 +272,13 @@ func SetUserBadge(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(map[string]interface{}{
+	if err := db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(map[string]interface{}{
 		"is_verified":         true,
 		"verified_badge_type": req.BadgeType,
 		"verified_badge_url":  req.BadgeURL,
-	})
+	}).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to grant badge"})
+	}
 
 	ws.HubInstance.SendToUser(req.TargetID, mustWSMap("user:badge", map[string]string{
 		"badgeType": req.BadgeType,
@@ -280,13 +290,15 @@ func SetUserBadge(c *fiber.Ctx) error {
 	), "")
 
 	// Log moderation action
-	db.GetDB().Create(&models.ModerationLog{
+	if err := db.GetDB().Create(&models.ModerationLog{
 		ID:       generateID(),
 		TargetID: req.TargetID,
 		ActorID:  userID,
 		Action:   "grant_badge",
 		Reason:   req.BadgeType,
-	})
+	}).Error; err != nil {
+		log.Printf("[Moderation] failed to log grant_badge: %v", err)
+	}
 
 	return c.JSON(fiber.Map{"ok": true, "action": "grant_badge"})
 }
@@ -311,23 +323,27 @@ func ClearUserBadge(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(map[string]interface{}{
+	if err := db.GetDB().Model(&models.User{}).Where("id = ?", req.TargetID).Updates(map[string]interface{}{
 		"is_verified":         false,
 		"verified_badge_type": "",
 		"verified_badge_url":  "",
-	})
+	}).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to clear badge"})
+	}
 
 	ws.HubInstance.SendToUser(req.TargetID, mustWSMap("user:badge", map[string]string{
 		"badgeType": "",
 		"badgeUrl":  "",
 	}))
 
-	db.GetDB().Create(&models.ModerationLog{
+	if err := db.GetDB().Create(&models.ModerationLog{
 		ID:       generateID(),
 		TargetID: req.TargetID,
 		ActorID:  userID,
 		Action:   "clear_badge",
-	})
+	}).Error; err != nil {
+		log.Printf("[Moderation] failed to log clear_badge: %v", err)
+	}
 
 	return c.JSON(fiber.Map{"ok": true, "action": "clear_badge"})
 }
@@ -355,14 +371,16 @@ func ReportChat(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
 	}
 
-	db.GetDB().Create(&models.ModerationLog{
+	if err := db.GetDB().Create(&models.ModerationLog{
 		ID:       generateID(),
 		ChatID:   chatID,
 		TargetID: chatID,
 		ActorID:  userID,
 		Action:   "report_chat",
 		Reason:   req.Reason,
-	})
+	}).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save report"})
+	}
 
 	return c.Status(201).JSON(fiber.Map{"ok": true, "action": "report_chat"})
 }

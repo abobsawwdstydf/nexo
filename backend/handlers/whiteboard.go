@@ -32,7 +32,9 @@ func CreateWhiteboard(c *fiber.Ctx) error {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	db.GetDB().Create(&wb)
+	if err := db.GetDB().Create(&wb).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create whiteboard"})
+	}
 
 	return c.Status(201).JSON(wb)
 }
@@ -94,7 +96,9 @@ func ApplyWhiteboardEdit(c *fiber.Ctx) error {
 		Version:     wb.Version + 1,
 		CreatedAt:   time.Now(),
 	}
-	db.GetDB().Create(&edit)
+	if err := db.GetDB().Create(&edit).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save edit"})
+	}
 
 	db.GetDB().Model(&wb).Updates(map[string]interface{}{
 		"version":    wb.Version + 1,

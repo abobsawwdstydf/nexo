@@ -44,7 +44,9 @@ func StartVoiceRoomActivity(c *fiber.Ctx) error {
 		StartedBy: userID,
 		CreatedAt: time.Now(),
 	}
-	db.GetDB().Create(&activity)
+	if err := db.GetDB().Create(&activity).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to start activity"})
+	}
 
 	return c.Status(201).JSON(activity)
 }

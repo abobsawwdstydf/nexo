@@ -35,7 +35,12 @@ export function installMessages(api: ApiClient): void {
       timeout: 300_000,
     });
 
-    if (Array.isArray(result)) return result[0];
+    if (Array.isArray(result)) {
+      const first = result[0];
+      if (first) return first;
+      console.error('[uploadFile] Empty upload response:', result);
+      throw new Error('Пустой ответ сервера при загрузке');
+    }
     if (result.files && result.files.length) return result.files[0];
     if (result.fileId || result.url) return result;
 

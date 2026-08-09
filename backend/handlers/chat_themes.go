@@ -65,15 +65,19 @@ func SetChatTheme(c *fiber.Ctx) error {
 			BubbleTextColor: bubbleTextColor,
 			AccentColor:     accentColor,
 		}
-		db.GetDB().Create(&theme)
+		if err := db.GetDB().Create(&theme).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save theme"})
+		}
 	} else {
-		db.GetDB().Model(&theme).Updates(map[string]interface{}{
+		if err := db.GetDB().Model(&theme).Updates(map[string]interface{}{
 			"background_image":  bgImage,
 			"background_color":  bgColor,
 			"bubble_color":      bubbleColor,
 			"bubble_text_color": bubbleTextColor,
 			"accent_color":      accentColor,
-		})
+		}).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save theme"})
+		}
 	}
 
 	return c.JSON(theme)

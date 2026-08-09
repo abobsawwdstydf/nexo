@@ -44,7 +44,9 @@ func CreateCalendarEvent(c *fiber.Ctx) error {
 		Recurrence:  req.Recurrence,
 		CreatedAt:   time.Now(),
 	}
-	db.GetDB().Create(&event)
+	if err := db.GetDB().Create(&event).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create event"})
+	}
 
 	// Create invites
 	for _, inviteID := range req.InviteIDs {
@@ -55,7 +57,9 @@ func CreateCalendarEvent(c *fiber.Ctx) error {
 			Status:    "pending",
 			CreatedAt: time.Now(),
 		}
-		db.GetDB().Create(&invite)
+		if err := db.GetDB().Create(&invite).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create event invites"})
+		}
 	}
 
 	return c.Status(201).JSON(event)

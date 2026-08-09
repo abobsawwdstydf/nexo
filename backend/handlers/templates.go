@@ -28,7 +28,9 @@ func CreateTemplate(c *fiber.Ctx) error {
 		Shortcut: req.Shortcut,
 		Category: req.Category,
 	}
-	db.GetDB().Create(&template)
+	if err := db.GetDB().Create(&template).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save template"})
+	}
 
 	return c.Status(201).JSON(template)
 }

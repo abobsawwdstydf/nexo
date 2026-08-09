@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Flag, MessageSquare, BadgeCheck, RefreshCw, Send, ShieldAlert } from 'lucide-react';
+import { X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert } from 'lucide-react';
 import { api } from '../lib/api';
 import type { AdminReport, AdminFeedbackTicket } from '../lib/api/admin';
 import { toast } from '../lib/toast';

@@ -186,9 +186,8 @@ func DeleteAccount(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete account"})
 	}
 
-	if client := ws.HubInstance.GetUserClient(userID); client != nil {
-		ws.HubInstance.UnregisterClient(client)
-	}
+	// Disconnect all active sockets of the deleted account (multi-tab/devices)
+	ws.HubInstance.UnregisterUser(userID)
 
 	return c.JSON(fiber.Map{"ok": true, "message": "Account deleted"})
 }

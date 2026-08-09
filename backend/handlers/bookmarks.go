@@ -34,7 +34,9 @@ func CreateBookmark(c *fiber.Ctx) error {
 		Note:      req.Note,
 		Tags:      req.Tags,
 	}
-	db.GetDB().Create(&bookmark)
+	if err := db.GetDB().Create(&bookmark).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save bookmark"})
+	}
 
 	return c.Status(201).JSON(bookmark)
 }

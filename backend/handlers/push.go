@@ -208,7 +208,9 @@ func NotifyUser(userID string, title string, body string, data map[string]interf
 			log.Printf("[Push] send error user=%s: %v", userID, err)
 			// 404/410 = endpoint expired — clean up
 			if resp != nil && (resp.StatusCode == 404 || resp.StatusCode == 410) {
-				db.GetDB().Delete(&models.PushSubscription{}, "id = ?", sub.ID)
+				if err := db.GetDB().Delete(&models.PushSubscription{}, "id = ?", sub.ID).Error; err != nil {
+					log.Printf("[Push] failed to remove expired subscription %s: %v", sub.ID, err)
+				}
 			}
 			continue
 		}

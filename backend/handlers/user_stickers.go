@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -233,7 +234,9 @@ func DeleteUserSticker(c *fiber.Ctx) error {
 		os.Remove(filepath.Join(userStickerPackDir(pack.ID), fileName))
 	}
 
-	db.GetDB().Delete(&models.Sticker{}, "id = ?", stickerID)
+	if err := db.GetDB().Delete(&models.Sticker{}, "id = ?", stickerID).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete sticker"})
+	}
 	return c.JSON(fiber.Map{"ok": true})
 }
 
@@ -259,7 +262,11 @@ func DeleteUserStickerPack(c *fiber.Ctx) error {
 	}
 	os.RemoveAll(userStickerPackDir(packID))
 
-	db.GetDB().Delete(&models.Sticker{}, "pack_id = ?", packID)
-	db.GetDB().Delete(&models.StickerPack{}, "id = ?", packID)
+	if err := db.GetDB().Delete(&models.Sticker{}, "pack_id = ?", packID).Error; err != nil {
+		log.Printf("[Stickers] failed to delete pack stickers: %v", err)
+	}
+	if err := db.GetDB().Delete(&models.StickerPack{}, "id = ?", packID).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete sticker pack"})
+	}
 	return c.JSON(fiber.Map{"ok": true})
 }

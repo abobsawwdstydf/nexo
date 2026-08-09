@@ -107,7 +107,7 @@ export class ApiClient {
     return this._doRequest<T>(endpoint, options);
   }
 
-  private async _doRequest<T>(endpoint: string, options: RequestInit & { timeout?: number } = {}): Promise<T> {
+  private async _doRequest<T>(endpoint: string, options: RequestInit & { timeout?: number } = {}, retried = false): Promise<T> {
     const { timeout = 30_000, ...fetchOptions } = options;
     const controller = new AbortController();
     const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : undefined;
@@ -168,7 +168,10 @@ export class ApiClient {
       if (response.status === 401) {
         const isAuthEndpoint = endpoint.startsWith('/auth/');
 
-        if (!isAuthEndpoint) {
+        // Retry after refresh only once, directly through _doRequest to bypass
+        // GET deduplication (otherwise the retry reuses its own pending promise
+        // and deadlocks) and to avoid an infinite 401→refresh→retry loop.
+        if (!isAuthEndpoint && !retried) {
           if (!this.refreshPromise) {
             this.refreshPromise = this.doRefresh().finally(() => {
               this.refreshPromise = null;
@@ -178,7 +181,7 @@ export class ApiClient {
           const refreshOk = await this.refreshPromise;
 
           if (refreshOk) {
-            return this.request<T>(endpoint, options);
+            return this._doRequest<T>(endpoint, options, true);
           }
 
           this.onAuthFailed?.();

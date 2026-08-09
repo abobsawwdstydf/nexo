@@ -137,6 +137,15 @@ function emitEvent(event: string, data: any) {
   }
 }
 
+/** Reject all pending RPC promises when the socket closes so callers fail fast. */
+function rejectAllPendingRPCs(reason: string) {
+  pendingRPCs.forEach((rpc) => {
+    clearTimeout(rpc.timer);
+    rpc.reject(new Error(reason));
+  });
+  pendingRPCs.clear();
+}
+
 // Connection status management
 type ConnectionStatusType = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 let statusListeners: Array<(status: ConnectionStatusType) => void> = [];
@@ -242,6 +251,8 @@ function setupWebSocketHandlers() {
   };
 
   ws.onclose = (event) => {
+    rejectAllPendingRPCs(`WebSocket closed (code ${event.code})`);
+
     const reconnectState = loadReconnectState() || {
       lastEventTimestamp: Date.now(),
     };

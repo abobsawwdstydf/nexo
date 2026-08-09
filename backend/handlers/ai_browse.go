@@ -51,7 +51,9 @@ func StartAIBrowse(c *fiber.Ctx) error {
 		Query:  req.Query,
 		Status: "pending",
 	}
-	db.GetDB().Create(&dbTask)
+	if err := db.GetDB().Create(&dbTask).Error; err != nil {
+		log.Printf("[AI] failed to persist browse task %s: %v", taskID, err)
+	}
 
 	// Start background browsing
 	go func() {

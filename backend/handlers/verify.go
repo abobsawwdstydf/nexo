@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"strconv"
@@ -217,7 +218,9 @@ func updateBotHealth(provider string, healthy bool, errMsg string) {
 			LastCheck: time.Now(),
 			Error:     errMsg,
 		}
-		db.GetDB().Create(&check)
+		if err := db.GetDB().Create(&check).Error; err != nil {
+			log.Printf("[Verify] failed to save provider check: %v", err)
+		}
 	} else if result.Error == nil {
 		db.GetDB().Model(&check).Updates(map[string]interface{}{
 			"is_healthy": healthy,

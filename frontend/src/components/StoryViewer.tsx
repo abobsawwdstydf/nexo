@@ -30,7 +30,7 @@ export function StoriesViewer({ groups, initialGroupIndex, onClose }: StoriesVie
 
   const group = groups[groupIdx];
   const stories = group?.stories ?? [];
-  const story = stories[Math.min(storyIdx, stories.length - 1)];
+  const story = stories.length > 0 ? stories[Math.min(storyIdx, stories.length - 1)] : undefined;
 
   useEffect(() => {
     setGroupIdx(initialGroupIndex);

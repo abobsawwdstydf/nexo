@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"nexo/db"
+	"nexo/helpers"
 	"nexo/models"
 )
 
@@ -39,13 +40,7 @@ func truncate(s string, max int) string {
 
 // generateID creates a random hex ID for tokens and audit entries
 func generateID() string {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		// Fallback: time-based hash (never blocks critical flows on RNG failure)
-		h := sha256.Sum256([]byte(strconv.FormatInt(time.Now().UnixNano(), 10)))
-		return hex.EncodeToString(h[:16])
-	}
-	return hex.EncodeToString(b)
+	return helpers.GenerateID()
 }
 
 // CSRF tokens are also persisted to the database for resilience across restarts.

@@ -15,7 +15,6 @@ import {
   X,
   Reply,
   Forward,
-  Pin,
   CheckCheck,
   Camera,
   Video,
@@ -31,7 +30,6 @@ import {
   Menu,
   Phone,
   ArrowLeft,
-  Sparkles,
   Palette,
   Trophy,
   Gamepad2,
@@ -50,7 +48,7 @@ import type { Chat, Message, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup 
 import type { SocketInterface } from '../lib/socket';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
-import { LinkPreview, extractUrls, renderTextWithLinks } from './LinkPreview';
+import { LinkPreview, extractUrls } from './LinkPreview';
 import { e2eManager } from '../lib/e2eSession';
 import { tryInitE2EForChat } from '../lib/e2eStore';
 import { EncryptionBadge } from './EncryptionBadge';

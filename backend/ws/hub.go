@@ -111,6 +111,23 @@ func (h *Hub) UnregisterClient(client *Client) {
 	}
 }
 
+// UnregisterUser disconnects all active connections of a user (multiple
+// tabs/devices). Client cleanup happens in the Run goroutine.
+func (h *Hub) UnregisterUser(userID string) {
+	h.mu.RLock()
+	var clients []*Client
+	if userClients, ok := h.clients[userID]; ok {
+		for client := range userClients {
+			clients = append(clients, client)
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, client := range clients {
+		h.UnregisterClient(client)
+	}
+}
+
 func (h *Hub) SendToUser(userID string, data []byte) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

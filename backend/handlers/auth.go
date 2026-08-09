@@ -1,16 +1,12 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"net/smtp"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +17,7 @@ import (
 
 	"nexo/beta"
 	"nexo/db"
+	"nexo/helpers"
 	"nexo/middleware"
 	"nexo/models"
 )
@@ -127,13 +124,7 @@ func init() {
 }
 
 func generateID() string {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		// Fallback: time-based hash (never blocks critical flows on RNG failure)
-		h := sha256.Sum256([]byte(strconv.FormatInt(time.Now().UnixNano(), 10)))
-		return hex.EncodeToString(h[:16])
-	}
-	return hex.EncodeToString(b)
+	return helpers.GenerateID()
 }
 
 func Register(c *fiber.Ctx) error {

@@ -24,13 +24,21 @@ func CreateKanbanBoard(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "chatId required"})
 	}
 
+	// Только участник чата может создать доску
+	var membership models.ChatMember
+	if err := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&membership).Error; err != nil {
+		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
+	}
+
 	board := models.KanbanBoard{
 		ID:        generateID(),
 		ChatID:    chatID,
 		Name:      req.Name,
 		CreatorID: userID,
 	}
-	db.GetDB().Create(&board)
+	if err := db.GetDB().Create(&board).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create board"})
+	}
 
 	// Create default columns
 	defaultColumns := []models.KanbanColumn{
@@ -39,7 +47,9 @@ func CreateKanbanBoard(c *fiber.Ctx) error {
 		{ID: generateID(), BoardID: board.ID, Name: "Готово", Order: 2, Color: "#10b981"},
 	}
 	for i := range defaultColumns {
-		db.GetDB().Create(&defaultColumns[i])
+		if err := db.GetDB().Create(&defaultColumns[i]).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create board columns"})
+		}
 	}
 
 	return c.Status(201).JSON(board)
@@ -58,10 +68,11 @@ func GetKanbanBoards(c *fiber.Ctx) error {
 
 // GET /kanban/:boardId
 func GetKanbanBoard(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
 	boardID := c.Params("boardId")
 
 	var board models.KanbanBoard
-	if err := db.GetDB().Where("id = ?", boardID).
+	if err := db.GetDB().Where("id = ? AND chat_id IN (SELECT chat_id FROM chat_members WHERE user_id = ?)", boardID, userID).
 		Preload("Columns", func(db *gorm.DB) *gorm.DB { return db.Order("`order` ASC") }).
 		Preload("Columns.Tasks", func(db *gorm.DB) *gorm.DB { return db.Order("`order` ASC") }).
 		First(&board).Error; err != nil {
@@ -71,9 +82,22 @@ func GetKanbanBoard(c *fiber.Ctx) error {
 	return c.JSON(board)
 }
 
+func boardBelongsToUser(boardID, userID string) bool {
+	var count int64
+	db.GetDB().Model(&models.KanbanBoard{}).
+		Where("id = ? AND chat_id IN (SELECT chat_id FROM chat_members WHERE user_id = ?)", boardID, userID).
+		Count(&count)
+	return count > 0
+}
+
 // POST /kanban/:boardId/tasks
 func CreateKanbanTask(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
 	boardID := c.Params("boardId")
+
+	if !boardBelongsToUser(boardID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Board not found"})
+	}
 
 	var req models.CreateKanbanTaskRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -99,14 +123,25 @@ func CreateKanbanTask(c *fiber.Ctx) error {
 		Deadline:    &deadline,
 		Labels:      "[]",
 	}
-	db.GetDB().Create(&task)
+	if err := db.GetDB().Create(&task).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create task"})
+	}
 
 	return c.Status(201).JSON(task)
 }
 
 // PUT /kanban/tasks/:taskId
 func UpdateKanbanTask(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
 	taskID := c.Params("taskId")
+
+	var task models.KanbanTask
+	if err := db.GetDB().Select("board_id").Where("id = ?", taskID).First(&task).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Task not found"})
+	}
+	if !boardBelongsToUser(task.BoardID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Board not found"})
+	}
 
 	var req struct {
 		Title       string `json:"title"`
@@ -145,16 +180,31 @@ func UpdateKanbanTask(c *fiber.Ctx) error {
 
 // DELETE /kanban/tasks/:taskId
 func DeleteKanbanTask(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
 	taskID := c.Params("taskId")
+
+	var task models.KanbanTask
+	if err := db.GetDB().Select("board_id").Where("id = ?", taskID).First(&task).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Task not found"})
+	}
+	if !boardBelongsToUser(task.BoardID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Board not found"})
+	}
+
 	db.GetDB().Where("id = ?", taskID).Delete(&models.KanbanTask{})
 	return c.JSON(fiber.Map{"success": true})
 }
 
 // PUT /kanban/:boardId/reorder
 func ReorderKanbanBoard(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
 	boardID := c.Params("boardId")
 	if boardID == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	if !boardBelongsToUser(boardID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Board not found"})
 	}
 
 	var req struct {

@@ -58,7 +58,6 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
   const screenStreamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callListenersRef = useRef<{ event: string; handler: (data: any) => void }[]>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const e2eCopyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
@@ -107,12 +106,6 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
       if (localVideoRef.current && videoOn) {
         localVideoRef.current.srcObject = stream;
       }
-
-      audioContextRef.current = new AudioContext();
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      const gain = audioContextRef.current.createGain();
-      gain.gain.value = 1.0;
-      source.connect(gain);
 
       return stream;
     } catch (err) {
@@ -184,10 +177,6 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
     if (screenStreamRef.current) {
       screenStreamRef.current.getTracks().forEach(t => t.stop());
       screenStreamRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
     }
     if (timerRef.current) {
       clearInterval(timerRef.current);

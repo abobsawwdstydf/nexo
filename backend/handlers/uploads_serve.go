@@ -87,7 +87,7 @@ func ImportGifFromURL(rawURL string) (MediaPayload, error) {
 		"video/mp4": true, "video/webm": true,
 	}
 	if !allowed[contentType] {
-		return MediaPayload{}, fmt.Errorf("unsupported gif format: " + contentType)
+		return MediaPayload{}, fmt.Errorf("unsupported gif format: %s", contentType)
 	}
 
 	filename := generateID() + mimeToExt(contentType)

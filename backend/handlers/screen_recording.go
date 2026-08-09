@@ -37,7 +37,9 @@ func UploadScreenRecording(c *fiber.Ctx) error {
 		Size:      file.Size,
 		CreatedAt: time.Now(),
 	}
-	db.GetDB().Create(&recording)
+	if err := db.GetDB().Create(&recording).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save recording"})
+	}
 
 	return c.Status(201).JSON(recording)
 }

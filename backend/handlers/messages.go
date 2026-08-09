@@ -380,7 +380,9 @@ func AddReaction(c *fiber.Ctx) error {
 	// Toggle: if exists, remove; if not, add
 	var existing models.Reaction
 	if result := db.GetDB().Where("message_id = ? AND user_id = ? AND emoji = ?", msgID, userID, req.Emoji).First(&existing); result.Error == nil {
-		db.GetDB().Delete(&existing)
+		if err := db.GetDB().Delete(&existing).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to remove reaction"})
+		}
 		ws.HubInstance.SendToChat(msg.ChatID, mustWSMap("message:reaction_removed", map[string]string{
 			"messageId": msgID,
 			"userId":    userID,
@@ -428,7 +430,9 @@ func RemoveReaction(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Reaction not found"})
 	}
 
-	db.GetDB().Delete(&existing)
+	if err := db.GetDB().Delete(&existing).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove reaction"})
+	}
 	ws.HubInstance.SendToChat(msg.ChatID, mustWSMap("message:reaction_removed", map[string]string{
 		"messageId": msgID,
 		"userId":    userID,
@@ -497,7 +501,9 @@ func Typing(c *fiber.Ctx) error {
 		UserID:    userID,
 		ExpiresAt: now.Add(5 * time.Second),
 	}
-	db.GetDB().Create(&indicator)
+	if err := db.GetDB().Create(&indicator).Error; err != nil {
+		log.Printf("[Messages] failed to save typing indicator: %v", err)
+	}
 
 	ws.HubInstance.SendToChat(chatID, mustWSMap("typing", map[string]string{
 		"chatId": chatID,
@@ -585,8 +591,8 @@ func SearchMessages(c *fiber.Ctx) error {
 	var historyCount int64
 	if err := db.GetDB().Model(&models.SearchHistory{}).Where("user_id = ?", userID).Count(&historyCount).Error; err == nil && historyCount > 200 {
 		if err := db.GetDB().Exec(
-			"DELETE FROM search_histories WHERE id IN (SELECT id FROM search_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET 200)",
-			userID,
+			"DELETE FROM search_histories WHERE user_id = ? AND id NOT IN (SELECT id FROM search_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT 200)",
+			userID, userID,
 		).Error; err != nil {
 			log.Printf("[SearchMessages] failed to trim history for user=%s: %v", userID, err)
 		}

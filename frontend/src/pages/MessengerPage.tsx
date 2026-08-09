@@ -67,7 +67,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const { chats: initChats, loaded: initLoaded } = useInitStore();
   const storyGroups = useInitStore(s => s.stories);
   const callContext = useCallContext();
-  const isLowPerf = usePerformanceMode();
+  usePerformanceMode();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -246,20 +246,6 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
 
   const handleOpenFriends = useCallback(() => setShowFriends(true), []);
   const handleOpenNewChat = useCallback(() => setCreateTab('personal'), []);
-  const handleOpenAccountManager = useCallback(() => setShowAccountManager(true), []);
-  const handleOpenFeedback = useCallback(() => {
-    if (!user) return;
-    api.getOrCreateFeedbackChat()
-      .then(chat => {
-        useInitStore.getState().addChat(enrichChat(chat, user));
-        setSelectedChatId(chat.id);
-        setMobileView('chat');
-        setShowFriends(false);
-      })
-      .catch(err => {
-        console.error('Failed to open feedback chat:', err);
-      });
-  }, [user]);
   const handleChatCreated = useCallback((chat: Chat | null) => {
     if (chat && user) {
       useInitStore.getState().addChat(enrichChat(chat, user));
@@ -333,13 +319,8 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
               onSearchChange={setSearchQuery}
               loading={loading}
               user={user}
-              onLogout={logout}
               onOpenProfile={handleOpenProfile}
-              onOpenSettings={() => handleOpenSettings('general')}
-              onOpenFriends={handleOpenFriends}
               onNewChat={handleOpenNewChat}
-              onOpenAccountManager={handleOpenAccountManager}
-              onOpenFeedback={handleOpenFeedback}
               onCreateStory={() => setShowStoryCreate(true)}
               onOpenStory={(idx) => setStoryViewerGroup(idx)}
             />

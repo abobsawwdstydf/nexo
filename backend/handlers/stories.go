@@ -179,7 +179,9 @@ func DeleteStory(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Can only delete your own stories"})
 	}
 
-	db.GetDB().Delete(&story)
+	if err := db.GetDB().Delete(&story).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete story"})
+	}
 	return c.JSON(fiber.Map{"ok": true})
 }
 
@@ -271,7 +273,9 @@ func RejectFriendRequest(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Not your friend request"})
 	}
 
-	db.GetDB().Delete(&friendship)
+	if err := db.GetDB().Delete(&friendship).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to cancel request"})
+	}
 	return c.JSON(fiber.Map{"ok": true})
 }
 

@@ -40,6 +40,7 @@ import type { User as UserType } from '../lib/types';
 import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotification } from '../lib/notifications';
 import { api } from '../lib/api';
 import { toast } from '../lib/toast';
+import { disconnectSocket } from '../lib/socket';
 import { BUILD_COMMIT, BUILD_TIME, getBackendVersion, type BackendVersion } from '../lib/version';
 import { useSoundsEnabled } from '../lib/soundSettings';
 
@@ -253,6 +254,15 @@ function applyCustomAccent(color: string) {
   root.style.setProperty('--color-accent-bright', color);
 }
 
+function clearCustomAccent() {
+  const root = document.documentElement;
+  root.style.removeProperty('--nexo-custom-color');
+  root.style.removeProperty('--nexo-custom-rgb');
+  root.style.removeProperty('--color-accent');
+  root.style.removeProperty('--color-accent-dark');
+  root.style.removeProperty('--color-accent-bright');
+}
+
 function AppearanceSettings() {
   const [theme, setTheme] = useState(() => localStorage.getItem('nexo_theme') || 'dark');
   const [colorScheme, setColorScheme] = useState(() => localStorage.getItem('nexo_color_scheme') || 'purple');
@@ -269,6 +279,11 @@ function AppearanceSettings() {
     setColorScheme(newColor);
     localStorage.setItem('nexo_color_scheme', newColor);
     document.documentElement.setAttribute('data-color-scheme', newColor);
+    // Clear leftover inline accent variables from a previously applied
+    // custom color so the scheme's own stylesheet rules take effect.
+    if (newColor !== 'custom') {
+      clearCustomAccent();
+    }
   };
 
   const handleCustomColorChange = (color: string) => {
@@ -463,6 +478,7 @@ function PrivacySettings() {
     try {
       await api.request('/account/delete', { method: 'DELETE' });
       toast.success('Аккаунт удалён');
+      disconnectSocket();
       localStorage.clear();
       window.location.href = '/login';
     } catch (err) {

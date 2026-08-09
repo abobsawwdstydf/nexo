@@ -3,31 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   MessageCircle,
-  LogOut,
-  MoreVertical,
-  User,
-  Settings,
   Bookmark,
-  Users,
-  Plus,
   X,
-  Clock,
-  ArrowRight,
   Pin,
   BellOff,
   Bell,
-  Trash2,
-  Edit3,
   SquarePen,
-  PlusCircle,
-  Sparkles,
-  Camera,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
 import { NOTES_CHAT_ID } from '../lib/api/noteChat';
 import { AI_CHAT_ID } from '../lib/api/aiChat';
 import { VerifiedBadge } from './VerifiedBadge';
-import { AnimatedEmoji } from './AnimatedEmoji';
 import { StoriesBar } from './StoriesBar';
 import { useInitStore } from '../stores/initStore';
 
@@ -39,13 +25,8 @@ interface ChatListProps {
   onSearchChange: (query: string) => void;
   loading: boolean;
   user: UserType | null;
-  onLogout: () => void;
   onOpenProfile: () => void;
-  onOpenSettings: () => void;
-  onOpenFriends: () => void;
   onNewChat: () => void;
-  onOpenAccountManager: () => void;
-  onOpenFeedback: () => void;
   onCreateStory: () => void;
   onOpenStory: (groupIndex: number) => void;
 }
@@ -57,28 +38,6 @@ const CATEGORIES = [
   { id: 'groups', label: 'Группы' },
   { id: 'channels', label: 'Каналы' },
 ];
-
-function ActionButton({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon?: typeof Users;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <motion.button
-      onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all duration-200 text-xs text-white/50 hover:text-white/70 hover:border-white/[0.1]"
-      whileHover={{ scale: 1.03, y: -1 }}
-      whileTap={{ scale: 0.97 }}
-    >
-      {Icon ? <Icon size={14} /> : null}
-      {label}
-    </motion.button>
-  );
-}
 
 function ChatAvatar({ chat }: { chat: Chat }) {
   if (chat.id === NOTES_CHAT_ID) {
@@ -233,13 +192,8 @@ export function ChatList({
   onSearchChange,
   loading,
   user,
-  onLogout,
   onOpenProfile,
-  onOpenSettings,
-  onOpenFriends,
   onNewChat,
-  onOpenAccountManager,
-  onOpenFeedback,
   onCreateStory,
   onOpenStory,
 }: ChatListProps) {

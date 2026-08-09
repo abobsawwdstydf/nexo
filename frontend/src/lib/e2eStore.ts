@@ -7,8 +7,6 @@ export interface E2EChatStatus {
   keyFingerprint: string | null;
 }
 
-const e2eChatStatus = new Map<string, E2EChatStatus>();
-
 export async function tryInitE2EForChat(
   userId: string,
   chatId: string,
@@ -16,9 +14,7 @@ export async function tryInitE2EForChat(
   isSecret: boolean
 ): Promise<E2EChatStatus> {
   if (!isSecret || !otherUserId) {
-    const status: E2EChatStatus = { isE2E: false, isReady: false, keyFingerprint: null };
-    e2eChatStatus.set(chatId, status);
-    return status;
+    return { isE2E: false, isReady: false, keyFingerprint: null };
   }
 
   try {
@@ -26,25 +22,17 @@ export async function tryInitE2EForChat(
 
     const existingInfo = getSessionInfo(chatId);
     if (existingInfo && hasActiveSession(chatId)) {
-      const status: E2EChatStatus = { isE2E: true, isReady: true, keyFingerprint: existingInfo.keyFingerprint };
-      e2eChatStatus.set(chatId, status);
-      return status;
+      return { isE2E: true, isReady: true, keyFingerprint: existingInfo.keyFingerprint };
     }
 
     const ok = await e2eManager.establishSession({ userId, chatId, otherUserId });
     if (ok) {
       const info = getSessionInfo(chatId);
-      const status: E2EChatStatus = { isE2E: true, isReady: true, keyFingerprint: info?.keyFingerprint || null };
-      e2eChatStatus.set(chatId, status);
-      return status;
+      return { isE2E: true, isReady: true, keyFingerprint: info?.keyFingerprint || null };
     }
 
-    const status: E2EChatStatus = { isE2E: true, isReady: false, keyFingerprint: null };
-    e2eChatStatus.set(chatId, status);
-    return status;
+    return { isE2E: true, isReady: false, keyFingerprint: null };
   } catch {
-    const status: E2EChatStatus = { isE2E: false, isReady: false, keyFingerprint: null };
-    e2eChatStatus.set(chatId, status);
-    return status;
+    return { isE2E: false, isReady: false, keyFingerprint: null };
   }
 }

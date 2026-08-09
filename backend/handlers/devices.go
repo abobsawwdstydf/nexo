@@ -58,13 +58,17 @@ func DeviceCheckIn(c *fiber.Ctx) error {
 			LastActive: time.Now(),
 			CreatedAt:  time.Now(),
 		}
-		db.GetDB().Create(&session)
+		if err := db.GetDB().Create(&session).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to register device"})
+		}
 	} else {
-		db.GetDB().Model(&session).Updates(map[string]interface{}{
+		if err := db.GetDB().Model(&session).Updates(map[string]interface{}{
 			"last_active": time.Now(),
 			"is_active":   true,
 			"ip_address":  ip,
-		})
+		}).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update device"})
+		}
 	}
 
 	return c.JSON(fiber.Map{"success": true, "deviceId": deviceID})

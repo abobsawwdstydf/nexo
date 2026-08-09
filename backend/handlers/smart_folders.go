@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -780,8 +781,12 @@ func DeleteVoiceRoom(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Voice room not found or not creator"})
 	}
 
-	db.GetDB().Where("room_id = ?", roomID).Delete(&models.VoiceRoomParticipant{})
-	db.GetDB().Delete(&room)
+	if err := db.GetDB().Where("room_id = ?", roomID).Delete(&models.VoiceRoomParticipant{}).Error; err != nil {
+		log.Printf("[SmartFolders] failed to delete room participants: %v", err)
+	}
+	if err := db.GetDB().Delete(&room).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete voice room"})
+	}
 
 	// WS notification
 	wsHub := ws.HubInstance
@@ -922,6 +927,10 @@ func CreateWebhookConfig(c *fiber.Ctx) error {
 
 	if req.URL == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "URL is required"})
+	}
+
+	if !isURLSafe(req.URL) {
+		return c.Status(400).JSON(fiber.Map{"error": "URL is not allowed"})
 	}
 
 	webhook := models.WebhookConfig{

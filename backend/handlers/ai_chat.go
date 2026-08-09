@@ -124,7 +124,9 @@ func aiSaveMessage(userID, role, content string) {
 			Limit(int(count - aiHistoryLimit)).
 			Find(&oldest)
 		for _, o := range oldest {
-			db.GetDB().Delete(&models.AIMessage{}, "id = ?", o.ID)
+			if err := db.GetDB().Delete(&models.AIMessage{}, "id = ?", o.ID).Error; err != nil {
+				log.Printf("[AI] failed to trim message %s: %v", o.ID, err)
+			}
 		}
 	}
 }
