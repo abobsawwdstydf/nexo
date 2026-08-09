@@ -1,6 +1,7 @@
 package beta
 
 import (
+	"os"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -85,5 +86,18 @@ func earlyAccessAllowed(c *fiber.Ctx) bool {
 	if result := db.GetDB().First(&user, "id = ?", claims.UserID); result.Error != nil {
 		return false
 	}
-	return strings.EqualFold(user.Email, EarlyAccessEmail)
+	if strings.EqualFold(user.Email, EarlyAccessEmail) {
+		return true
+	}
+	// Локальный dev-аккаунт (dev-вход) получает доступ до старта беты
+	// только когда DEV_LOGIN_KEY задан в окружении (прод его не имеет).
+	devKey := os.Getenv("DEV_LOGIN_KEY")
+	if devKey == "" {
+		return false
+	}
+	devEmail := strings.ToLower(strings.TrimSpace(os.Getenv("DEV_LOGIN_EMAIL")))
+	if devEmail == "" {
+		devEmail = "dev@nexo.local"
+	}
+	return strings.EqualFold(user.Email, devEmail)
 }
