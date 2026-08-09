@@ -58,6 +58,23 @@
 ### Бэкенд
 - **Публичный API:** https://neexxoo.hakerone.ru
 
+### Dev-режим (только локально, НЕ для продакшена)
+Локальный «вход разработчика» без реального аккаунта (тестировать чаты/сообщения/кнопки до и во время беты).
+
+- **Как работает:** роут `POST /api/dev/login` (`backend/handlers/dev.go`) регистрируется в `backend/main.go` **только** при env `DEV_LOGIN_KEY`. В проде переменной нет → роута не существует. Создаёт/поднимает тестовый аккаунт в локальной БД, выдаёт обычные JWT (`models.AuthResponse`).
+- **Активация (локально):** в `backend/.env` (или env процесса) задать `DEV_LOGIN_KEY=<секрет>` (+ опц. `DEV_LOGIN_USERNAME`, `DEV_LOGIN_EMAIL`, `DEV_LOGIN_DISPLAY_NAME`).
+- **Фронтенд:** кнопка «Вход для разработчика» (`DevLoginButton.tsx`) рендерится **только** на `localhost/127.0.0.1` на экране «Нексо откроется 10 августа»; глобальная плавающая колба-кнопка `DevFab.tsx` (в `App.tsx`) — на любом экране. Ключ вводится в UI (сохраняется в `localStorage: nexo_dev_login_key`) или `VITE_DEV_LOGIN_KEY`. Логика: `frontend/src/lib/devMode.ts`.
+- **Правила для агентов:**
+  - НИКОГДА не деплоить бэкенд с `DEV_LOGIN_KEY` в env; роут сам по себе безопасен (не регистрируется без ключа).
+  - `beta/middleware.go` содержит публичный prefix `/api/dev/` — удалять/менять только осознанно (иначе dev-вход до старта беты сломается).
+  - Не хранить dev-ключи в коде/repo; не трогать прод-БД, uploads, токены (см. «Неприкосновенность данных»).
+- **Проверки после изменений:** `go build ./...` (в `backend/`), `npx tsc --noEmit` и `npm run build` (в `frontend/`).
+
+### Деплой фронтенда (важно для агентов)
+- Триггер deploy: только изменения в `frontend/**` → Cloudflare Pages (workflow `.github/workflows/deploy-frontend.yml`).
+- Backend: `powershell -ExecutionPolicy Bypass -File backend/deploy-backend.ps1` (кросс-компиляция `nexo-linux`, scp на `dh-s-1@192.168.0.64`, swap через `.new`+`mv`, рестарт `nexo.service`).
+- Проверка деплоя: `GET /api/version` (должен отдавать SHA коммита).
+
 ---
 
 ## Core Thinking Protocol

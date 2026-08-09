@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { DevLoginButton } from './DevLoginButton';
+import { isDevLocal } from '../lib/devMode';
 
 interface BetaNotStartedProps {
   startTime: string;
@@ -99,6 +101,8 @@ export function BetaNotStarted({ startTime, message, onTeamLogin }: BetaNotStart
             Вход для команды
           </button>
         )}
+
+        {isDevLocal() && <DevLoginButton />}
       </motion.div>
     </div>
   );

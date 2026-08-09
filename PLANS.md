@@ -120,6 +120,25 @@
 
 ---
 
+## 🛠 Dev-режим (только локально, НЕ в проде)
+
+Вход для разработчиков без реального аккаунта: тестировать чаты, сообщения, кнопки до/во время беты.
+
+**Как работает:** `POST /api/dev/login` регистрируется в бэкенде **только** если в env задан `DEV_LOGIN_KEY`. В проде переменной нет → роут не существует → 404/401. Роут создаёт (или поднимает) локальный тестовый аккаунт в локальной БД и выдаёт те же JWT, что обычный вход.
+
+- **Backend (локально):** в `backend/.env` (или env процесса) добавить:
+  - `DEV_LOGIN_KEY=<случайный секрет>`
+  - опционально `DEV_LOGIN_USERNAME=nexodev`, `DEV_LOGIN_EMAIL=dev@nexo.local`, `DEV_LOGIN_DISPLAY_NAME=Nexo Dev`
+- **Frontend:** кнопка **«Вход для разработчика»** появляется **только** на `localhost/127.0.0.1`:
+  - на экране «Нексо откроется 10 августа» (под «Вход для команды»);
+  - как плавающая колба-кнопка справа внизу (DevFab) на любом экране.
+  - Ключ: вводится прямо в UI (сохраняется в `localStorage: nexo_dev_login_key`) либо через `VITE_DEV_LOGIN_KEY` при сборке.
+- **Безопасность:** DEV_LOGIN_KEY никогда не хранится в коде/репозитории; кнопка и роут не существуют на продакшене.
+
+**Файлы:** `backend/handlers/dev.go`, `backend/main.go` (условная регистрация), `backend/beta/middleware.go` (public prefix `/api/dev/`), `frontend/src/lib/devMode.ts`, `frontend/src/components/DevLoginButton.tsx`, `frontend/src/components/DevFab.tsx`, `frontend/src/App.tsx`, `frontend/src/components/BetaNotStarted.tsx`.
+
+---
+
 ## Known Remaining Issues
 
 ### Low Priority (backend)

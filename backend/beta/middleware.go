@@ -24,6 +24,7 @@ var publicPrefixes = []string{
 	"/api/beta/",
 	"/api/bot/",
 	"/api/stickers/",
+	"/api/dev/",
 }
 
 func BetaGuard() fiber.Handler {

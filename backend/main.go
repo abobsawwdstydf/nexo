@@ -323,6 +323,12 @@ nexo_up 1
 	api.Post("/auth/email/send-code", handlers.AuthRateLimit(3, 15*time.Minute), handlers.SendEmailCode)
 	api.Post("/auth/email/confirm", handlers.AuthRateLimit(5, time.Minute), handlers.ConfirmEmailCode)
 
+	// Dev-only login — роут существует ТОЛЬКО при DEV_LOGIN_KEY в окружении
+	// (в проде переменная не задана, поэтому /api/dev/login туда не попадает)
+	if os.Getenv("DEV_LOGIN_KEY") != "" {
+		api.Post("/dev/login", handlers.DevLogin)
+	}
+
 	// Protected routes
 	auth := api.Group("", middleware.AuthenticateToken, middleware.CSRFProtection())
 	auth.Get("/init", handlers.GetInit)

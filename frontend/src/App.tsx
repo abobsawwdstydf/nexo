@@ -10,6 +10,7 @@ import { CallProvider } from './lib/callContext';
 import { BetaBanner } from './components/BetaBanner';
 import { BetaEnded } from './components/BetaEnded';
 import { BetaNotStarted } from './components/BetaNotStarted';
+import { DevFab } from './components/DevFab';
 
 // Lazy load heavy pages for better initial load
 const AuthPage = lazy(() => import('./pages/AuthPage'));
@@ -181,6 +182,7 @@ export default function App() {
 
       <CookieConsent />
       <ToastContainer />
+      <DevFab />
     </div>
     </AudioClickWrapper>
     </ErrorBoundary>

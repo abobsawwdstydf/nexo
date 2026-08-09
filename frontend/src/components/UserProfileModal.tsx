@@ -21,6 +21,11 @@ import {
   Plus,
   Trash2,
   FileAudio,
+  Users,
+  Coins,
+  FileText,
+  Mail,
+  Cake,
 } from 'lucide-react';
 import type { User } from '../lib/types';
 import { VerifiedBadge } from './VerifiedBadge';
@@ -55,6 +60,27 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
   const premiumColor = user.isPremium
     ? 'from-amber-400 via-yellow-300 to-orange-400'
     : 'from-zinc-800 via-zinc-900 to-black';
+
+  const fmtDate = (iso?: string | null): string | null => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const memberSince = fmtDate(user.createdAt);
+  const birthday = fmtDate(user.birthday);
+  const premiumUntil = fmtDate(user.premiumUntil);
+
+  const details = [
+    ...(user.beavers != null ? [{ Icon: Coins, label: 'Бобры', value: String(user.beavers) }] : []),
+    ...(user.subscribersCount != null ? [{ Icon: Users, label: 'Подписчики', value: String(user.subscribersCount) }] : []),
+    ...(user.postsCount != null ? [{ Icon: FileText, label: 'Посты', value: String(user.postsCount) }] : []),
+    ...(memberSince ? [{ Icon: Calendar, label: 'В Нексо с', value: memberSince }] : []),
+    ...(user.isPremium && premiumUntil ? [{ Icon: Star, label: 'Премиум до', value: premiumUntil }] : []),
+    ...(birthday ? [{ Icon: Cake, label: 'День рождения', value: birthday }] : []),
+    ...(user.email ? [{ Icon: Mail, label: 'Email', value: user.email }] : []),
+    ...(user.profileMusic ? [{ Icon: Music, label: 'Музыка', value: user.profileMusic }] : []),
+  ];
 
   return (
     <motion.div
@@ -147,6 +173,24 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
               {user.isOnline ? 'В сети' : 'Не в сети'}
             </span>
           </div>
+
+          {/* Details grid */}
+          {details.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mt-5 text-left">
+              {details.map(({ Icon, label, value }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.06]"
+                >
+                  <Icon size={14} className="shrink-0 text-white/40" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-wide text-white/35 truncate">{label}</div>
+                    <div className="text-xs text-white/80 truncate">{value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Quick Action buttons */}
           <div className="grid grid-cols-2 gap-2 mt-6">
