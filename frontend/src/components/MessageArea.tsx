@@ -44,6 +44,7 @@ import { VerifiedBadge } from './VerifiedBadge';
 import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/noteChat';
 import { AI_CHAT_ID, AI_SENDER, loadAIHistory, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
+import { getInitials } from '../lib/initials';
 import type { Chat, Message, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup } from '../lib/types';
 import type { SocketInterface } from '../lib/socket';
 import { useCallContext } from '../lib/callContext';
@@ -93,6 +94,7 @@ const ATTACHMENT_OPTIONS = [
 interface MessageAreaProps {
   chat: Chat;
   onBack: () => void;
+  onOpenProfile?: (userId: string) => void;
 }
 
 function formatTime(dateStr: string): string {
@@ -755,12 +757,7 @@ function ChatHeader({
   const menuRef = useRef<HTMLDivElement>(null);
   const { startCall } = useCallContext();
   const isAIChat = chat.id === AI_CHAT_ID;
-  const initials = (chat.name || '?')
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(chat.name);
 
   const handleCall = (type: 'voice' | 'video') => {
     if (chat.otherMember) {
@@ -2479,7 +2476,7 @@ function TypingDots({ names }: { names: string[] }) {
   );
 }
 
-export function MessageArea({ chat, onBack }: MessageAreaProps) {
+export function MessageArea({ chat, onBack, onOpenProfile }: MessageAreaProps) {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3070,11 +3067,21 @@ export function MessageArea({ chat, onBack }: MessageAreaProps) {
     setShowEmojiPicker(prev => (prev === msgId ? null : msgId));
   }, []);
 
+  const handleOpenContactProfile = useCallback(() => {
+    if (!onOpenProfile) return;
+    if (chat.type !== 'personal') return;
+    const otherId = chat.otherMember?.id ||
+      chat.members?.find(m => m.userId !== user?.id)?.userId ||
+      null;
+    if (otherId) onOpenProfile(otherId);
+  }, [onOpenProfile, chat, user?.id]);
+
   return (
     <ChatWallpaper chatId={chat.id}>
       <ChatHeader
         chat={chat}
         onBack={onBack}
+        onOpenProfile={handleOpenContactProfile}
         onSearchToggle={() => setSearchMode(v => !v)}
         pinnedMessages={pinnedMessages}
         e2eReady={e2eReady}

@@ -26,10 +26,19 @@ import {
   FileText,
   Mail,
   Cake,
+  QrCode,
+  Share2,
+  Pencil,
 } from 'lucide-react';
+import QRCodeLib from 'qrcode';
 import type { User } from '../lib/types';
 import { VerifiedBadge } from './VerifiedBadge';
 import { toast } from '../lib/toast';
+import { api } from '../lib/api';
+import { useAuthStore } from '../stores/authStore';
+import { getInviteLink } from '../lib/getDomain';
+import { normalizeMediaUrl } from '../lib/mediaUrl';
+import { getInitials } from '../lib/initials';
 
 interface UserProfileModalProps {
   user: User;
@@ -42,6 +51,13 @@ interface UserProfileModalProps {
 export default function UserProfileModal({ user, onClose, onOpenSettings, onLogout, onOpenAdmin }: UserProfileModalProps) {
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrRef = useRef<HTMLCanvasElement>(null);
+  const [showQr, setShowQr] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(user.displayName || '');
+  const [draftBio, setDraftBio] = useState(user.bio || '');
+  const [saving, setSaving] = useState(false);
 
   const handleCopyUsername = () => {
     navigator.clipboard.writeText(`@${user.username}`);
@@ -50,12 +66,77 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
     copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
   };
 
-  const initials = (user.displayName || user.username || '?')
-    .split(' ')
-    .map((w: string) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const handleShare = async () => {
+    const link = getInviteLink(user.username);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${user.displayName || user.username} в Нексо`, text: `Присоединяйтесь: ${link}` });
+        return;
+      } catch { /* user cancelled */ }
+    }
+    navigator.clipboard.writeText(link);
+    toast.success('Ссылка на профиль скопирована');
+  };
+
+  const renderQr = useCallback(() => {
+    if (!qrRef.current) return;
+    QRCodeLib.toCanvas(qrRef.current, getInviteLink(user.username), {
+      width: 220,
+      margin: 1,
+      color: { dark: '#09090f', light: '#ffffff' },
+    }).catch(() => toast.error('Не удалось создать QR-код'));
+  }, [user.username]);
+
+  useEffect(() => {
+    if (showQr) renderQr();
+  }, [showQr, renderQr]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  // Keep drafts in sync when the profile data changes
+  useEffect(() => {
+    if (!editing) {
+      setDraftName(user.displayName || '');
+      setDraftBio(user.bio || '');
+    }
+  }, [user.displayName, user.bio, editing]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const media = await api.uploadFile(file);
+      const updated = await api.updateProfile({ avatar: media.url });
+      useAuthStore.getState().updateUser({ avatar: updated.avatar || media.url });
+      toast.success('Аватар обновлён');
+    } catch (err: any) {
+      toast.error(err?.message || 'Не удалось обновить аватар');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (saving) return;
+    try {
+      setSaving(true);
+      const updated = await api.updateProfile({
+        displayName: draftName.trim(),
+        bio: draftBio.trim(),
+      });
+      useAuthStore.getState().updateUser({ displayName: updated.displayName, bio: updated.bio });
+      setEditing(false);
+      toast.success('Профиль сохранён');
+    } catch (err: any) {
+      toast.error(err?.message || 'Не удалось сохранить');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const initials = getInitials(user.displayName || user.username);
 
   const premiumColor = user.isPremium
     ? 'from-amber-400 via-yellow-300 to-orange-400'
@@ -120,7 +201,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
           <div className="relative group">
             <div className="w-28 h-28 rounded-3xl overflow-hidden ring-4 ring-[#0a0a0f] shadow-2xl">
               {user.avatar ? (
-                <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                <img src={normalizeMediaUrl(user.avatar)} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
                   <span className="text-3xl font-bold text-white/60">{initials}</span>
@@ -128,20 +209,38 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
               )}
             </div>
             <motion.button
+              onClick={() => fileInputRef.current?.click()}
               className="absolute inset-0 rounded-3xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               whileHover={{ scale: 1.02 }}
             >
               <Camera size={20} className="text-white/80" />
             </motion.button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
         </div>
 
         {/* ─── Info ───────────────────────────────────────────────── */}
         <div className="px-6 pt-3 pb-6 text-center">
           <div className="flex items-center justify-center gap-2">
-            <h1 className="text-xl font-bold text-white/90 font-display">
-              {user.displayName || user.username}
-            </h1>
+            {editing ? (
+              <input
+                value={draftName}
+                onChange={e => setDraftName(e.target.value)}
+                maxLength={32}
+                autoFocus
+                className="w-full max-w-[220px] text-center text-lg font-bold bg-white/[0.06] border border-white/[0.12] rounded-xl px-3 py-1 text-white/90 outline-none focus:border-accent/40 text-white"
+              />
+            ) : (
+              <h1 className="text-xl font-bold text-white/90 font-display">
+                {user.displayName || user.username}
+              </h1>
+            )}
             <VerifiedBadge
               isVerified={user.isVerified}
               badgeUrl={user.verifiedBadgeUrl}
@@ -149,6 +248,13 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
               size={18}
             />
             {user.isPremium && <Star size={16} className="text-amber-400 fill-amber-400" />}
+            <button
+              onClick={() => setEditing(v => !v)}
+              className="p-1.5 rounded-full bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.1] text-white/50 hover:text-white/80 transition-all"
+              title={editing ? 'Отменить' : 'Редактировать профиль'}
+            >
+              <Pencil size={12} />
+            </button>
           </div>
 
           <button
@@ -160,10 +266,29 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
             {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
           </button>
 
-          {user.bio && (
+          {editing ? (
+            <textarea
+              value={draftBio}
+              onChange={e => setDraftBio(e.target.value)}
+              maxLength={200}
+              rows={3}
+              placeholder="Расскажите о себе..."
+              className="w-full max-w-xs mx-auto mt-3 text-xs bg-white/[0.06] border border-white/[0.12] rounded-xl px-3 py-2 text-white/80 placeholder:text-white/25 outline-none focus:border-accent/40 resize-none"
+            />
+          ) : user.bio ? (
             <p className="mt-3 text-xs text-white/60 leading-relaxed max-w-xs mx-auto">
               {user.bio}
             </p>
+          ) : null}
+
+          {editing && (
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving || !draftName.trim()}
+              className="mt-3 px-5 py-1.5 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/30 text-xs font-medium text-accent transition-all disabled:opacity-40"
+            >
+              {saving ? 'Сохранение...' : 'Сохранить'}
+            </button>
           )}
 
           {/* Status */}
@@ -217,8 +342,50 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
               <LogOut size={15} />
               Выйти
             </button>
+            <button
+              onClick={() => setShowQr(true)}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-xs font-medium text-white/80 transition-all"
+            >
+              <QrCode size={15} />
+              QR-код
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-xs font-medium text-white/80 transition-all"
+            >
+              <Share2 size={15} />
+              Поделиться
+            </button>
           </div>
         </div>
+
+        {/* ─── QR overlay ─────────────────────────────────────────── */}
+        {showQr && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#0a0a0f]/95 backdrop-blur-md rounded-none md:rounded-3xl px-6">
+            <motion.button
+              onClick={() => setShowQr(false)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-black/40 border border-white/[0.08] hover:bg-white/[0.1] transition-all"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <X size={18} className="text-white/70" />
+            </motion.button>
+            <div className="text-center">
+              <div className="inline-block rounded-2xl bg-white p-3 shadow-2xl">
+                <canvas ref={qrRef} width={220} height={220} />
+              </div>
+              <p className="mt-4 text-sm font-semibold text-white/90">@{user.username}</p>
+              <p className="mt-1 text-[11px] text-white/40">Сканируйте, чтобы открыть профиль</p>
+              <button
+                onClick={handleShare}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent/15 hover:bg-accent/25 border border-accent/20 text-xs text-accent font-medium transition-all"
+              >
+                <Share2 size={13} />
+                Поделиться ссылкой
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

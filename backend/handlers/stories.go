@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -338,18 +340,39 @@ func BlockUser(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	req.BlockedUserID = strings.TrimSpace(req.BlockedUserID)
+	if req.BlockedUserID == "" || req.BlockedUserID == userID {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	var target models.User
+	if result := db.GetDB().First(&target, "id = ?", req.BlockedUserID); result.Error != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	// Already blocked — treat as success (idempotent)
+	var existing models.BlockedUser
+	if err := db.GetDB().
+		Where("user_id = ? AND blocked_user_id = ?", userID, req.BlockedUserID).
+		First(&existing).Error; err == nil {
+		return c.JSON(fiber.Map{"ok": true})
+	}
+
 	blocked := models.BlockedUser{
 		ID:            generateID(),
 		UserID:        userID,
 		BlockedUserID: req.BlockedUserID,
 	}
 	if err := db.GetDB().Create(&blocked).Error; err != nil {
+		log.Printf("error: BlockUser: create block (user=%s target=%s): %v", userID, req.BlockedUserID, err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to block user"})
 	}
 
 	// Remove friendship
-	db.GetDB().Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
-		userID, req.BlockedUserID, req.BlockedUserID, userID).Delete(&models.Friendship{})
+	if err := db.GetDB().Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+		userID, req.BlockedUserID, req.BlockedUserID, userID).Delete(&models.Friendship{}).Error; err != nil {
+		log.Printf("warn: BlockUser: cleanup friendship (user=%s target=%s): %v", userID, req.BlockedUserID, err)
+	}
 
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -364,6 +387,14 @@ func UnblockUser(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	db.GetDB().Where("user_id = ? AND blocked_user_id = ?", userID, req.BlockedUserID).Delete(&models.BlockedUser{})
+	req.BlockedUserID = strings.TrimSpace(req.BlockedUserID)
+	if req.BlockedUserID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	if err := db.GetDB().Where("user_id = ? AND blocked_user_id = ?", userID, req.BlockedUserID).Delete(&models.BlockedUser{}).Error; err != nil {
+		log.Printf("error: UnblockUser: delete block (user=%s target=%s): %v", userID, req.BlockedUserID, err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to unblock user"})
+	}
 	return c.JSON(fiber.Map{"ok": true})
 }

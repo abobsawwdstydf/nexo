@@ -11,6 +11,7 @@ import {
   SquarePen,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
+import { getInitials } from '../lib/initials';
 import { NOTES_CHAT_ID } from '../lib/api/noteChat';
 import { AI_CHAT_ID } from '../lib/api/aiChat';
 import { VerifiedBadge } from './VerifiedBadge';
@@ -59,12 +60,7 @@ function ChatAvatar({ chat }: { chat: Chat }) {
     );
   }
 
-  const initials = (chat.name || '?')
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(chat.name);
 
   const isOnline = chat.type === 'personal' && chat.otherMember?.isOnline;
 

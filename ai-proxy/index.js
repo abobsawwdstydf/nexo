@@ -200,13 +200,14 @@ const KEYS = {
 };
 
 const PROV = {
+  workersai: { url: '', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast' },
   cerebras: { url: 'https://api.cerebras.ai/v1/chat/completions', model: 'gpt-oss-120b' },
   groq: { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile' },
   sambanova: { url: 'https://api.sambanova.ai/v1/chat/completions', model: 'Meta-Llama-3.3-70B-Instruct' },
   mistral: { url: 'https://api.mistral.ai/v1/chat/completions', model: 'mistral-small-latest' },
   openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', model: 'openai/gpt-oss-120b:free' },
 };
-const ORDER = ['cerebras', 'groq', 'sambanova', 'mistral', 'openrouter'];
+const ORDER = ['workersai', 'cerebras', 'groq', 'sambanova', 'mistral', 'openrouter'];
 const ki = {};
 
 function getKey(name) {
@@ -222,9 +223,49 @@ function j2(d, s, ch) {
   return new Response(JSON.stringify(d), { status: s || 200, headers: ch({ 'Content-Type': 'application/json' }) });
 }
 
+// Workers AI streams raw text, not OpenAI SSE. Adapt it into OpenAI-format
+// SSE so the existing sse2() parser works unchanged.
+function workersAISSE(out) {
+  const ts = new TransformStream();
+  const w = ts.writable.getWriter();
+  const d = new TextDecoder();
+  const rd = out.getReader();
+  (async () => {
+    try {
+      while (true) {
+        const res = await rd.read();
+        if (res.done) break;
+        const text = d.decode(res.value, { stream: true });
+        if (text) {
+          await w.write(new TextEncoder().encode('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n'));
+        }
+      }
+      await w.write(new TextEncoder().encode('data: [DONE]\n\n'));
+    } catch (e) {
+      await w.write(new TextEncoder().encode('data: ' + JSON.stringify({ error: e.message || 'Workers AI stream error' }) + '\n\n'));
+    }
+    await w.close();
+  })();
+  return new Response(ts.readable);
+}
+
 async function call(name, msgs, stream) {
   const c = PROV[name];
   if (!c) throw new Error('No provider: ' + name);
+  if (name === 'workersai') {
+    if (!ENV.AI) throw new Error('AI binding missing');
+    const out = await ENV.AI.run(c.model, {
+      messages: msgs,
+      temperature: 0.7,
+      max_tokens: 2048,
+      stream: stream,
+    });
+    if (stream) return workersAISSE(out);
+    const text = out?.response || out?.choices?.[0]?.message?.content || '';
+    return new Response(JSON.stringify({ choices: [{ message: { content: text } }] }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const key = getKey(name);
   if (!key) throw new Error('No key for: ' + name);
   const body = { model: c.model, messages: msgs, stream: stream, temperature: 0.7, max_tokens: 2048 };

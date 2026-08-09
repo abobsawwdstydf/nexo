@@ -37,6 +37,7 @@ import {
   ChevronRightIcon as ChevronRight,
 } from '../lib/appleIcons';
 import type { User as UserType } from '../lib/types';
+import { getInitials } from '../lib/initials';
 import { subscribeToNotifications, unsubscribeFromNotifications, sendTestNotification } from '../lib/notifications';
 import { api } from '../lib/api';
 import { toast } from '../lib/toast';
@@ -556,12 +557,7 @@ function PrivacySettings() {
 }
 
 function ProfileSettings({ user }: { user: UserType }) {
-  const initials = (user.displayName || user.username || '?')
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(user.displayName || user.username);
 
   return (
     <div className="space-y-4">

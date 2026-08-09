@@ -523,11 +523,11 @@ type CreateChatRequest struct {
 }
 
 type UpdateProfileRequest struct {
-	DisplayName  string `json:"displayName"`
-	Bio          string `json:"bio"`
-	Avatar       string `json:"avatar"`
-	NameColor    string `json:"nameColor"`
-	NameGradient string `json:"nameGradient"`
+	DisplayName  *string `json:"displayName"`
+	Bio          *string `json:"bio"`
+	Avatar       *string `json:"avatar"`
+	NameColor    *string `json:"nameColor"`
+	NameGradient *string `json:"nameGradient"`
 }
 
 type EmailVerification struct {

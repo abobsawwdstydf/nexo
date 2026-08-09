@@ -10,6 +10,7 @@ import { MessageArea } from '../components/MessageArea';
 import FriendsPanel from '../components/FriendsPanel';
 import NewChatModal from '../components/NewChatModal';
 import UserProfileModal from '../components/UserProfileModal';
+import ContactProfileModal from '../components/ContactProfileModal';
 import SettingsModal from '../components/SettingsModal';
 import AccountManager from '../components/AccountManager';
 import { toast } from '../lib/toast';
@@ -82,6 +83,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [showStoryCreate, setShowStoryCreate] = useState(false);
   const [storyViewerGroup, setStoryViewerGroup] = useState<number | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [contactUserId, setContactUserId] = useState<string | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
   const chatListRef = useRef<HTMLDivElement>(null);
@@ -245,6 +247,10 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   }, []);
 
   const handleOpenFriends = useCallback(() => setShowFriends(true), []);
+  const handleOpenContactProfile = useCallback((userId: string) => {
+    setShowFriends(false);
+    setContactUserId(userId);
+  }, []);
   const handleOpenNewChat = useCallback(() => setCreateTab('personal'), []);
   const handleChatCreated = useCallback((chat: Chat | null) => {
     if (chat && user) {
@@ -309,6 +315,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
             <FriendsPanel
               onClose={() => setShowFriends(false)}
               onStartChat={handleFriendsChat}
+              onOpenProfile={handleOpenContactProfile}
             />
           ) : (
             <ChatList
@@ -348,6 +355,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
                 <MessageArea
                   chat={selectedChat}
                   onBack={handleBackToList}
+                  onOpenProfile={handleOpenContactProfile}
                 />
               </motion.div>
             ) : (
@@ -413,6 +421,22 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
       <AnimatePresence>
         {showAdmin && (
           <AdminPanel onClose={() => setShowAdmin(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Contact profile (opened from chat header / friends) */}
+      <AnimatePresence>
+        {contactUserId && (
+          <ContactProfileModal
+            userId={contactUserId}
+            onClose={() => setContactUserId(null)}
+            onMessage={handleFriendsChat}
+            onOpenCommonChat={(chatId) => {
+              setContactUserId(null);
+              setShowFriends(false);
+              handleSelectChat(chatId);
+            }}
+          />
         )}
       </AnimatePresence>
 

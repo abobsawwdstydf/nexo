@@ -1,4 +1,5 @@
 import { normalizeMediaUrl } from '../lib/mediaUrl';
+import { getInitials } from '../lib/initials';
 
 interface UserAvatarProps {
   user: { avatar: string | null; displayName: string };
@@ -18,12 +19,7 @@ export function UserAvatar({ user, size = 'md' }: UserAvatarProps) {
     );
   }
 
-  const initials = user.displayName
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(user.displayName);
 
   return (
     <div

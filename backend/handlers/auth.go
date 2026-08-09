@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"log"
 	"net/smtp"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 
 	"nexo/beta"
 	"nexo/db"
@@ -26,6 +28,13 @@ var (
 	usernameRegex = regexp.MustCompile(`^[a-zA-Zа-яА-ЯёЁ0-9_]{3,32}$`)
 	emailRegex    = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 )
+
+// commonChatRow — общий чат (личный или группа) между двумя пользователями.
+type commonChatRow struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
 
 // ─── Reserved usernames ─────────────────────────────────────────────────
 // blockedForAll — никто не может использовать
@@ -517,6 +526,7 @@ func GetProfile(c *fiber.Ctx) error {
 }
 
 func GetUser(c *fiber.Ctx) error {
+	viewerID := middleware.UserIDFromCtx(c)
 	targetID := c.Params("id")
 
 	// Block invalid IDs that aren't real user IDs
@@ -524,12 +534,90 @@ func GetUser(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
+	// Viewing own profile: return the same response shape as any other profile
+	if targetID == viewerID {
+		var me models.User
+		if result := db.GetDB().First(&me, "id = ?", viewerID); result.Error != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+		return c.JSON(fiber.Map{
+			"user":         sanitizeUser(me),
+			"friendship":   "none",
+			"friendshipId": "",
+			"blockedByMe":  false,
+			"blockedMe":    false,
+			"commonChats":  []commonChatRow{},
+		})
+	}
+
 	var user models.User
 	if result := db.GetDB().First(&user, "id = ?", targetID); result.Error != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	return c.JSON(sanitizeUser(user))
+	safe := sanitizeUser(user)
+
+	// Friendship status between viewer and target
+	friendshipStatus := "none"
+	friendshipID := ""
+	if viewerID != "" {
+		var friendship models.Friendship
+		result := db.GetDB().
+			Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+				viewerID, targetID, targetID, viewerID).
+			First(&friendship)
+		if result.Error == nil {
+			friendshipID = friendship.ID
+			if friendship.Status == "accepted" {
+				friendshipStatus = "accepted"
+			} else if friendship.UserID == viewerID {
+				friendshipStatus = "pending_sent"
+			} else {
+				friendshipStatus = "pending_received"
+			}
+		} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			log.Printf("error: GetUser: friendship query (viewer=%s target=%s): %v", viewerID, targetID, result.Error)
+		}
+	}
+
+	// Block state (both directions)
+	var blockedByMe, blockedMe bool
+	if viewerID != "" {
+		var b1, b2 models.BlockedUser
+		if db.GetDB().Where("user_id = ? AND blocked_user_id = ?", viewerID, targetID).First(&b1).Error == nil {
+			blockedByMe = true
+		}
+		if db.GetDB().Where("user_id = ? AND blocked_user_id = ?", targetID, viewerID).First(&b2).Error == nil {
+			blockedMe = true
+		}
+	}
+
+	// Common chats (personal + group) between viewer and target
+	commonChats := make([]commonChatRow, 0)
+	if viewerID != "" && !blockedMe {
+		if err := db.GetDB().Raw(`
+			SELECT cm1.chat_id AS id, c.name AS name, c.type AS type
+			FROM chat_members cm1
+			JOIN chat_members cm2 ON cm1.chat_id = cm2.chat_id
+			JOIN chats c ON c.id = cm1.chat_id
+			WHERE cm1.user_id = ? AND cm2.user_id = ?
+			  AND cm1.user_id != cm2.user_id
+			  AND c.type IN ('personal','group')
+			ORDER BY c.updated_at DESC
+			LIMIT 20`,
+			viewerID, targetID).Scan(&commonChats).Error; err != nil {
+			log.Printf("error: GetUser: common chats query (viewer=%s target=%s): %v", viewerID, targetID, err)
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"user":         safe,
+		"friendship":   friendshipStatus,
+		"friendshipId": friendshipID,
+		"blockedByMe":  blockedByMe,
+		"blockedMe":    blockedMe,
+		"commonChats":  commonChats,
+	})
 }
 
 func UpdateProfile(c *fiber.Ctx) error {
@@ -541,28 +629,34 @@ func UpdateProfile(c *fiber.Ctx) error {
 	}
 
 	updates := map[string]interface{}{}
-	if req.DisplayName != "" {
-		updates["display_name"] = req.DisplayName
+	if req.DisplayName != nil {
+		updates["display_name"] = strings.TrimSpace(*req.DisplayName)
 	}
-	if req.Bio != "" {
-		updates["bio"] = req.Bio
+	if req.Bio != nil {
+		updates["bio"] = strings.TrimSpace(*req.Bio)
 	}
-	if req.Avatar != "" {
-		updates["avatar"] = req.Avatar
+	if req.Avatar != nil {
+		updates["avatar"] = *req.Avatar
 	}
-	if req.NameColor != "" {
-		updates["name_color"] = req.NameColor
+	if req.NameColor != nil {
+		updates["name_color"] = *req.NameColor
 	}
-	if req.NameGradient != "" {
-		updates["name_gradient"] = req.NameGradient
+	if req.NameGradient != nil {
+		updates["name_gradient"] = *req.NameGradient
 	}
 
 	if len(updates) > 0 {
-		db.GetDB().Model(&models.User{}).Where("id = ?", userID).Updates(updates)
+		if err := db.GetDB().Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+			log.Printf("error: UpdateProfile: failed to update user %s: %v", userID, err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update profile"})
+		}
 	}
 
 	var user models.User
-	db.GetDB().First(&user, "id = ?", userID)
+	if err := db.GetDB().First(&user, "id = ?", userID).Error; err != nil {
+		log.Printf("error: UpdateProfile: reload user %s: %v", userID, err)
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
 	return c.JSON(user)
 }
 

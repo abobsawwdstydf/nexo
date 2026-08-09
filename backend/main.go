@@ -180,7 +180,7 @@ func main() {
 	}
 	app.Use(cors.New(cors.Config{
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-CSRF-Token,X-Request-Timestamp,X-Request-Signature",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-CSRF-Token,X-Request-Timestamp,X-Request-Signature,X-Dev-Key,X-Dev-Login-Key",
 		AllowCredentials: true,
 		AllowOriginsFunc: func(origin string) bool {
 			if origin == "" {
