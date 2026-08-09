@@ -634,7 +634,7 @@ const MessageBubble = memo(function MessageBubble({
               )}
               {!location && (
                 <div className={`text-sm leading-relaxed word-break ${isOwn && !isChannel ? 'text-white/90' : 'text-white/85'}`}>
-                  <MarkdownRenderer content={message.content} isOwn={isOwn && !isChannel} />
+                  <MarkdownRenderer content={message.content} isOwn={isOwn && !isChannel} senderId={message.sender?.id} />
                 </div>
               )}
               {/* Link Previews */}
@@ -1873,6 +1873,7 @@ function MessageInput({
               <textarea
                 ref={inputRef}
                 rows={1}
+                name="message-input"
                 value={text}
                 onChange={e => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -2412,6 +2413,7 @@ function ForwardModal({
         <div className="px-3 pt-2 pb-1">
           <input
             type="text"
+            name="chat-search-mobile"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Поиск чатов..."

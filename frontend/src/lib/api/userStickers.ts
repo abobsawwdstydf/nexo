@@ -30,6 +30,10 @@ export function installUserStickers(api: ApiClient): void {
     return api.get<UserStickerPack[]>('/sticker-packs');
   };
 
+  api.getUserStickerPacks = async (userId: string) => {
+    return api.get<UserStickerPack[]>(`/users/${userId}/sticker-packs`);
+  };
+
   api.uploadUserSticker = async (packId: string, file: File, emoji = '') => {
     const form = new FormData();
     form.append('file', file);
@@ -50,6 +54,7 @@ declare module './core' {
   interface ApiClient {
     createUserStickerPack(name: string, type: 'sticker' | 'emoji', description?: string): Promise<UserStickerPack>;
     getMyStickerPacks(): Promise<UserStickerPack[]>;
+    getUserStickerPacks(userId: string): Promise<UserStickerPack[]>;
     uploadUserSticker(packId: string, file: File, emoji?: string): Promise<UserSticker>;
     deleteUserSticker(stickerId: string): Promise<{ ok: boolean }>;
     deleteUserStickerPack(packId: string): Promise<{ ok: boolean }>;

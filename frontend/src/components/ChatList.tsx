@@ -291,6 +291,7 @@ export function ChatList({
           />
           <input
             type="text"
+            name="chat-search"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             placeholder="Поиск чатов, сообщений..."

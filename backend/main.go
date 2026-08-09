@@ -407,6 +407,9 @@ nexo_up 1
 	auth.Post("/sticker-packs/:packId/stickers", handlers.UploadUserSticker)
 	auth.Delete("/sticker-packs/:packId", handlers.DeleteUserStickerPack)
 	auth.Delete("/stickers/:stickerId", handlers.DeleteUserSticker)
+	// Public (auth'd) list of another user's packs — used to render received
+	// [mysticker:...] / [myemoji:...] tokens. Must stay after /sticker-packs.
+	auth.Get("/users/:userId/sticker-packs", handlers.GetUserStickerPacks)
 
 	// ─── New Features ─────────────────────────────────────────────────────
 
