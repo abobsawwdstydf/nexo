@@ -10,6 +10,7 @@ declare module './core' {
     createChannel(name: string, username: string, description?: string): Promise<Chat>;
     addChatMember(chatId: string, userId: string): Promise<{ id: string }>;
     getOrCreateFeedbackChat(): Promise<Chat>;
+    openComments(chatId: string, messageId: string): Promise<{ chatId: string; chat: Chat }>;
     adminListFeedback(): Promise<{ items: Array<{ chatId: string; name: string; avatar: string; members: number; messageCount: number; lastMessage: { content: string } | null; lastAt: string }>; total: number }>;
     adminReplyFeedback(chatId: string, content: string): Promise<unknown>;
     setUserBadge(targetId: string, badgeType: string, badgeUrl: string): Promise<{ ok: boolean }>;
@@ -53,6 +54,10 @@ export function installChats(api: ApiClient): void {
   // ─── System Feedback Chat ─────────────────────────────────────────
   api.getOrCreateFeedbackChat = async () => {
     return api.request<Chat>('/feedback/chat', { method: 'POST' });
+  };
+
+  api.openComments = async (chatId: string, messageId: string) => {
+    return api.request<{ chatId: string; chat: Chat }>(`/chats/${chatId}/comments/${messageId}/open`, { method: 'POST' });
   };
 
   api.adminListFeedback = async () => {

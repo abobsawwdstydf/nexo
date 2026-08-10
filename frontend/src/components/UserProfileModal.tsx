@@ -51,11 +51,14 @@ interface UserProfileModalProps {
 export default function UserProfileModal({ user, onClose, onOpenSettings, onLogout, onOpenAdmin }: UserProfileModalProps) {
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const usernameCheckRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLCanvasElement>(null);
   const [showQr, setShowQr] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(user.displayName || '');
+  const [draftUsername, setDraftUsername] = useState(user.username || '');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'ok' | 'taken' | 'invalid'>('idle');
   const [draftBio, setDraftBio] = useState(user.bio || '');
   const [saving, setSaving] = useState(false);
 
@@ -94,6 +97,7 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
   useEffect(() => {
     return () => {
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
     };
   }, []);
 
@@ -101,9 +105,37 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
   useEffect(() => {
     if (!editing) {
       setDraftName(user.displayName || '');
+      setDraftUsername(user.username || '');
       setDraftBio(user.bio || '');
+      setUsernameStatus('idle');
     }
-  }, [user.displayName, user.bio, editing]);
+  }, [user.displayName, user.username, user.bio, editing]);
+
+  const checkDraftUsername = async (value: string) => {
+    const v = value.trim();
+    if (!v || v === user.username) {
+      setUsernameStatus('idle');
+      return;
+    }
+    if (!/^[a-zA-Zа-яА-ЯёЁ0-9_]{3,32}$/.test(v)) {
+      setUsernameStatus('invalid');
+      return;
+    }
+    setUsernameStatus('checking');
+    try {
+      const res = await api.checkUsername(v);
+      setUsernameStatus(res.available ? 'ok' : 'taken');
+    } catch {
+      setUsernameStatus('idle');
+    }
+  };
+
+  const handleUsernameChange = (value: string) => {
+    setDraftUsername(value);
+    setUsernameStatus('checking');
+    clearTimeout(usernameCheckRef.current);
+    usernameCheckRef.current = setTimeout(() => checkDraftUsername(value), 400);
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,16 +150,41 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
     }
   };
 
+  const handleRemoveAvatar = async () => {
+    try {
+      const updated = await api.updateProfile({ avatar: '' });
+      useAuthStore.getState().updateUser({ avatar: updated.avatar || '' });
+      toast.success('Аватар удалён');
+    } catch (err: any) {
+      toast.error(err?.message || 'Не удалось удалить аватар');
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (saving) return;
+    const finalUsername = draftUsername.trim();
+    if (!finalUsername) {
+      toast.error('Никнейм не может быть пустым');
+      return;
+    }
+    if (!/^[a-zA-Zа-яА-ЯёЁ0-9_]{3,32}$/.test(finalUsername)) {
+      toast.error('Никнейм: 3–32 символа (латиница, кириллица, цифры, _)');
+      return;
+    }
+    if (usernameStatus === 'taken') {
+      toast.error('Этот никнейм уже занят');
+      return;
+    }
     try {
       setSaving(true);
       const updated = await api.updateProfile({
         displayName: draftName.trim(),
+        username: finalUsername,
         bio: draftBio.trim(),
       });
-      useAuthStore.getState().updateUser({ displayName: updated.displayName, bio: updated.bio });
+      useAuthStore.getState().updateUser({ displayName: updated.displayName, username: updated.username, bio: updated.bio });
       setEditing(false);
+      setUsernameStatus('idle');
       toast.success('Профиль сохранён');
     } catch (err: any) {
       toast.error(err?.message || 'Не удалось сохранить');
@@ -215,6 +272,17 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
             >
               <Camera size={20} className="text-white/80" />
             </motion.button>
+            {user.avatar && (
+              <motion.button
+                onClick={handleRemoveAvatar}
+                className="absolute -bottom-2 -right-2 rounded-xl bg-rose-500/90 p-1.5 shadow-lg hover:bg-rose-500 transition-all"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Удалить аватар"
+              >
+                <Trash2 size={13} className="text-white" />
+              </motion.button>
+            )}
             <input
               ref={fileInputRef}
               type="file"
@@ -267,14 +335,33 @@ export default function UserProfileModal({ user, onClose, onOpenSettings, onLogo
           </button>
 
           {editing ? (
-            <textarea
-              value={draftBio}
-              onChange={e => setDraftBio(e.target.value)}
-              maxLength={200}
-              rows={3}
-              placeholder="Расскажите о себе..."
-              className="w-full max-w-xs mx-auto mt-3 text-xs bg-white/[0.06] border border-white/[0.12] rounded-xl px-3 py-2 text-white/80 placeholder:text-white/25 outline-none focus:border-accent/40 resize-none"
-            />
+            <div className="mt-2 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <AtSign size={14} className="text-white/35" />
+                <input
+                  value={draftUsername}
+                  onChange={e => handleUsernameChange(e.target.value)}
+                  maxLength={32}
+                  className={`w-full max-w-[200px] text-center text-sm font-semibold bg-white/[0.06] border rounded-xl px-3 py-1 text-white/90 outline-none ${
+                    usernameStatus === 'taken' || usernameStatus === 'invalid'
+                      ? 'border-rose-500/50 focus:border-rose-500/60'
+                      : 'border-white/[0.12] focus:border-accent/40'
+                  }`}
+                />
+                {usernameStatus === 'checking' && <span className="text-xs text-white/35">…</span>}
+                {usernameStatus === 'ok' && <span className="text-xs text-green-400">✓</span>}
+                {usernameStatus === 'taken' && <span className="text-xs text-rose-400">занят</span>}
+                {usernameStatus === 'invalid' && <span className="text-xs text-rose-400">неверно</span>}
+              </div>
+              <textarea
+                value={draftBio}
+                onChange={e => setDraftBio(e.target.value)}
+                maxLength={200}
+                rows={3}
+                placeholder="Расскажите о себе..."
+                className="w-full max-w-xs mx-auto text-xs bg-white/[0.06] border border-white/[0.12] rounded-xl px-3 py-2 text-white/80 placeholder:text-white/25 outline-none focus:border-accent/40 resize-none"
+              />
+            </div>
           ) : user.bio ? (
             <p className="mt-3 text-xs text-white/60 leading-relaxed max-w-xs mx-auto">
               {user.bio}

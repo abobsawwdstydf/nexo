@@ -259,6 +259,12 @@ export interface Chat {
   verifiedBadgeUrl?: string | null;
   verifiedBadgeType?: string | null;
   verifiedAt?: string | null;
+  // Channels
+  subscribersCount?: number;
+  isPremium?: boolean;
+  // Comments chats (linked to a channel post)
+  linkedChatId?: string;
+  linkedMessageId?: string;
   // Secret chat
   isSecret?: boolean;
   isE2E?: boolean;

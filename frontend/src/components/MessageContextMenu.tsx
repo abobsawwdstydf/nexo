@@ -14,6 +14,7 @@ interface MessageContextMenuProps {
   onCopy: (content: string) => void;
   onEdit: (message: Message) => void;
   onDelete: (messageId: string, forEveryone: boolean) => void;
+  canDelete?: boolean;
 }
 
 export function MessageContextMenu({
@@ -27,6 +28,7 @@ export function MessageContextMenu({
   onCopy,
   onEdit,
   onDelete,
+  canDelete = true,
 }: MessageContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -87,21 +89,25 @@ export function MessageContextMenu({
         </button>
       )}
       <div className="mx-3 my-1 h-px bg-white/[0.06]" />
-      <button
-        onClick={() => { onDelete(message.id, false); onClose(); }}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:bg-white/[0.08] transition-colors"
-      >
-        <Trash2 size={14} />
-        Удалить для меня
-      </button>
-      {isOwn && (
-        <button
-          onClick={() => { onDelete(message.id, true); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:bg-white/[0.08] transition-colors"
-        >
-          <Trash2 size={14} />
-          Удалить для всех
-        </button>
+      {canDelete && (
+        <>
+          <button
+            onClick={() => { onDelete(message.id, false); onClose(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:bg-white/[0.08] transition-colors"
+          >
+            <Trash2 size={14} />
+            Удалить для меня
+          </button>
+          {isOwn && (
+            <button
+              onClick={() => { onDelete(message.id, true); onClose(); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:bg-white/[0.08] transition-colors"
+            >
+              <Trash2 size={14} />
+              Удалить для всех
+            </button>
+          )}
+        </>
       )}
     </motion.div>
   );

@@ -95,6 +95,8 @@ interface MessageAreaProps {
   chat: Chat;
   onBack: () => void;
   onOpenProfile?: (userId: string) => void;
+  onOpenCommentsChat?: (chatId: string) => void;
+  onOpenChannelProfile?: (chatId: string) => void;
 }
 
 function formatTime(dateStr: string): string {
@@ -506,6 +508,8 @@ const MessageBubble = memo(function MessageBubble({
   onContextMenu,
   onCallback,
   onWebApp,
+  onOpenComments,
+  onAvatarClick,
   decryptedMediaUrl,
 }: {
   message: Message;
@@ -516,6 +520,8 @@ const MessageBubble = memo(function MessageBubble({
   onContextMenu?: (message: Message, position: { x: number; y: number }) => void;
   onCallback?: (messageId: string, data: string) => void;
   onWebApp?: (url: string) => void;
+  onOpenComments?: (message: Message) => void;
+  onAvatarClick?: (message: Message) => void;
   decryptedMediaUrl?: string;
 }) {
   const time = formatTime(message.createdAt);
@@ -530,7 +536,7 @@ const MessageBubble = memo(function MessageBubble({
       initial={{ opacity: 0, y: 12, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-      className={`group relative flex ${isOwn && !isChannel ? 'justify-end' : 'justify-start'} mb-1`}
+      className={`group relative flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1`}
       onContextMenu={(e) => {
         e.preventDefault();
         onContextMenu?.(message, { x: e.clientX, y: e.clientY });
@@ -539,13 +545,29 @@ const MessageBubble = memo(function MessageBubble({
         if (onReact) onReact(message.id);
       }}
     >
-      <div className={`max-w-[75%] ${hasVideoNote ? 'max-w-[160px]' : ''}`}>
+      <div className="flex items-end gap-1.5 min-w-0 max-w-full">
+        {!isOwn && onAvatarClick && message.sender && (
+          <button
+            onClick={() => onAvatarClick(message)}
+            className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 mb-1 bg-white/[0.06] border border-white/[0.08] hover:opacity-75 transition-opacity"
+            title="Открыть профиль"
+          >
+            {message.sender.avatar ? (
+              <img src={normalizeMediaUrl(message.sender.avatar)} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-white/50">
+                {getInitials(message.sender.displayName || message.sender.username || '?')}
+              </div>
+            )}
+          </button>
+        )}
+        <div className={`max-w-[75%] ${hasVideoNote ? 'max-w-[160px]' : ''}`}>
         {/* Reply quote */}
         {message.replyTo && (
           <div
             className={`
               px-3 py-1.5 mb-1 rounded-lg border-l-2 text-xs
-              ${isOwn && !isChannel ? 'bg-white/[0.06] border-white/20' : 'bg-black/[0.2] border-white/30'}
+              ${isOwn ? 'bg-white/[0.06] border-white/20' : 'bg-black/[0.2] border-white/30'}
             `}
           >
             <p className="font-medium text-white/60 text-[10px]">
@@ -577,7 +599,7 @@ const MessageBubble = memo(function MessageBubble({
         <div
           className={`
             ${hasVideoNote ? 'px-2 py-2' : 'px-4 py-2.5'}
-            ${isOwn && !isChannel
+            ${isOwn
               ? 'rounded-[20px] rounded-br-[8px] liquid-glass bubble-sent-glow'
               : 'rounded-[20px] rounded-bl-[8px] liquid-glass bubble-received-glow'
             }
@@ -635,13 +657,13 @@ const MessageBubble = memo(function MessageBubble({
                 </div>
               )}
               {!location && (
-                <div className={`text-sm leading-relaxed word-break ${isOwn && !isChannel ? 'text-white/90' : 'text-white/85'}`}>
-                  <MarkdownRenderer content={message.content} isOwn={isOwn && !isChannel} senderId={message.sender?.id} />
+                <div className={`text-sm leading-relaxed word-break ${isOwn ? 'text-white/90' : 'text-white/85'}`}>
+                  <MarkdownRenderer content={message.content} isOwn={isOwn} senderId={message.sender?.id} />
                 </div>
               )}
               {/* Link Previews */}
               {!location && extractUrls(message.content).slice(0, 2).map((url) => (
-                <LinkPreview key={url} url={url} isOwn={isOwn && !isChannel} />
+                <LinkPreview key={url} url={url} isOwn={isOwn} />
               ))}
             </div>
           )}
@@ -649,7 +671,7 @@ const MessageBubble = memo(function MessageBubble({
           {/* Channel Comments Button (TG Style) */}
           {isChannel && (
             <button
-              onClick={() => onReply?.(message)}
+              onClick={() => onOpenComments?.(message)}
               className="mt-2 w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] transition-colors text-xs text-white/70 font-medium"
             >
               <span className="flex items-center gap-1.5">
@@ -661,9 +683,9 @@ const MessageBubble = memo(function MessageBubble({
           )}
 
           {/* Time & Read Status */}
-          <div className={`flex items-center gap-2 mt-1 ${isOwn && !isChannel ? 'justify-end' : 'justify-start'}`}>
+          <div className={`flex items-center gap-2 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
             <span className="text-[10px] text-white/30">{time}</span>
-            {isOwn && !isChannel && (
+            {isOwn && (
               message.readBy && message.readBy.length > 1 ? (
                 <span className="text-[10px] text-white/40 flex items-center gap-0.5">
                   <CheckCheck size={12} />
@@ -678,6 +700,7 @@ const MessageBubble = memo(function MessageBubble({
             )}
           </div>
         </div>
+        </div>
 
         {/* Bot inline keyboard */}
         {message.replyMarkup && (
@@ -686,7 +709,7 @@ const MessageBubble = memo(function MessageBubble({
 
         {/* Reactions */}
         {message.reactions && message.reactions.length > 0 && (
-          <div className={`flex flex-wrap gap-1 mt-0.5 ${isOwn && !isChannel ? 'justify-end' : 'justify-start'}`}>
+          <div className={`flex flex-wrap gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
             {message.reactions.map((r) => (
               <button
                 key={r.id}
@@ -700,7 +723,7 @@ const MessageBubble = memo(function MessageBubble({
         )}
 
         {/* Hover actions */}
-        <div className={`absolute top-0 ${isOwn && !isChannel ? 'left-0 -translate-x-full pl-1' : 'right-0 translate-x-full pr-1'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5`}>
+        <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full pl-1' : 'right-0 translate-x-full pr-1'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5`}>
           <button
             onClick={() => onReply?.(message)}
             className="p-1 rounded-lg bg-black/40 border border-white/[0.06] hover:bg-white/[0.1] transition-colors"
@@ -854,6 +877,8 @@ function ChatHeader({
                   ? `${chat.members?.length || 0} участников`
                   : chat.type === 'channel'
                   ? 'Канал'
+                  : chat.type === 'comments'
+                  ? 'Комментарии'
                   : ''}
               </p>
             </div>
@@ -946,7 +971,9 @@ function ChatHeader({
                   {chat.type === 'group' && <ChatMenuItem icon={Users} label="Участники" />}
                   <div className="mx-3 my-1 h-px bg-white/[0.06]" />
                   <ChatMenuItem icon={Flag} label="Пожаловаться" className="text-red-400" onClick={handleReportChat} />
-                  <ChatMenuItem icon={Trash2} label="Удалить чат" className="text-red-400" />
+                  {chat.type !== 'comments' && (
+                    <ChatMenuItem icon={Trash2} label="Удалить чат" className="text-red-400" />
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1068,7 +1095,7 @@ function MessageInput({
   useEffect(() => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    fetch('/stickers/manifest.json', { signal: controller.signal })
+    fetch('/stickers/manifest.json?v=2', { signal: controller.signal })
       .then(r => r.json())
       .then((data: StickerPackManifest[]) => {
         setStickerPacks(data.map(pack => ({
@@ -2476,7 +2503,7 @@ function TypingDots({ names }: { names: string[] }) {
   );
 }
 
-export function MessageArea({ chat, onBack, onOpenProfile }: MessageAreaProps) {
+export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, onOpenChannelProfile }: MessageAreaProps) {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3068,13 +3095,30 @@ export function MessageArea({ chat, onBack, onOpenProfile }: MessageAreaProps) {
   }, []);
 
   const handleOpenContactProfile = useCallback(() => {
+    if (chat.type === 'channel') {
+      onOpenChannelProfile?.(chat.id);
+      return;
+    }
+    if (chat.type === 'comments') {
+      onOpenChannelProfile?.(chat.linkedChatId || '');
+      return;
+    }
     if (!onOpenProfile) return;
     if (chat.type !== 'personal') return;
     const otherId = chat.otherMember?.id ||
       chat.members?.find(m => m.userId !== user?.id)?.userId ||
       null;
     if (otherId) onOpenProfile(otherId);
-  }, [onOpenProfile, chat, user?.id]);
+  }, [onOpenProfile, onOpenChannelProfile, chat, user?.id]);
+
+  const handleOpenComments = useCallback(async (msg: Message) => {
+    try {
+      const result = await api.openComments(chat.id, msg.id);
+      onOpenCommentsChat?.(result.chatId);
+    } catch {
+      toast.error('Не удалось открыть комментарии');
+    }
+  }, [chat.id, onOpenCommentsChat]);
 
   return (
     <ChatWallpaper chatId={chat.id}>
@@ -3195,6 +3239,8 @@ export function MessageArea({ chat, onBack, onOpenProfile }: MessageAreaProps) {
                       onContextMenu={handleContextMenu}
                       onCallback={handleBotCallback}
                       onWebApp={setWebAppUrl}
+                      onOpenComments={handleOpenComments}
+                      onAvatarClick={(m) => { if (m.senderId && m.senderId !== user?.id) onOpenProfile?.(m.senderId); }}
                       decryptedMediaUrl={decryptedMediaUrls[msg.id]}
                     />
                     {/* Quick reactions for this message */}
@@ -3361,6 +3407,7 @@ export function MessageArea({ chat, onBack, onOpenProfile }: MessageAreaProps) {
             onCopy={handleCopyText}
             onEdit={(msg) => { setReplyTo({ id: msg.id, content: msg.content || '', sender: msg.sender?.displayName || '' }); setShowContextMenu(null); }}
             onDelete={handleDeleteMessage}
+            canDelete={chat.type !== 'comments' || chat.members?.some(m => m.userId === user?.id && m.role === 'owner')}
           />
         )}
       </AnimatePresence>

@@ -82,6 +82,8 @@ type Chat struct {
 	CustomIcon       string    `json:"customIcon"`
 	CustomColor      string    `json:"customColor"`
 	CustomBackground string    `json:"customBackground"`
+	LinkedChatID     string    `json:"linkedChatId"`
+	LinkedMessageID  string    `json:"linkedMessageId"`
 	CreatedAt        time.Time `json:"createdAt" gorm:"autoCreateTime"`
 	UpdatedAt        time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
@@ -356,11 +358,25 @@ type Payment struct {
 	GiftToUserID  string    `json:"giftToUserId"`                          // for gifts
 	PremiumMonths int       `json:"premiumMonths"`
 	Metadata      string    `json:"metadata"` // JSON metadata
+	PromoCode     string    `json:"promoCode,omitempty"`
 	CreatedAt     time.Time `json:"createdAt" gorm:"autoCreateTime"`
 	UpdatedAt     time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
 
 	User       User  `json:"user" gorm:"foreignKey:UserID"`
 	GiftToUser *User `json:"giftToUser,omitempty" gorm:"foreignKey:GiftToUserID"`
+}
+
+// PromoCode — купон на знижку для преміуму
+type PromoCode struct {
+	ID              string     `json:"id" gorm:"primaryKey"`
+	Code            string     `json:"code" gorm:"uniqueIndex;size:64"`
+	DiscountPercent int        `json:"discountPercent"` // 1-99
+	MaxUses         int        `json:"maxUses"`
+	UsedCount       int        `json:"usedCount"`
+	Active          bool       `json:"active" gorm:"default:true"`
+	ExpiresAt       *time.Time `json:"expiresAt,omitempty"`
+	CreatedAt       time.Time  `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time  `json:"updatedAt" gorm:"autoUpdateTime"`
 }
 
 type BotHealthCheck struct {
@@ -464,6 +480,7 @@ type CreatePaymentRequest struct {
 	Type          string `json:"type"` // "premium" or "premium_gift"
 	PremiumMonths int    `json:"premiumMonths"`
 	GiftToUserID  string `json:"giftToUserId,omitempty"`
+	PromoCode     string `json:"promoCode,omitempty"`
 }
 
 type PaymentCallbackRequest struct {
@@ -528,6 +545,7 @@ type UpdateProfileRequest struct {
 	Avatar       *string `json:"avatar"`
 	NameColor    *string `json:"nameColor"`
 	NameGradient *string `json:"nameGradient"`
+	Username     *string `json:"username"`
 }
 
 type EmailVerification struct {

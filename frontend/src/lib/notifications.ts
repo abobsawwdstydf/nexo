@@ -1,9 +1,37 @@
 // Web Push notifications manager
 import { logger } from './logger';
 import type { PushSubscriptionJSON } from './api/realtime';
+import { getApiBase } from './api/core';
 
 // VAPID public key (can be overridden from server config)
-const VAPID_PUBLIC_KEY = 'BJ1KtETxqOeTH_9VsXDSRJVyXZExqbWJn_WupTc1a6mm9CdQdtXNzzknTTz4SE4dU78Und4ZTwTXKoWIT02cMrk';
+const FALLBACK_VAPID_PUBLIC_KEY = 'BJ1KtETxqOeTH_9VsXDSRJVyXZExqbWJn_WupTc1a6mm9CdQdtXNzzknTTz4SE4dU78Und4ZTwTXKoWIT02cMrk';
+
+let cachedVapidKey: string | null = null;
+
+/**
+ * Fetch the exact VAPID public key used by the backend (falls back to the
+ * bundled key when the endpoint is unavailable).
+ */
+export async function getVapidPublicKey(): Promise<string> {
+  if (cachedVapidKey) return cachedVapidKey;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(`${getApiBase()}/vapid-public-key`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.publicKey) {
+        cachedVapidKey = data.publicKey as string;
+        return cachedVapidKey;
+      }
+    }
+  } catch {
+    // backend unreachable — fall back below
+  }
+  cachedVapidKey = FALLBACK_VAPID_PUBLIC_KEY;
+  return cachedVapidKey;
+}
 
 /**
  * Register notification service worker
@@ -132,9 +160,15 @@ export async function subscribeToNotifications(): Promise<PushSubscription | nul
     }
 
     // Subscribe to push notifications
+    const vapidKey = await getVapidPublicKey();
+    if (!vapidKey) {
+      logger.warn('[Push] No VAPID public key available');
+      return null;
+    }
+
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource
+      applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource
     });
 
     logger.log('[Push] Subscribed successfully');

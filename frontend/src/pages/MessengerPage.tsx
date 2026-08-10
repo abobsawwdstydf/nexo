@@ -7,6 +7,7 @@ import type { Chat, Message, UserBasic } from '../lib/types';
 import { enrichChat } from '../lib/enrichChat';
 import { ChatList } from '../components/ChatList';
 import { MessageArea } from '../components/MessageArea';
+import ChannelProfileModal from '../components/ChannelProfileModal';
 import FriendsPanel from '../components/FriendsPanel';
 import NewChatModal from '../components/NewChatModal';
 import UserProfileModal from '../components/UserProfileModal';
@@ -84,6 +85,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [storyViewerGroup, setStoryViewerGroup] = useState<number | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [contactUserId, setContactUserId] = useState<string | null>(null);
+  const [channelProfileChat, setChannelProfileChat] = useState<Chat | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
   const chatListRef = useRef<HTMLDivElement>(null);
@@ -251,6 +253,12 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
     setShowFriends(false);
     setContactUserId(userId);
   }, []);
+
+  const handleOpenChannelProfile = useCallback((chatId: string) => {
+    if (!chatId) return;
+    const target = chatsRef.current.find(c => c.id === chatId) || null;
+    setChannelProfileChat(target);
+  }, []);
   const handleOpenNewChat = useCallback(() => setCreateTab('personal'), []);
   const handleChatCreated = useCallback((chat: Chat | null) => {
     if (chat && user) {
@@ -278,6 +286,26 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
         setMobileView('chat');
       }).catch(console.error);
     }
+  }, [chats, user]);
+
+  const handleOpenCommentsChat = useCallback((commentsChatId: string) => {
+    if (!user) return;
+    const existing = chats.find(c => c.id === commentsChatId);
+    if (existing) {
+      setSelectedChatId(commentsChatId);
+      setMobileView('chat');
+      return;
+    }
+    // Fetch the fresh chat list (the comments chat was just created server-side)
+    api.getChats().then(list => {
+      const target = list.find(c => c.id === commentsChatId);
+      if (target) {
+        useInitStore.getState().addChat(enrichChat(target, user));
+        setSelectedChatId(commentsChatId);
+        setMobileView('chat');
+        useAuthStore.getState().checkAuth();
+      }
+    }).catch(() => {});
   }, [chats, user]);
 
   // ─── Filter chats by search ──────────────────────────────────────────
@@ -356,6 +384,8 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
                   chat={selectedChat}
                   onBack={handleBackToList}
                   onOpenProfile={handleOpenContactProfile}
+                  onOpenCommentsChat={handleOpenCommentsChat}
+                  onOpenChannelProfile={handleOpenChannelProfile}
                 />
               </motion.div>
             ) : (
@@ -436,6 +466,17 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
               setShowFriends(false);
               handleSelectChat(chatId);
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Channel / group profile (opened from chat header) */}
+      <AnimatePresence>
+        {channelProfileChat && (
+          <ChannelProfileModal
+            chat={channelProfileChat}
+            onClose={() => setChannelProfileChat(null)}
+            onOpenUser={handleOpenContactProfile}
           />
         )}
       </AnimatePresence>

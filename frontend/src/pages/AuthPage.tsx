@@ -1142,7 +1142,7 @@ export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?:
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                 {/* Floating label input with @ prefix */}
                 <div style={{ position: 'relative', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: D.primary, fontSize: 20, fontWeight: 700, fontFamily: FONT, marginRight: 2, position: 'relative', top: -2 }}>@</span>
+                  <span style={{ color: D.primary, fontSize: 20, fontWeight: 700, fontFamily: FONT, marginRight: 2, position: 'relative', top: 8 }}>@</span>
                   <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
                     <motion.span
                       animate={{

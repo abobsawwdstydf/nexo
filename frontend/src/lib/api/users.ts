@@ -6,7 +6,17 @@ declare module './core' {
     searchUsers(query: string): Promise<UserPresence[]>;
     getUser(userId: string): Promise<UserProfileResponse>;
     updateProfile(data: Partial<ProfileUpdate>): Promise<User>;
+    getPrivacySettings(): Promise<PrivacySettingsResponse>;
+    updatePrivacySettings(data: Partial<PrivacySettingsResponse>): Promise<PrivacySettingsResponse>;
   }
+}
+
+export interface PrivacySettingsResponse {
+  whoCanMessage: string;
+  whoCanCall: string;
+  whoCanSeeProfile: string;
+  showLastSeen: boolean;
+  allowGroupInvites: boolean;
 }
 
 export interface CommonChatInfo {
@@ -47,5 +57,13 @@ export function installUsers(api: ApiClient): void {
 
   api.updateProfile = async (data: Partial<ProfileUpdate>) => {
     return api.put<User>('/users/me', data);
+  };
+
+  api.getPrivacySettings = async () => {
+    return api.request<PrivacySettingsResponse>('/users/privacy');
+  };
+
+  api.updatePrivacySettings = async (data: Partial<PrivacySettingsResponse>) => {
+    return api.put<PrivacySettingsResponse>('/users/privacy', data);
   };
 }

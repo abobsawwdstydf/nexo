@@ -91,7 +91,7 @@ func GetStories(c *fiber.Ctx) error {
 		Find(&stories)
 
 	for i := range stories {
-		stories[i].User = sanitizeUser(stories[i].User)
+		stories[i].User = sanitizeUser(stories[i].User, "")
 	}
 
 	return c.JSON(stories)
@@ -304,9 +304,9 @@ func GetFriends(c *fiber.Ctx) error {
 	friends := make([]models.User, 0)
 	for _, f := range friendships {
 		if f.UserID == userID {
-			friends = append(friends, sanitizeUser(f.Friend))
+			friends = append(friends, sanitizeUser(f.Friend, ""))
 		} else {
-			friends = append(friends, sanitizeUser(f.User))
+			friends = append(friends, sanitizeUser(f.User, ""))
 		}
 	}
 
@@ -324,7 +324,7 @@ func GetFriendRequests(c *fiber.Ctx) error {
 		Find(&friendships)
 
 	for i := range friendships {
-		friendships[i].User = sanitizeUser(friendships[i].User)
+		friendships[i].User = sanitizeUser(friendships[i].User, "")
 	}
 
 	return c.JSON(friendships)

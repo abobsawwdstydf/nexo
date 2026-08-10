@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert } from 'lucide-react';
+import { X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert, TicketPercent, Plus, Pause, Play, Trash2, Copy } from 'lucide-react';
 import { api } from '../lib/api';
-import type { AdminReport, AdminFeedbackTicket } from '../lib/api/admin';
+import type { AdminReport, AdminFeedbackTicket, AdminPromoCode } from '../lib/api/admin';
 import { toast } from '../lib/toast';
 
-type Tab = 'reports' | 'feedback' | 'badges';
+type Tab = 'reports' | 'feedback' | 'badges' | 'promos';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -59,6 +59,12 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
   const [badgeType, setBadgeType] = useState('verified');
   const [badgeUrl, setBadgeUrl] = useState('');
 
+  // Promo codes
+  const [promos, setPromos] = useState<AdminPromoCode[]>([]);
+  const [promosLoading, setPromosLoading] = useState(false);
+  const [promoForm, setPromoForm] = useState({ code: '', discountPercent: 20, maxUses: 100, active: true, expiresAt: '' });
+  const [promoSaving, setPromoSaving] = useState(false);
+
   const loadReports = useCallback(async () => {
     setLoading(true);
     try {
@@ -85,10 +91,23 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
     }
   }, []);
 
+  const loadPromos = useCallback(async () => {
+    setPromosLoading(true);
+    try {
+      setPromos(await api.getAdminPromoCodes());
+    } catch (err) {
+      console.error('Failed to load promos:', err);
+      toast.error('Не удалось загрузить промокоды');
+    } finally {
+      setPromosLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (tab === 'reports') loadReports();
     if (tab === 'feedback') loadFeedback();
-  }, [tab, loadReports, loadFeedback]);
+    if (tab === 'promos') loadPromos();
+  }, [tab, loadReports, loadFeedback, loadPromos]);
 
   const handleReply = async (chatId: string) => {
     const content = window.prompt('Ответ пользователю:');
@@ -134,10 +153,65 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
     }
   };
 
+  const handleCreatePromo = async () => {
+    if (!promoForm.code.trim()) {
+      toast.error('Укажи код промокода');
+      return;
+    }
+    if (promoForm.discountPercent < 1 || promoForm.discountPercent > 99) {
+      toast.error('Скидка: 1–99%');
+      return;
+    }
+    setPromoSaving(true);
+    try {
+      await api.adminCreatePromoCode({
+        code: promoForm.code.trim().toUpperCase(),
+        discountPercent: promoForm.discountPercent,
+        maxUses: promoForm.maxUses,
+        active: promoForm.active,
+        expiresAt: promoForm.expiresAt || undefined,
+      });
+      toast.success('Промокод создан');
+      setPromoForm({ code: '', discountPercent: 20, maxUses: 100, active: true, expiresAt: '' });
+      loadPromos();
+    } catch (err) {
+      console.error('Failed to create promo:', err);
+      toast.error('Не удалось создать промокод');
+    } finally {
+      setPromoSaving(false);
+    }
+  };
+
+  const handleTogglePromo = async (p: AdminPromoCode) => {
+    try {
+      await api.adminUpdatePromoCode(p.id, { active: !p.active });
+      loadPromos();
+    } catch {
+      toast.error('Не удалось обновить промокод');
+    }
+  };
+
+  const handleDeletePromo = async (p: AdminPromoCode) => {
+    if (!window.confirm(`Удалить промокод ${p.code}?`)) return;
+    try {
+      await api.adminDeletePromoCode(p.id);
+      toast.success('Промокод удалён');
+      loadPromos();
+    } catch {
+      toast.error('Не удалось удалить промокод');
+    }
+  };
+
+  const handleCopyPromo = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success('Код скопирован');
+  };
+
   const TABS: { id: Tab; label: string; icon: typeof Flag }[] = [
     { id: 'reports', label: 'Жалобы', icon: Flag },
     { id: 'feedback', label: 'Обратная связь', icon: MessageSquare },
     { id: 'badges', label: 'Бейджи', icon: BadgeCheck },
+    { id: 'promos', label: 'Промокоды', icon: TicketPercent },
   ];
 
   return (
@@ -311,6 +385,127 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+        {tab === 'promos' && (
+            <div>
+              <SectionHeader title="Промокоды на НуЧе" icon={TicketPercent} onRefresh={loadPromos} loading={promosLoading} />
+
+              {/* Create form */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-3 mb-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-[11px] text-white/40 mb-1">Код</label>
+                    <input
+                      value={promoForm.code}
+                      onChange={e => setPromoForm(p => ({ ...p, code: e.target.value.toUpperCase() }))}
+                      placeholder="SUMMER2026"
+                      className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/25 uppercase outline-none focus:border-white/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/40 mb-1">Скидка, %</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={promoForm.discountPercent}
+                      onChange={e => setPromoForm(p => ({ ...p, discountPercent: Number(e.target.value) }))}
+                      className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/40 mb-1">Лимит использований (0 = ∞)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={promoForm.maxUses}
+                      onChange={e => setPromoForm(p => ({ ...p, maxUses: Number(e.target.value) }))}
+                      className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/40 mb-1">Действует до (опц.)</label>
+                    <input
+                      type="date"
+                      value={promoForm.expiresAt}
+                      onChange={e => setPromoForm(p => ({ ...p, expiresAt: e.target.value }))}
+                      className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 text-xs text-white/60 pb-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={promoForm.active}
+                        onChange={e => setPromoForm(p => ({ ...p, active: e.target.checked }))}
+                        className="accent-amber-500"
+                      />
+                      Активен
+                    </label>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCreatePromo}
+                  disabled={promoSaving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-colors disabled:opacity-40"
+                >
+                  <Plus size={13} />
+                  {promoSaving ? 'Создание...' : 'Создать промокод'}
+                </button>
+              </div>
+
+              {/* List */}
+              {promos.length === 0 ? (
+                <p className="text-xs text-white/30 text-center py-8">Промокодов пока нет</p>
+              ) : (
+                <div className="space-y-2">
+                  {promos.map(p => (
+                    <div key={p.id} className="rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            onClick={() => handleCopyPromo(p.code)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] font-mono text-sm font-semibold text-amber-300 transition-colors"
+                            title="Скопировать"
+                          >
+                            {p.code}
+                            <Copy size={11} className="text-white/40" />
+                          </button>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.active ? 'bg-green-500/15 text-green-400' : 'bg-white/[0.06] text-white/40'}`}>
+                            {p.active ? 'активен' : 'выкл'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-white/70">−{p.discountPercent}%</span>
+                          <span className="text-[10px] text-white/35">
+                            {p.usedCount}/{p.maxUses === 0 ? '∞' : p.maxUses}
+                          </span>
+                          {p.expiresAt && (
+                            <span className="text-[10px] text-white/35">
+                              до {new Date(p.expiresAt).toLocaleDateString('ru-RU')}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleTogglePromo(p)}
+                            className={`p-1.5 rounded-lg transition-colors ${p.active ? 'text-white/40 hover:text-white' : 'text-green-400 hover:text-green-300'}`}
+                            title={p.active ? 'Отключить' : 'Включить'}
+                          >
+                            {p.active ? <Pause size={13} /> : <Play size={13} />}
+                          </button>
+                          <button
+                            onClick={() => handleDeletePromo(p)}
+                            className="p-1.5 rounded-lg text-white/40 hover:text-red-400 transition-colors"
+                            title="Удалить"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

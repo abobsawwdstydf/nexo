@@ -13,13 +13,17 @@ import (
 	"nexo/ws"
 )
 
+// PlatformAdminEmail — аккаунт техподдержки с полными правами платформы.
+// Админство определяется полем is_admin ИЛИ этим email (без правки БД).
+const PlatformAdminEmail = "nexo.su.support@gmail.com"
+
 // isPlatformAdmin checks if a user is a platform admin (is_admin field).
 func isPlatformAdmin(userID string) bool {
 	var user models.User
-	if result := db.GetDB().Select("is_admin").First(&user, "id = ?", userID); result.Error != nil {
+	if result := db.GetDB().Select("is_admin, email").First(&user, "id = ?", userID); result.Error != nil {
 		return false
 	}
-	return user.IsAdmin
+	return user.IsAdmin || user.Email == PlatformAdminEmail
 }
 
 func BanUser(c *fiber.Ctx) error {

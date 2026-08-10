@@ -105,6 +105,8 @@ func GetInit(c *fiber.Ctx) error {
 
 	storyGroups := buildStoryGroups(stories)
 
+	user.IsAdmin = isPlatformAdmin(userID)
+
 	return c.JSON(InitResponse{
 		User:         user,
 		Chats:        chats,

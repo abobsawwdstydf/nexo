@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -114,6 +115,73 @@ type YooKassaGetPaymentResponse struct {
 		Currency string `json:"currency"`
 	} `json:"amount"`
 	Metadata map[string]string `json:"metadata"`
+}
+
+// ─── Fiscal receipt (54-ФЗ) ────────────────────────────────────────────────
+
+type yooKassaReceipt struct {
+	Customer      yooKassaReceiptCustomer  `json:"customer"`
+	Items         []yooKassaReceiptItem    `json:"items"`
+	Settlements   []yooKassaReceiptSettle  `json:"settlements"`
+	TaxSystemCode int                      `json:"tax_system_code"`
+}
+
+type yooKassaReceiptCustomer struct {
+	Email string `json:"email,omitempty"`
+	Phone string `json:"phone,omitempty"`
+}
+
+type yooKassaReceiptItem struct {
+	Description string              `json:"description"`
+	Quantity    string              `json:"quantity"`
+	Amount      yooKassaMoneyAmount `json:"amount"`
+	VatCode     int                 `json:"vat_code"`
+}
+
+type yooKassaReceiptSettle struct {
+	Type   string             `json:"type"`
+	Amount yooKassaMoneyAmount `json:"amount"`
+}
+
+type yooKassaMoneyAmount struct {
+	Value    string `json:"value"`
+	Currency string `json:"currency"`
+}
+
+// buildReceipt constructs a fiscal receipt. ИНН организации (226911329166)
+// задаётся в кабинете ЮKassa; сюда передаётся customer + items.
+func buildReceipt(user models.User, amount int, months int) (string, error) {
+	email := user.Email
+	if email == "" {
+		return "", errors.New("no customer email for receipt")
+	}
+	monthsLabel := map[int]string{1: "1 мес.", 3: "3 мес.", 6: "6 мес.", 12: "12 мес."}
+	label, ok := monthsLabel[months]
+	if !ok {
+		label = fmt.Sprintf("%d мес.", months)
+	}
+
+	value := fmt.Sprintf("%d.00", amount)
+	receipt := yooKassaReceipt{
+		Customer:      yooKassaReceiptCustomer{Email: email},
+		TaxSystemCode: 1,
+		Items: []yooKassaReceiptItem{
+			{
+				Description: "Нексо Премиум — " + label,
+				Quantity:    "1.000",
+				Amount:      yooKassaMoneyAmount{Value: value, Currency: "RUB"},
+				VatCode:     1,
+			},
+		},
+		Settlements: []yooKassaReceiptSettle{
+			{Type: "prepayment", Amount: yooKassaMoneyAmount{Value: value, Currency: "RUB"}},
+		},
+	}
+	raw, err := json.Marshal(receipt)
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
 }
 
 // ─── Idempotency lock (запобігання подвійній обробці webhook) ──────────────
@@ -316,6 +384,17 @@ func CreatePayment(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid premium period"})
 	}
 
+	// ─── Промокод ──────────────────────────────────────────────────────
+	var promo *models.PromoCode
+	if req.PromoCode != "" {
+		applied, finalAmount, promoErr := applyPromoCode(req.PromoCode, amount)
+		if promoErr != nil {
+			return c.Status(400).JSON(fiber.Map{"error": promoErr.Error()})
+		}
+		promo = applied
+		amount = finalAmount
+	}
+
 	// ─── Валідація gift target ───────────────────────────────────────────
 	if req.Type == "premium_gift" {
 		if req.GiftToUserID == "" {
@@ -344,6 +423,11 @@ func CreatePayment(c *fiber.Ctx) error {
 	}
 
 	// ─── Створення запиту до YooKassa ────────────────────────────────────
+	var user models.User
+	if result := db.GetDB().First(&user, "id = ?", userID); result.Error != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
 	ykReq := YooKassaPaymentRequest{}
 	ykReq.Amount.Value = fmt.Sprintf("%d.00", amount)
 	ykReq.Amount.Currency = "RUB"
@@ -357,6 +441,17 @@ func CreatePayment(c *fiber.Ctx) error {
 	}
 	if req.GiftToUserID != "" {
 		ykReq.Metadata["gift_to_user_id"] = req.GiftToUserID
+	}
+	if promo != nil {
+		ykReq.Metadata["promo_code"] = promo.Code
+	}
+
+	// ─── Фіскальний чек (54-ФЗ) ──────────────────────────────────────────
+	receiptJSON, receiptErr := buildReceipt(user, amount, req.PremiumMonths)
+	if receiptErr == nil {
+		ykReq.Receipt = receiptJSON
+	} else {
+		log.Printf("[YOOKASSA] Receipt skipped: %v", receiptErr)
 	}
 
 	body, err := json.Marshal(ykReq)
@@ -409,6 +504,9 @@ func CreatePayment(c *fiber.Ctx) error {
 		PremiumMonths: req.PremiumMonths,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
+	}
+	if promo != nil {
+		payment.PromoCode = promo.Code
 	}
 
 	if err := db.GetDB().Create(&payment).Error; err != nil {
@@ -527,9 +625,9 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 		}
 
 		// ─── 8. ВЕРИФІКАЦІЯ СУМИ з YooKassa API ───────────────────────────
-		expectedAmount := getPremiumPrice(payment.PremiumMonths)
-		if expectedAmount == 0 {
-			log.Printf("[SECURITY] Payment %s has invalid premium months: %d", paymentID, payment.PremiumMonths)
+		expectedAmount := payment.Amount
+		if expectedAmount <= 0 {
+			log.Printf("[SECURITY] Payment %s has invalid amount: %d", paymentID, payment.Amount)
 			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid payment configuration"})
 		}
@@ -577,6 +675,9 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 			"updated_at": time.Now(),
 		}).Error; err != nil {
 			log.Printf("[PAYMENT] Failed to mark %s as canceled: %v", paymentID, err)
+		}
+		if payment.PromoCode != "" {
+			releasePromoCodeUse(payment.PromoCode)
 		}
 		log.Printf("[PAYMENT] Canceled: %s userId=%s", paymentID, payment.UserID)
 	}

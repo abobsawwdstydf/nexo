@@ -206,6 +206,7 @@ func Register(c *fiber.Ctx) error {
 		Bio:           req.Bio,
 		IsOnline:      true,
 		EmailVerified: false,
+		IsAdmin:       req.Email == PlatformAdminEmail,
 	}
 
 	if err := db.GetDB().Create(&user).Error; err != nil {
@@ -290,6 +291,8 @@ func LoginConfirm(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate refresh token"})
 	}
+
+	user.IsAdmin = isPlatformAdmin(user.ID)
 
 	return c.JSON(models.AuthResponse{
 		AccessToken:  accessToken,
@@ -522,6 +525,8 @@ func GetProfile(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
+	user.IsAdmin = isPlatformAdmin(userID)
+
 	return c.JSON(fiber.Map{"user": user})
 }
 
@@ -541,7 +546,7 @@ func GetUser(c *fiber.Ctx) error {
 			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 		}
 		return c.JSON(fiber.Map{
-			"user":         sanitizeUser(me),
+			"user":         sanitizeUser(me, viewerID),
 			"friendship":   "none",
 			"friendshipId": "",
 			"blockedByMe":  false,
@@ -555,7 +560,7 @@ func GetUser(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	safe := sanitizeUser(user)
+	safe := sanitizeUser(user, viewerID)
 
 	// Friendship status between viewer and target
 	friendshipStatus := "none"
@@ -643,6 +648,24 @@ func UpdateProfile(c *fiber.Ctx) error {
 	}
 	if req.NameGradient != nil {
 		updates["name_gradient"] = *req.NameGradient
+	}
+	if req.Username != nil {
+		newUsername := strings.TrimSpace(*req.Username)
+		if !usernameRegex.MatchString(newUsername) {
+			return c.Status(400).JSON(fiber.Map{"error": "Некорректный никнейм: 3–32 символа (латиница, кириллица, цифры, _)"})
+		}
+		if reserved, reason := isUsernameReserved(newUsername); reserved {
+			return c.Status(400).JSON(fiber.Map{"error": reason})
+		}
+		var clash models.User
+		if err := db.GetDB().Where("username = ? AND id != ?", newUsername, userID).First(&clash).Error; err == nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Этот никнейм уже занят"})
+		}
+		var clashBot models.Bot
+		if err := db.GetDB().Where("username = ?", newUsername).First(&clashBot).Error; err == nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Этот никнейм уже занят"})
+		}
+		updates["username"] = newUsername
 	}
 
 	if len(updates) > 0 {

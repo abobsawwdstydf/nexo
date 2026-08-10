@@ -311,6 +311,9 @@ nexo_up 1
 	api.Get("/auth/check-email", handlers.CheckEmailAvailability)
 	api.Get("/auth/check-username", handlers.CheckUsername)
 
+	// VAPID public key (public, for push subscriptions)
+	api.Get("/vapid-public-key", handlers.GetVapidPublicKey)
+
 	// Bot API (Telegram-совместимый, токен в URL: /api/bot/:token/:method) — public, BEFORE auth group
 	api.All("/bot/:token/:method", handlers.BotAPI)
 	app.Get("/file/:token/*", handlers.BotFile)
@@ -381,6 +384,7 @@ nexo_up 1
 
 	auth.Post("/chats/:id/messages", handlers.SendMessage)
 	auth.Get("/chats/:id/messages", handlers.GetMessages)
+	auth.Post("/chats/:chatId/comments/:messageId/open", handlers.OpenComments)
 	auth.Put("/messages/:messageId", handlers.EditMessage)
 	auth.Delete("/messages/:messageId", handlers.DeleteMessage)
 	auth.Post("/messages/:messageId/reactions", handlers.AddReaction)
@@ -455,6 +459,13 @@ nexo_up 1
 	auth.Post("/feedback/chat", handlers.GetOrCreateFeedbackChat)
 	auth.Get("/admin/feedback", handlers.AdminListFeedback)
 	auth.Post("/admin/feedback/:chatId/reply", handlers.AdminReplyFeedback)
+
+	// ─── Promo codes ─────────────────────────────────────────────────────
+	auth.Get("/promo/check", handlers.CheckPromoCode)
+	auth.Get("/admin/promocodes", handlers.ListPromoCodes)
+	auth.Post("/admin/promocodes", handlers.CreatePromoCode)
+	auth.Put("/admin/promocodes/:id", handlers.UpdatePromoCode)
+	auth.Delete("/admin/promocodes/:id", handlers.DeletePromoCode)
 
 	// Bot API (user-managed)
 	auth.Post("/bots", handlers.CreateBot)

@@ -21,8 +21,9 @@ declare module './core' {
   interface ApiClient {
     // Premium
     getPremiumStatus(): Promise<{ isPremium: boolean; premiumUntil: string | null }>;
-    createPayment(data: { type: 'premium' | 'premium_gift'; premiumMonths: number; giftToUserId?: string }): Promise<{ paymentId: string; confirmationUrl: string; amount: number }>;
+    createPayment(data: { type: 'premium' | 'premium_gift'; premiumMonths: number; giftToUserId?: string; promoCode?: string }): Promise<{ paymentId: string; confirmationUrl: string; amount: number }>;
     getPremiumPrices(): Promise<{ prices: Record<number, number>; currency: string }>;
+    checkPromoCode(code: string, months: number): Promise<{ valid: boolean; error?: string; code?: string; discountPercent?: number; baseAmount?: number; finalAmount?: number }>;
     // E2E
     uploadKeyBundle(data: E2EKeyBundleData): Promise<{ ok: boolean }>;
     fetchKeyBundle(userId: string): Promise<{ bundles: E2EKeyBundleResponse[] }>;
@@ -50,6 +51,12 @@ export function installFeatures(api: ApiClient): void {
 
   api.getPremiumPrices = async () => {
     return api.request<{ prices: Record<number, number>; currency: string }>('/premium/prices');
+  };
+
+  api.checkPromoCode = async (code, months) => {
+    return api.request<{ valid: boolean; error?: string; code?: string; discountPercent?: number; baseAmount?: number; finalAmount?: number }>(
+      `/promo/check?code=${encodeURIComponent(code)}&months=${months}`
+    );
   };
 
   // ─── E2E Encryption ──────────────────────────────────────────────

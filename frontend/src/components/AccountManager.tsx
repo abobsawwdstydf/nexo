@@ -54,13 +54,21 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
   const { user, loginWithToken } = useAuthStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [showAddAccount, setShowAddAccount] = useState(false);
+  const [addMode, setAddMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
+  const [regEmail, setRegEmail] = useState('');
+  const [regCode, setRegCode] = useState('');
+  const [regCodeSent, setRegCodeSent] = useState(false);
+  const [regUsername, setRegUsername] = useState('');
+  const [regDisplayName, setRegDisplayName] = useState('');
+  const [regUsernameStatus, setRegUsernameStatus] = useState<'idle' | 'checking' | 'ok' | 'taken' | 'invalid'>('idle');
   const [loading, setLoading] = useState(false);
   const [codeExpiry, setCodeExpiry] = useState<number>(0);
   const [syncing, setSyncing] = useState(false);
   const codeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const regCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setAccounts(loadAccounts());
@@ -90,6 +98,10 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
       if (codeTimerRef.current) {
         clearInterval(codeTimerRef.current);
         codeTimerRef.current = null;
+      }
+      if (regCheckRef.current) {
+        clearTimeout(regCheckRef.current);
+        regCheckRef.current = null;
       }
     };
   }, []);
@@ -222,6 +234,95 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Ошибка входа');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Register new account ─────────────────────────────────────────────
+  const handleSendRegCode = async () => {
+    if (!regEmail.trim() || !regEmail.includes('@')) return;
+    setLoading(true);
+    try {
+      await api.sendEmailCode(regEmail.trim());
+      setRegCodeSent(true);
+      toast.success('Код отправлен на email');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Ошибка отправки кода');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegUsernameChange = (value: string) => {
+    setRegUsername(value);
+    setRegUsernameStatus('checking');
+    if (regCheckRef.current) clearTimeout(regCheckRef.current);
+    regCheckRef.current = setTimeout(async () => {
+      const v = value.trim();
+      if (!v) { setRegUsernameStatus('idle'); return; }
+      if (!/^[a-zA-Zа-яА-ЯёЁ0-9_]{3,32}$/.test(v)) { setRegUsernameStatus('invalid'); return; }
+      try {
+        const res = await api.checkUsername(v);
+        setRegUsernameStatus(res.available ? 'ok' : 'taken');
+      } catch {
+        setRegUsernameStatus('idle');
+      }
+    }, 500);
+  };
+
+  const handleRegister = async () => {
+    const uname = regUsername.trim();
+    if (!uname || !/^[a-zA-Zа-яА-ЯёЁ0-9_]{3,32}$/.test(uname)) {
+      toast.error('Никнейм: 3–32 символа (латиница, кириллица, цифры, _)');
+      return;
+    }
+    if (regUsernameStatus === 'taken') {
+      toast.error('Этот никнейм уже занят');
+      return;
+    }
+    if (!regCode || regCode.length !== 6) {
+      toast.error('Введите код из email');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.confirmEmailCode(regEmail.trim(), regCode);
+      const result = await api.register({
+        username: uname,
+        displayName: regDisplayName.trim() || undefined,
+        email: regEmail.trim(),
+      });
+
+      if (result.user && result.accessToken) {
+        const newAccount: Account = {
+          id: generateAccountId(),
+          userId: result.user.id,
+          username: result.user.username,
+          displayName: result.user.displayName,
+          email: result.user.email || '',
+          avatar: result.user.avatar || undefined,
+          token: result.accessToken || '',
+          refreshToken: result.refreshToken || '',
+          lastUsed: Date.now(),
+        };
+
+        setAccounts(prev => {
+          const updated = [...prev, newAccount];
+          saveAccounts(updated);
+          return updated;
+        });
+
+        loginWithToken(result.accessToken, result.user);
+
+        toast.success('Аккаунт зарегистрирован!');
+        setShowAddAccount(false);
+        setAddMode('login');
+        setRegEmail(''); setRegCode(''); setRegCodeSent(false);
+        setRegUsername(''); setRegDisplayName(''); setRegUsernameStatus('idle');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Ошибка регистрации');
     } finally {
       setLoading(false);
     }
@@ -418,6 +519,23 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
               exit={{ opacity: 0, height: 0 }}
               className="space-y-3"
             >
+              {/* Mode tabs */}
+              <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+                {(['login', 'register'] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => { setAddMode(m); setCodeSent(false); setRegCodeSent(false); setEmail(''); setCode(''); setRegEmail(''); setRegCode(''); }}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      addMode === m ? 'bg-white/[0.1] text-white/90' : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    {m === 'login' ? 'Войти по коду' : 'Регистрация'}
+                  </button>
+                ))}
+              </div>
+
+              {addMode === 'login' ? (
+              <>
               <div className="relative">
                 <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
                 <input
@@ -472,6 +590,105 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
                   {loading ? 'Загрузка...' : codeSent ? 'Войти' : 'Отправить код'}
                 </motion.button>
               </div>
+              </>
+              ) : (
+              <>
+              <div className="relative">
+                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+                <input
+                  type="email"
+                  value={regEmail}
+                  onChange={e => setRegEmail(e.target.value)}
+                  placeholder="Email (новый аккаунт)"
+                  className="w-full h-10 pl-9 pr-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+                  disabled={regCodeSent}
+                />
+              </div>
+
+              {!regCodeSent ? (
+                <motion.button
+                  onClick={handleSendRegCode}
+                  disabled={loading || !regEmail.trim() || !regEmail.includes('@')}
+                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/[0.1] transition-colors text-sm text-white/80 disabled:opacity-40"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  {loading ? 'Загрузка...' : 'Отправить код'}
+                </motion.button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-3"
+                >
+                  <div className="relative">
+                    <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+                    <input
+                      type="text"
+                      value={regCode}
+                      onChange={e => setRegCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="6-значный код из email"
+                      className="w-full h-10 pl-9 pr-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+                      maxLength={6}
+                    />
+                  </div>
+                  <div className="relative">
+                    <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+                    <input
+                      type="text"
+                      value={regUsername}
+                      onChange={e => handleRegUsernameChange(e.target.value)}
+                      placeholder="Никнейм"
+                      maxLength={32}
+                      className={`w-full h-10 pl-9 pr-16 text-sm bg-white/[0.04] border rounded-xl text-white/70 placeholder:text-white/20 outline-none ${
+                        regUsernameStatus === 'taken' || regUsernameStatus === 'invalid'
+                          ? 'border-red-500/40 focus:border-red-500/60'
+                          : 'border-white/[0.06] focus:border-white/20'
+                      }`}
+                    />
+                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] ${
+                      regUsernameStatus === 'checking' ? 'text-white/30'
+                      : regUsernameStatus === 'ok' ? 'text-green-400'
+                      : regUsernameStatus === 'taken' || regUsernameStatus === 'invalid' ? 'text-red-400'
+                      : 'text-white/20'
+                    }`}>
+                      {regUsernameStatus === 'checking' ? '…' : regUsernameStatus === 'ok' ? 'свободен' : regUsernameStatus === 'taken' ? 'занят' : regUsernameStatus === 'invalid' ? 'неверно' : ''}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+                    <input
+                      type="text"
+                      value={regDisplayName}
+                      onChange={e => setRegDisplayName(e.target.value)}
+                      placeholder="Имя (необязательно)"
+                      maxLength={32}
+                      className="w-full h-10 pl-9 pr-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <motion.button
+                      onClick={() => { setShowAddAccount(false); setRegCodeSent(false); setRegEmail(''); setRegCode(''); setRegUsername(''); setRegDisplayName(''); }}
+                      className="flex-1 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors text-sm text-white/50"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      Отмена
+                    </motion.button>
+                    <motion.button
+                      onClick={handleRegister}
+                      disabled={loading || regCode.length !== 6 || !regUsername.trim() || regUsernameStatus === 'taken'}
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/80 to-teal-500/80 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/20 transition-colors text-sm text-white font-medium disabled:opacity-40"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      {loading ? 'Загрузка...' : 'Создать аккаунт'}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+              </>
+              )}
             </motion.div>
           )}
 

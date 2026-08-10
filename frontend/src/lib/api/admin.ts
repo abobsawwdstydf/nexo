@@ -33,6 +33,25 @@ export interface BadgeInput {
   badgeUrl: string;
 }
 
+export interface AdminPromoCode {
+  id: string;
+  code: string;
+  discountPercent: number;
+  maxUses: number;
+  usedCount: number;
+  active: boolean;
+  expiresAt?: string | null;
+  createdAt: string;
+}
+
+export interface PromoCodeInput {
+  code: string;
+  discountPercent: number;
+  maxUses: number;
+  active?: boolean;
+  expiresAt?: string;
+}
+
 declare module './core' {
   interface ApiClient {
     getAdminReports(): Promise<AdminReport[]>;
@@ -40,6 +59,10 @@ declare module './core' {
     adminReplyFeedback(chatId: string, content: string): Promise<{ ok: boolean }>;
     adminSetBadge(input: BadgeInput): Promise<{ ok: boolean }>;
     adminClearBadge(targetId: string): Promise<{ ok: boolean }>;
+    getAdminPromoCodes(): Promise<AdminPromoCode[]>;
+    adminCreatePromoCode(input: PromoCodeInput): Promise<AdminPromoCode>;
+    adminUpdatePromoCode(id: string, input: Partial<PromoCodeInput>): Promise<AdminPromoCode>;
+    adminDeletePromoCode(id: string): Promise<{ ok: boolean }>;
   }
 }
 
@@ -67,5 +90,25 @@ export function installAdmin(api: ApiClient): void {
       method: 'DELETE',
       body: JSON.stringify({ targetId }),
     });
+  };
+
+  api.getAdminPromoCodes = async () => {
+    const res = await api.get<{ items: AdminPromoCode[] }>('/admin/promocodes');
+    return res.items ?? [];
+  };
+
+  api.adminCreatePromoCode = async (input: PromoCodeInput) => {
+    return api.post<AdminPromoCode>('/admin/promocodes', input);
+  };
+
+  api.adminUpdatePromoCode = async (id: string, input: Partial<PromoCodeInput>) => {
+    return api.request<AdminPromoCode>(`/admin/promocodes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  };
+
+  api.adminDeletePromoCode = async (id: string) => {
+    return api.request<{ ok: boolean }>(`/admin/promocodes/${id}`, { method: 'DELETE' });
   };
 }

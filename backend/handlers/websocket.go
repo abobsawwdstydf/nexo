@@ -653,9 +653,9 @@ func handleFetchFriends(client *ws.Client, env *wsEnvelope) error {
 	friends := make([]models.User, 0)
 	for _, f := range friendships {
 		if f.UserID == userID {
-			friends = append(friends, sanitizeUser(f.Friend))
+			friends = append(friends, sanitizeUser(f.Friend, ""))
 		} else {
-			friends = append(friends, sanitizeUser(f.User))
+			friends = append(friends, sanitizeUser(f.User, ""))
 		}
 	}
 
@@ -674,7 +674,7 @@ func handleFetchFriendRequests(client *ws.Client, _ *wsEnvelope) error {
 		Find(&friendships)
 
 	for i := range friendships {
-		friendships[i].User = sanitizeUser(friendships[i].User)
+		friendships[i].User = sanitizeUser(friendships[i].User, "")
 	}
 
 	return &wsDataResponse{Data: map[string]interface{}{"requests": friendships}}

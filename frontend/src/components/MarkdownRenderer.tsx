@@ -19,7 +19,7 @@ let manifestPromise: Promise<Map<string, string>> | null = null;
 /** [{pack}.{filename}] в†’ real URL from /stickers/manifest.json (bundle packs). */
 function loadStickerManifest(): Promise<Map<string, string>> {
   if (manifestPromise) return manifestPromise;
-  manifestPromise = fetch('/stickers/manifest.json')
+  manifestPromise = fetch('/stickers/manifest.json?v=2')
     .then(r => (r.ok ? r.json() : []))
     .then((packs: Array<{ name: string; stickers: Array<{ filename: string; fileUrl: string }> }>) => {
       const map = new Map<string, string>();
@@ -88,7 +88,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, isOwn,
         const key2 = t[3];
         let url = '';
         if (kind === 'sticker') {
-          url = bundle.get(`${key1}\u0000${key2}`) || `/stickers/proxy/${encodeURIComponent(key2)}`;
+          url = bundle.get(`${key1}\u0000${key2}`) || `https://stickers.darkheavens.ru/${encodeURIComponent(key2)}`;
         } else if (userPacks) {
           const pack = (userPacks as Record<string, string>);
           url = pack[key2] || '';

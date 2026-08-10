@@ -171,6 +171,8 @@ func InitLocal(dsn string) error {
 		&models.AuditLogEntry{},
 		// AI chat history
 		&models.AIMessage{},
+		// Promo codes
+		&models.PromoCode{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)

@@ -111,7 +111,7 @@ func AdminListFeedback(c *fiber.Ctx) error {
 			LastAt:       ch.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 		if hasLast {
-			last.Sender = sanitizeUser(last.Sender)
+			last.Sender = sanitizeUser(last.Sender, "")
 			var lastJSON MessageJSON
 			if err := json.Unmarshal([]byte(messageToJSON(last)), &lastJSON); err == nil {
 				ticket.LastMessage = &lastJSON
@@ -178,6 +178,6 @@ func AdminReplyFeedback(c *fiber.Ctx) error {
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
 
-	msg.Sender = sanitizeUser(msg.Sender)
+	msg.Sender = sanitizeUser(msg.Sender, "")
 	return c.Status(201).JSON(msg)
 }

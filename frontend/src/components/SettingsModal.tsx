@@ -143,11 +143,21 @@ function NotificationSettings() {
         await unsubscribeFromNotifications();
         setPushEnabled(false);
       } else {
+        if ('Notification' in window && Notification.permission === 'denied') {
+          toast.error('Уведомления заблокированы браузером. Разрешите их в настройках сайта и попробуйте снова');
+          return;
+        }
         const result = await subscribeToNotifications();
         setPushEnabled(result !== null);
+        if (result) {
+          toast.success('Push-уведомления включены');
+        } else {
+          toast.error('Не удалось включить уведомления. Разрешите доступ в настройках браузера и попробуйте снова');
+        }
       }
     } catch {
       console.error('[Push] Toggle failed');
+      toast.error('Ошибка при включении уведомлений');
     } finally {
       setPushLoading(false);
     }
@@ -453,6 +463,32 @@ function PrivacySettings() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [whoCanSeeProfile, setWhoCanSeeProfile] = useState('everyone');
+
+  useEffect(() => {
+    api.getPrivacySettings().then((s) => {
+      setWhoCanSeeProfile(s.whoCanSeeProfile || 'everyone');
+    }).catch(() => {});
+  }, []);
+
+  const profileVisibilityOrder = ['everyone', 'friends', 'nobody'] as const;
+  const profileVisibilityLabels: Record<string, string> = {
+    everyone: 'Все',
+    friends: 'Только друзья',
+    nobody: 'Никто',
+  };
+
+  const cycleProfileVisibility = async () => {
+    const idx = profileVisibilityOrder.indexOf(whoCanSeeProfile as (typeof profileVisibilityOrder)[number]);
+    const next = profileVisibilityOrder[(idx + 1) % profileVisibilityOrder.length];
+    setWhoCanSeeProfile(next);
+    try {
+      await api.updatePrivacySettings({ whoCanSeeProfile: next });
+    } catch {
+      toast.error('Не удалось сохранить настройку');
+      setWhoCanSeeProfile(whoCanSeeProfile);
+    }
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -492,7 +528,7 @@ function PrivacySettings() {
   return (
     <div className="space-y-1">
       <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2">Приватность</h3>
-      <SettingRow icon={Eye} label="Кто видит номер" value="Никто" />
+      <SettingRow icon={Eye} label="Кто видит мой email" value={profileVisibilityLabels[whoCanSeeProfile] || 'Все'} onClick={cycleProfileVisibility} />
       <SettingRow icon={EyeOff} label="Статус в сети" value="Все" />
       <SettingRow icon={Check} label="Подтверждение прочтения" value="Вкл" toggle />
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
@@ -575,7 +611,6 @@ function ProfileSettings({ user }: { user: UserType }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-white/90">{user.displayName || user.username}</p>
-          <p className="text-xs text-white/40">@{user.username}</p>
           <p className="text-xs text-white/30 mt-1">{user.bio || 'Нет описания'}</p>
         </div>
       </div>
@@ -600,6 +635,10 @@ function PremiumSettings() {
   const [newAlias, setNewAlias] = useState('');
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
+  const [promoInput, setPromoInput] = useState('');
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discountPercent: number; finalAmount: number } | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [promoChecking, setPromoChecking] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -617,7 +656,11 @@ function PremiumSettings() {
     if (!selected) return;
     setPaying(true);
     try {
-      const result = await api.createPayment({ type: 'premium', premiumMonths: selected });
+      const result = await api.createPayment({
+        type: 'premium',
+        premiumMonths: selected,
+        promoCode: promoApplied?.code,
+      });
       if (result.confirmationUrl) {
         window.open(result.confirmationUrl, '_blank', 'noopener,noreferrer');
         toast.success('Страница оплаты открыта');
@@ -627,6 +670,32 @@ function PremiumSettings() {
       toast.error('Ошибка создания платежа');
     } finally {
       setPaying(false);
+    }
+  };
+
+  const handleApplyPromo = async () => {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    if (!selected) {
+      toast.error('Сначала выберите тариф');
+      return;
+    }
+    setPromoChecking(true);
+    setPromoError('');
+    try {
+      const res = await api.checkPromoCode(code, selected);
+      if (res.valid && res.finalAmount != null && res.discountPercent != null) {
+        setPromoApplied({ code: res.code || code, discountPercent: res.discountPercent, finalAmount: res.finalAmount });
+        toast.success(`Промокод применён: −${res.discountPercent}%`);
+      } else {
+        setPromoApplied(null);
+        setPromoError(res.error || 'Промокод недействителен');
+      }
+    } catch {
+      setPromoApplied(null);
+      setPromoError('Не удалось проверить промокод');
+    } finally {
+      setPromoChecking(false);
     }
   };
 
@@ -752,16 +821,46 @@ function PremiumSettings() {
       {!isPremium && (
         <>
           <div className="h-px bg-white/[0.04] my-1 mx-1" />
+
+          {/* Promo code */}
+          <div className="px-1 space-y-1.5">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoInput}
+                onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError(''); if (promoApplied) setPromoApplied(null); }}
+                placeholder="Промокод..."
+                className="flex-1 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-white/20 uppercase outline-none focus:border-white/40"
+              />
+              <button
+                onClick={handleApplyPromo}
+                disabled={promoChecking || !promoInput.trim()}
+                className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.12] text-white/80 text-sm font-medium hover:bg-white/[0.14] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {promoChecking ? '...' : promoApplied ? 'Применён' : 'Применить'}
+              </button>
+            </div>
+            {promoApplied && (
+              <p className="text-[11px] text-green-400 px-1">
+                ✓ {promoApplied.code} — скидка {promoApplied.discountPercent}%
+              </p>
+            )}
+            {promoError && <p className="text-[11px] text-red-400 px-1">{promoError}</p>}
+          </div>
+
           <div className="grid grid-cols-2 gap-2 px-1">
             {months.map(m => {
               const price = prices[m];
               const isSelected = selected === m;
               const roundedPrice = price ? Math.round(price) : null;
               const monthlyPrice = roundedPrice ? Math.round(roundedPrice / m) : null;
+              const discounted = promoApplied && roundedPrice != null
+                ? Math.max(1, Math.round(roundedPrice * (100 - promoApplied.discountPercent) / 100))
+                : null;
               return (
                 <button
                   key={m}
-                  onClick={() => setSelected(m)}
+                  onClick={() => { setSelected(m); if (promoApplied) setPromoApplied(null); }}
                   className={`relative p-3 rounded-xl border transition-all text-left ${
                     isSelected
                       ? 'border-amber-500/50 bg-amber-500/10'
@@ -771,7 +870,13 @@ function PremiumSettings() {
                   <span className="text-sm font-medium text-white/80">{m} {m === 1 ? 'месяц' : m < 5 ? 'месяца' : 'месяцев'}</span>
                   {roundedPrice && (
                     <div className="mt-1 flex items-center gap-1">
-                      <span className="text-lg font-bold text-white/90">{roundedPrice.toLocaleString('ru-RU')}</span>
+                      {discounted != null && (
+                        <>
+                          <span className="text-sm text-white/30 line-through">{roundedPrice.toLocaleString('ru-RU')}</span>
+                          <span className="text-lg font-bold text-amber-300">{discounted.toLocaleString('ru-RU')}</span>
+                        </>
+                      )}
+                      {discounted == null && <span className="text-lg font-bold text-white/90">{roundedPrice.toLocaleString('ru-RU')}</span>}
                       <span className="text-sm font-semibold text-white/50">₽</span>
                       {monthlyPrice && (
                         <span className="text-[10px] text-white/30 ml-0.5">
@@ -790,7 +895,9 @@ function PremiumSettings() {
             disabled={!selected || paying}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {paying ? 'Создание платежа...' : selected && prices[selected] ? `Купить за ${Math.round(prices[selected]).toLocaleString('ru-RU')} НуЧе` : 'Выберите тариф'}
+            {paying ? 'Создание платежа...' : selected && prices[selected]
+              ? `Купить за ${(promoApplied ? Math.max(1, Math.round(prices[selected] * (100 - promoApplied.discountPercent) / 100)) : Math.round(prices[selected])).toLocaleString('ru-RU')} ₽`
+              : 'Выберите тариф'}
           </button>
         </>
       )}
@@ -805,6 +912,7 @@ function SettingRow({
   toggle,
   checked,
   onChange,
+  onClick,
 }: {
   icon: typeof Bell;
   label: string;
@@ -812,6 +920,7 @@ function SettingRow({
   toggle?: boolean;
   checked?: boolean;
   onChange?: (v: boolean) => void;
+  onClick?: () => void;
 }) {
   const [internal, setInternal] = useState(toggle ? value === 'Вкл' : false);
   const isChecked = onChange ? !!checked : internal;
@@ -821,6 +930,10 @@ function SettingRow({
       className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.03] hover:border-white/[0.06] border border-transparent transition-all duration-200 cursor-pointer"
       whileTap={{ scale: 0.99 }}
       onClick={() => {
+        if (onClick) {
+          onClick();
+          return;
+        }
         if (!toggle) return;
         const next = !isChecked;
         if (onChange) onChange(next);

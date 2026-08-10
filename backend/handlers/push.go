@@ -24,8 +24,10 @@ import (
 var vapidPublicKey string
 var vapidPrivateKey string
 var vapidEmail string
+var vapidKeysFile = "vapid_keys.json"
 
-// InitPush loads VAPID keys from the environment. Call once at startup.
+// InitPush loads VAPID keys from the environment (or generates a persistent
+// pair locally so push works even without .env VAPID_*). Call once at startup.
 func InitPush() {
 	initVAPID()
 	if vapidPublicKey == "" || vapidPrivateKey == "" {
@@ -42,6 +44,38 @@ func initVAPID() {
 	if vapidEmail == "" {
 		vapidEmail = "admin@darkheavens.ru"
 	}
+
+	if vapidPublicKey == "" || vapidPrivateKey == "" {
+		// Load previously generated pair (stable across restarts)
+		if data, err := os.ReadFile(vapidKeysFile); err == nil {
+			var stored struct {
+				Public  string `json:"public"`
+				Private string `json:"private"`
+			}
+			if json.Unmarshal(data, &stored) == nil && stored.Public != "" && stored.Private != "" {
+				vapidPublicKey, vapidPrivateKey = stored.Public, stored.Private
+				log.Println("[Push] VAPID keys loaded from", vapidKeysFile)
+				return
+			}
+		}
+		// Generate a fresh pair and persist it
+		privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
+		if err == nil {
+			vapidPublicKey, vapidPrivateKey = publicKey, privateKey
+			out, _ := json.Marshal(map[string]string{"public": vapidPublicKey, "private": vapidPrivateKey})
+			os.WriteFile(vapidKeysFile, out, 0o600)
+			log.Println("[Push] Generated new VAPID keys, saved to", vapidKeysFile)
+		}
+	}
+}
+
+// GetVapidPublicKey returns the VAPID public key so the frontend can always
+// subscribe with the exact key the server uses.
+func GetVapidPublicKey(c *fiber.Ctx) error {
+	if vapidPublicKey == "" {
+		return c.Status(404).JSON(fiber.Map{"error": "VAPID not configured"})
+	}
+	return c.JSON(fiber.Map{"publicKey": vapidPublicKey})
 }
 
 // --- Subscription storage --------------------------------------------------

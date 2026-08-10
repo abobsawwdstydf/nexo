@@ -45,7 +45,7 @@ func UpdatePrivacySettings(c *fiber.Ctx) error {
 		}
 	}
 	if req.WhoCanSeeProfile != "" {
-		if req.WhoCanSeeProfile == "everyone" || req.WhoCanSeeProfile == "friends" {
+		if req.WhoCanSeeProfile == "everyone" || req.WhoCanSeeProfile == "friends" || req.WhoCanSeeProfile == "nobody" {
 			updates["who_can_see_profile"] = req.WhoCanSeeProfile
 		}
 	}

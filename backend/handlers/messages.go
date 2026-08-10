@@ -226,7 +226,7 @@ func SendMessage(c *fiber.Ctx) error {
 	}
 	NotifyNewMessagePush(chatID, userID, senderName, req.Type, req.Content)
 
-	msg.Sender = sanitizeUser(msg.Sender)
+	msg.Sender = sanitizeUser(msg.Sender, "")
 	return c.Status(201).JSON(msg)
 }
 
@@ -314,7 +314,7 @@ func EditMessage(c *fiber.Ctx) error {
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(msg.ChatID, mustWSMsg("message:edited", "message", json.RawMessage(msgJSON)), "")
 
-	msg.Sender = sanitizeUser(msg.Sender)
+	msg.Sender = sanitizeUser(msg.Sender, "")
 	return c.JSON(msg)
 }
 
@@ -325,6 +325,21 @@ func DeleteMessage(c *fiber.Ctx) error {
 	var msg models.Message
 	if result := db.GetDB().First(&msg, "id = ?", msgID); result.Error != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Message not found"})
+	}
+
+	var chat models.Chat
+	db.GetDB().First(&chat, "id = ?", msg.ChatID)
+
+	// Comments chat: only the channel owner can delete anything,
+	// and the anchor post is not deletable at all.
+	if chat.Type == "comments" {
+		if msg.Type == "post" {
+			return c.Status(400).JSON(fiber.Map{"error": "The post cannot be deleted"})
+		}
+		if !isChannelOwner(userID, chat.LinkedChatID) {
+			return c.Status(403).JSON(fiber.Map{"error": "Only the channel owner can delete messages in comments"})
+		}
+		return deleteMessageSoft(c, msg)
 	}
 
 	// Allow owner or chat admin/owner to delete
@@ -338,6 +353,22 @@ func DeleteMessage(c *fiber.Ctx) error {
 		}
 	}
 
+	return deleteMessageSoft(c, msg)
+}
+
+// isChannelOwner проверяет, что пользователь — владелец канала (или комментариев к нему).
+func isChannelOwner(userID, chatID string) bool {
+	if chatID == "" {
+		return false
+	}
+	var member models.ChatMember
+	if result := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&member); result.Error != nil {
+		return false
+	}
+	return member.Role == "owner"
+}
+
+func deleteMessageSoft(c *fiber.Ctx, msg models.Message) error {
 	db.GetDB().Model(&msg).Updates(map[string]interface{}{
 		"is_deleted": true,
 		"content":    "",
@@ -345,7 +376,7 @@ func DeleteMessage(c *fiber.Ctx) error {
 	})
 
 	ws.HubInstance.SendToChat(msg.ChatID, mustWSMap("message:deleted", map[string]string{
-		"messageId": msgID,
+		"messageId": msg.ID,
 		"chatId":    msg.ChatID,
 	}), "")
 
