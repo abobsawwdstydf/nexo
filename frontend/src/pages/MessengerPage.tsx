@@ -14,6 +14,7 @@ import UserProfileModal from '../components/UserProfileModal';
 import ContactProfileModal from '../components/ContactProfileModal';
 import SettingsModal from '../components/SettingsModal';
 import AccountManager from '../components/AccountManager';
+import AccountStrip from '../components/AccountStrip';
 import { toast } from '../lib/toast';
 import { Confetti } from '../components/Confetti';
 import { CallOverlay } from '../components/CallOverlay';
@@ -349,6 +350,9 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
       <MessengerBackground />
       <Confetti trigger={confettiTrigger} />
 
+      {/* ─── Account strip (в самом верху, в потоке — не поверх) ───── */}
+      <AccountStrip onManage={() => setShowAccountManager(true)} />
+
       {/* Main layout */}
       <div className="relative z-10 flex-1 flex p-2 h-full overflow-hidden">
         <div className="flex-1 flex overflow-hidden rounded-[26px] border border-white/[0.08] liquid-glass-strong shadow-[0_0_60px_rgba(0,0,0,0.45)]">
@@ -378,6 +382,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
               user={user}
               onOpenProfile={handleOpenProfile}
               onNewChat={handleOpenNewChat}
+              onOpenFriends={handleOpenFriends}
               onCreateStory={() => setShowStoryCreate(true)}
               onOpenStory={(idx) => setStoryViewerGroup(idx)}
             />

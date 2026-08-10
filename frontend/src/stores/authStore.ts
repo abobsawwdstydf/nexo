@@ -220,10 +220,21 @@ export const useAuthStore = create<AuthState>((set, get) => {
       localStorage.setItem('nexo_user', JSON.stringify(user));
       if (token) {
         localStorage.setItem('nexo_access_token', token);
+        // Force a fresh socket — the previous one may belong to another account.
+        disconnectSocket();
         connectSocket(token);
       }
       set({ user });
       scheduleNotificationSubscribe();
+      // Reload chats/stories/folders for the newly activated account.
+      setTimeout(() => {
+        api.getInit()
+          .then((initData) => {
+            const t = localStorage.getItem('nexo_access_token');
+            finishInit(initData, t);
+          })
+          .catch(() => {});
+      }, 600);
     },
   };
 });

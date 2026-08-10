@@ -9,6 +9,7 @@ import {
   BellOff,
   Bell,
   SquarePen,
+  Users,
 } from 'lucide-react';
 import type { Chat, User as UserType } from '../lib/types';
 import { getInitials } from '../lib/initials';
@@ -28,6 +29,7 @@ interface ChatListProps {
   user: UserType | null;
   onOpenProfile: () => void;
   onNewChat: () => void;
+  onOpenFriends: () => void;
   onCreateStory: () => void;
   onOpenStory: (groupIndex: number) => void;
 }
@@ -190,6 +192,7 @@ export function ChatList({
   user,
   onOpenProfile,
   onNewChat,
+  onOpenFriends,
   onCreateStory,
   onOpenStory,
 }: ChatListProps) {
@@ -258,6 +261,15 @@ export function ChatList({
           Чаты
         </h1>
         <div className="flex items-center gap-2">
+          <motion.button
+            onClick={onOpenFriends}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Друзья"
+            className="p-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white/70 hover:text-white transition-colors"
+          >
+            <Users size={17} />
+          </motion.button>
           <motion.button
             onClick={onNewChat}
             whileHover={{ scale: 1.1 }}

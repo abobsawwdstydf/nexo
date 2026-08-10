@@ -69,10 +69,10 @@ export function StoryCreateModal({ onClose, onCreated }: StoryCreateModalProps) 
 
       const meGroup: StoryGroup = {
         user: { id: user.id, username: user.username, displayName: user.displayName, avatar: user.avatar ?? null },
-        stories: [],
+        stories: [story],
         hasUnviewed: false,
       };
-      const updatedGroups = [meGroup, ...stories];
+      const updatedGroups = [meGroup, ...stories.filter(g => g.user.id !== user.id)];
       onCreated(updatedGroups[0]);
       setStories(updatedGroups);
       toast.success('История опубликована');
