@@ -1,12 +1,13 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { X, Search, UserPlus, Loader2, Users, Radio, MessageCircle, Hash, Check } from 'lucide-react';
+import { X, Search, UserPlus, Loader2, Users, Radio, MessageCircle, Hash, Check, Compass, Download, BadgeCheck, Users2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { UserAvatar, OnlineDot } from './UserAvatar';
+import { normalizeMediaUrl } from '../lib/mediaUrl';
 import { getDomain } from '../lib/getDomain';
 import type { Chat, UserPresence } from '../lib/types';
 
-type CreateTab = 'personal' | 'group' | 'channel';
+type CreateTab = 'personal' | 'group' | 'channel' | 'directory';
 
 interface NewChatModalProps {
   initialTab?: CreateTab;
@@ -18,6 +19,7 @@ const TABS: { id: CreateTab; label: string; icon: typeof MessageCircle }[] = [
   { id: 'personal', label: 'Личный', icon: MessageCircle },
   { id: 'group', label: 'Группа', icon: Users },
   { id: 'channel', label: 'Канал', icon: Radio },
+  { id: 'directory', label: 'Каталог', icon: Compass },
 ];
 
 export default function NewChatModal({ initialTab = 'personal', onClose, onChatCreated }: NewChatModalProps) {
@@ -44,7 +46,7 @@ export default function NewChatModal({ initialTab = 'personal', onClose, onChatC
           <div>
             <h2 className="text-sm font-semibold text-white/90 font-display">Создать</h2>
             <p className="text-[11px] text-white/30">
-              {tab === 'personal' ? 'Начните личный диалог' : tab === 'group' ? 'Группа для друзей' : 'Публичный канал'}
+              {tab === 'personal' ? 'Начните личный диалог' : tab === 'group' ? 'Группа для друзей' : tab === 'channel' ? 'Публичный канал' : 'Каналы и стикеры'}
             </p>
           </div>
           <motion.button
@@ -83,6 +85,9 @@ export default function NewChatModal({ initialTab = 'personal', onClose, onChatC
         )}
         {tab === 'channel' && (
           <ChannelTab onClose={onClose} onChatCreated={onChatCreated} />
+        )}
+        {tab === 'directory' && (
+          <DirectoryTab onClose={onClose} onChatCreated={onChatCreated} />
         )}
       </motion.div>
     </motion.div>
@@ -525,6 +530,212 @@ function ChannelTab({ onClose, onChatCreated }: { onClose: () => void; onChatCre
             'Создать канал'
           )}
         </motion.button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════ Directory ═══════════════════════════ */
+
+interface DirectoryChannel {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string | null;
+  description: string;
+  subscribersCount: number;
+  isVerified: boolean;
+}
+
+interface DirectoryPack {
+  packId: string;
+  name: string;
+  description: string;
+  thumbnail: string | null;
+  stickers: { id: string; fileUrl: string; emoji: string }[];
+  creator: { id: string; username: string; displayName: string; avatar: string | null };
+}
+
+function DirectoryTab({ onClose, onChatCreated }: { onClose: () => void; onChatCreated: (chat: Chat | null) => void }) {
+  const [section, setSection] = useState<'channels' | 'stickers'>('channels');
+  const [channels, setChannels] = useState<DirectoryChannel[]>([]);
+  const [packs, setPacks] = useState<DirectoryPack[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      api.request<{ items: DirectoryChannel[] }>('/channels/directory'),
+      api.request<{ items: DirectoryPack[] }>('/sticker-packs/directory'),
+    ])
+      .then(([c, p]) => {
+        if (cancelled) return;
+        setChannels(c.items || []);
+        setPacks(p.items || []);
+        setError('');
+      })
+      .catch(() => { if (!cancelled) setError('Не удалось загрузить каталог'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSubscribe = async (channelId: string) => {
+    setBusyId(channelId);
+    setError('');
+    try {
+      const res = await api.request<{ chat: Chat }>(`/channels/${channelId}/subscribe`, { method: 'POST' });
+      onChatCreated(res.chat);
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Не удалось подписаться');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleInstallPack = async (packId: string) => {
+    setBusyId(packId);
+    setError('');
+    try {
+      await api.request(`/sticker-packs/${packId}/install`, { method: 'POST' });
+      setNotice('Пак добавлен в «Мои стикеры»');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Не удалось добавить пак');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="px-2 pb-2">
+      <div className="flex gap-1 px-3 pt-3">
+        <button
+          onClick={() => setSection('channels')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 ${
+            section === 'channels' ? 'bg-white/[0.08] text-white/90' : 'text-white/35 hover:text-white/60'
+          }`}
+        >
+          <Radio size={13} />
+          Каналы
+        </button>
+        <button
+          onClick={() => setSection('stickers')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 ${
+            section === 'stickers' ? 'bg-white/[0.08] text-white/90' : 'text-white/35 hover:text-white/60'
+          }`}
+        >
+          <Check size={13} />
+          Стикеры
+        </button>
+      </div>
+
+      {notice && (
+        <p className="text-[11px] text-emerald-400/80 text-center pt-2">{notice}</p>
+      )}
+      {error && (
+        <p className="text-[11px] text-red-400/70 text-center pt-2">{error}</p>
+      )}
+
+      <div className="min-h-[280px] max-h-[400px] overflow-y-auto px-1.5 pt-2">
+        {loading ? (
+          <div className="flex flex-col gap-2 px-3 pt-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                <div className="w-10 h-10 rounded-xl skeleton-shimmer bg-white/[0.04]" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-24 rounded skeleton-shimmer bg-white/[0.04]" />
+                  <div className="h-2 w-16 rounded skeleton-shimmer bg-white/[0.03]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : section === 'channels' ? (
+          channels.length === 0 ? (
+            <EmptyState icon={<Compass size={26} className="text-white/15" />} title="Пока нет публичных каналов" hint="Каналы с username появятся здесь" />
+          ) : (
+            <div className="space-y-0.5">
+              {channels.map(ch => (
+                <div
+                  key={ch.id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group"
+                >
+                  <div className="relative flex-shrink-0">
+                    <UserAvatar user={{ displayName: ch.name, avatar: ch.avatar }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium text-white/80 truncate">{ch.name}</span>
+                      {ch.isVerified && <BadgeCheck size={13} className="text-sky-400 shrink-0" />}
+                    </div>
+                    <p className="text-xs text-white/30 truncate">@{ch.username} · {ch.subscribersCount} подписчиков</p>
+                    {ch.description && <p className="text-[11px] text-white/25 truncate">{ch.description}</p>}
+                  </div>
+                  <button
+                    onClick={() => handleSubscribe(ch.id)}
+                    disabled={busyId === ch.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent/15 hover:bg-accent/25 border border-accent/20 text-accent transition-all duration-200 disabled:opacity-50 shrink-0"
+                  >
+                    {busyId === ch.id ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <>
+                        <UserPlus size={12} />
+                        Подписаться
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        ) : packs.length === 0 ? (
+          <EmptyState icon={<Users2 size={26} className="text-white/15" />} title="Пока нет стикер-паков" hint="Публичные паки появятся здесь" />
+        ) : (
+          <div className="space-y-0.5">
+            {packs.map(p => (
+              <div
+                key={p.packId}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/[0.04] overflow-hidden flex-shrink-0">
+                  {p.thumbnail && (
+                    <img
+                      src={normalizeMediaUrl(p.thumbnail)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-white/80 truncate block">{p.name}</span>
+                  <p className="text-xs text-white/30 truncate">
+                    {p.creator.displayName || `@${p.creator.username}`} · {p.stickers.length} шт.
+                  </p>
+                  {p.description && <p className="text-[11px] text-white/25 truncate">{p.description}</p>}
+                </div>
+                <button
+                  onClick={() => handleInstallPack(p.packId)}
+                  disabled={busyId === p.packId}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400/80 transition-all duration-200 disabled:opacity-50 shrink-0"
+                >
+                  {busyId === p.packId ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Download size={12} />
+                      Добавить
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

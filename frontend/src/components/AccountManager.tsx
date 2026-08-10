@@ -203,7 +203,7 @@ export default function AccountManager({ onClose }: AccountManagerProps) {
     try {
       const result = await api.loginConfirm(email, code);
       
-      if (result.user && result.accessToken) {
+      if (!result.requiresTwoFactor && result.user && result.accessToken) {
         // Add new account
         const newAccount: Account = {
           id: generateAccountId(),

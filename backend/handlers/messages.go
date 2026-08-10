@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/helpers"
@@ -17,6 +18,24 @@ import (
 )
 
 const maxMessageContentLength = 10000
+
+// validSelfDestructSeconds normalizes a self-destruct timer. Returns 0 when
+// unset, or clamps to [3, 7 days]. Negative values are invalid (-1 result).
+func validSelfDestructSeconds(sec int) int {
+	if sec == 0 {
+		return 0
+	}
+	if sec < 0 {
+		return -1
+	}
+	if sec < 3 {
+		return 3
+	}
+	if sec > 7*24*3600 {
+		return 7 * 24 * 3600
+	}
+	return sec
+}
 
 // MessageJSON for safe JSON output
 type MessageJSON struct {
@@ -33,6 +52,8 @@ type MessageJSON struct {
 	EncryptedContent string            `json:"encryptedContent"`
 	EncryptedIV      string            `json:"encryptedIv"`
 	CreatedAt        string            `json:"createdAt"`
+	SelfDestructTimer int              `json:"selfDestructTimer"`
+	SelfDestructAt   string            `json:"selfDestructAt,omitempty"`
 	Sender           SenderJSON        `json:"sender"`
 	ReplyTo          *MessageJSON      `json:"replyTo,omitempty"`
 	Media            []models.Media    `json:"media"`
@@ -127,10 +148,15 @@ func messageToJSON(msg models.Message) string {
 		EncryptedContent: msg.EncryptedContent,
 		EncryptedIV:      msg.EncryptedIV,
 		CreatedAt:        msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		SelfDestructTimer: msg.SelfDestructTimer,
 		Sender:           senderJSON,
 		Media:            msg.Media,
 		Reactions:        msg.Reactions,
 		ReplyMarkup:      replyMarkup,
+	}
+
+	if msg.SelfDestructAt != nil {
+		msgJSON.SelfDestructAt = msg.SelfDestructAt.Format("2006-01-02T15:04:05Z07:00")
 	}
 
 	data, err := json.Marshal(msgJSON)
@@ -178,6 +204,12 @@ func SendMessage(c *fiber.Ctx) error {
 	}
 
 	now := time.Now()
+
+	timer := validSelfDestructSeconds(req.SelfDestructTimer)
+	if timer < 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid self-destruct timer"})
+	}
+
 	msg := models.Message{
 		ID:               generateID(),
 		ChatID:           chatID,
@@ -189,8 +221,13 @@ func SendMessage(c *fiber.Ctx) error {
 		IsEncrypted:      req.IsEncrypted,
 		EncryptedContent: req.EncryptedContent,
 		EncryptedIV:      req.EncryptedIV,
+		SelfDestructTimer: timer,
 		CreatedAt:        now,
 		UpdatedAt:        now,
+	}
+	if timer > 0 {
+		expiresAt := now.Add(time.Duration(timer) * time.Second)
+		msg.SelfDestructAt = &expiresAt
 	}
 
 	if err := db.GetDB().Create(&msg).Error; err != nil {
@@ -572,13 +609,30 @@ func SearchMessages(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"items": []models.Message{}, "total": 0, "page": pag.Page, "pageSize": pag.PageSize})
 	}
 
-	// SECURITY FIX: Escape % and _ LIKE wildcards to prevent pattern injection.
-	// The ESCAPE clause is mandatory — without it SQLite treats backslash literally.
-	likeQuery := "%" + strings.ReplaceAll(strings.ReplaceAll(query, "%", "\\%"), "_", "\\_") + "%"
-	q := db.GetDB().
-		Preload("Sender").
-		Preload("Chat").
-		Where("chat_id IN ? AND is_deleted = false AND content LIKE ? ESCAPE '\\'", memberChatIDs, likeQuery)
+	// Search strategy:
+	//  - queries >= 3 runes run through the FTS5 index (messages_fts, synced by
+	//    triggers) with per-word prefix matching and unicode case folding;
+	//  - shorter queries fall back to the old LIKE scan (FTS5 prefixes are
+	//    impractical for 1-2 characters).
+	var q *gorm.DB
+	if utf8.RuneCountInString(query) < 3 {
+		// SECURITY FIX: Escape % and _ LIKE wildcards to prevent pattern injection.
+		// The ESCAPE clause is mandatory — without it SQLite treats backslash literally.
+		likeQuery := "%" + strings.ReplaceAll(strings.ReplaceAll(query, "%", "\\%"), "_", "\\_") + "%"
+		q = db.GetDB().
+			Model(&models.Message{}).
+			Preload("Sender").
+			Preload("Chat").
+			Where("chat_id IN ? AND is_deleted = false AND content LIKE ? ESCAPE '\\'", memberChatIDs, likeQuery)
+	} else {
+		ftsQuery := buildFTSQuery(query)
+		q = db.GetDB().
+			Model(&models.Message{}).
+			Joins("JOIN messages_fts ON messages_fts.rowid = messages.rowid").
+			Preload("Sender").
+			Preload("Chat").
+			Where("messages.chat_id IN ? AND messages.is_deleted = false AND messages_fts MATCH ?", memberChatIDs, ftsQuery)
+	}
 
 	if msgType != "" {
 		q = q.Where("type = ?", msgType)
@@ -632,6 +686,21 @@ func SearchMessages(c *fiber.Ctx) error {
 	return c.JSON(helpers.NewPaginatedResponse(messages, total, pag))
 }
 
+// buildFTSQuery turns a free-text query into an FTS5 MATCH expression with
+// per-word prefix matching ("кошка мышка" -> ""кошка"* "мышка"*", AND).
+func buildFTSQuery(query string) string {
+	words := strings.Fields(query)
+	if len(words) > 8 {
+		words = words[:8]
+	}
+	parts := make([]string, 0, len(words))
+	for _, w := range words {
+		escaped := strings.ReplaceAll(w, `"`, `""`)
+		parts = append(parts, `"`+escaped+`"*`)
+	}
+	return strings.Join(parts, " ")
+}
+
 func GetSearchHistory(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
@@ -642,6 +711,54 @@ func GetSearchHistory(c *fiber.Ctx) error {
 		Find(&history)
 
 	return c.JSON(history)
+}
+
+// SetMessageSelfDestruct arms (or disarms with seconds=0) a self-destruct
+// timer on an existing message. Only the author may do this.
+func SetMessageSelfDestruct(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+	messageID := c.Params("id")
+
+	var req struct {
+		Seconds int `json:"seconds"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	timer := validSelfDestructSeconds(req.Seconds)
+	if timer < 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid self-destruct timer"})
+	}
+
+	var msg models.Message
+	if err := db.GetDB().First(&msg, "id = ?", messageID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Message not found"})
+	}
+	if msg.SenderID != userID {
+		return c.Status(403).JSON(fiber.Map{"error": "Only the author can set a self-destruct timer"})
+	}
+	if msg.IsDeleted {
+		return c.Status(400).JSON(fiber.Map{"error": "Message is already deleted"})
+	}
+
+	var expiresAt *time.Time
+	if timer > 0 {
+		t := time.Now().Add(time.Duration(timer) * time.Second)
+		expiresAt = &t
+	}
+	db.GetDB().Model(&msg).Updates(map[string]interface{}{
+		"self_destruct_timer": timer,
+		"self_destruct_at":    expiresAt,
+	})
+
+	ws.HubInstance.SendToChat(msg.ChatID, mustWSMsg("message:self-destruct",
+		"messageId", messageID,
+		"chatId", msg.ChatID,
+		"seconds", timer,
+	), "")
+
+	return c.JSON(fiber.Map{"ok": true, "seconds": timer})
 }
 
 func GetSearchSuggestions(c *fiber.Ctx) error {

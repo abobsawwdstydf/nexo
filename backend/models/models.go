@@ -38,6 +38,11 @@ type User struct {
 	NotifyFriends    bool `json:"notifyFriends" gorm:"default:true"`
 	TwoFactorEnabled bool `json:"twoFactorEnabled" gorm:"default:false"`
 
+	// TOTP 2FA
+	TotpSecret        string `json:"-" gorm:"default:''"`          // base32 secret (never serialized)
+	TotpRecoveryCodes string `json:"-" gorm:"type:text"`           // JSON array of sha256(recovery code) hexes
+	TotpEnabledAt     *time.Time `json:"totpEnabledAt"`
+
 	// DND (Do Not Disturb)
 	DNDUntil   *time.Time `json:"dndUntil"`
 	DNDMessage string     `json:"dndMessage" gorm:"size:256"`
@@ -132,6 +137,7 @@ type Message struct {
 	SenderKeyID       string     `json:"senderKeyId"`
 	ThreadID          string     `json:"threadId"`
 	SelfDestructTimer int        `json:"selfDestructTimer"`
+	SelfDestructAt    *time.Time `json:"selfDestructAt"`
 	CanForward        bool       `json:"canForward" gorm:"default:true"`
 	CanScreenshot     bool       `json:"canScreenshot" gorm:"default:true"`
 	ReplyMarkup       string     `json:"-" gorm:"type:text"` // inline-клавиатура (JSON, Bot API)
@@ -526,6 +532,7 @@ type SendMessageRequest struct {
 	IsEncrypted      bool   `json:"isEncrypted"`
 	EncryptedContent string `json:"encryptedContent"`
 	EncryptedIV      string `json:"encryptedIv"`
+	SelfDestructTimer int   `json:"selfDestructTimer"` // seconds, 0 = no timer
 }
 
 type CreateChatRequest struct {

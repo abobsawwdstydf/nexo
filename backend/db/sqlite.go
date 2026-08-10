@@ -181,6 +181,9 @@ func InitLocal(dsn string) error {
 	// Add performance indexes
 	addIndexes(DB)
 
+	// Full-text search over messages
+	InitFTS5(DB)
+
 	log.Printf("Local SQLite database: %s", dsn)
 	return nil
 }

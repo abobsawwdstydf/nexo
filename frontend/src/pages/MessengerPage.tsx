@@ -28,6 +28,7 @@ import { usePerformanceMode } from '../hooks/usePerformanceMode';
 import { StoriesViewer } from '../components/StoryViewer';
 import { StoryCreateModal } from '../components/StoryCreateModal';
 import AdminPanel from '../components/AdminPanel';
+import { GlobalSearchModal } from '../components/GlobalSearchModal';
 import type { StoryGroup } from '../lib/types';
 
 const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -88,7 +89,28 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [channelProfileChat, setChannelProfileChat] = useState<Chat | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [focusMessageId, setFocusMessageId] = useState<string | null>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
+
+  // Global search hotkey: Ctrl+K / Cmd+K
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(s => !s);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const handleGlobalSearchSelect = useCallback((msg: Message) => {
+    setShowGlobalSearch(false);
+    setFocusMessageId(msg.id);
+    setSelectedChatId(msg.chatId);
+    setMobileView('chat');
+  }, []);
 
   // Saved Messages virtual chat — memoized so it is not recreated (and notes are
   // not re-read from localStorage) on every render. Refreshes on notes changes.
@@ -386,6 +408,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
                   onOpenProfile={handleOpenContactProfile}
                   onOpenCommentsChat={handleOpenCommentsChat}
                   onOpenChannelProfile={handleOpenChannelProfile}
+                  focusMessageId={focusMessageId}
                 />
               </motion.div>
             ) : (
@@ -527,6 +550,17 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
             groups={storyGroups}
             initialGroupIndex={Math.min(storyViewerGroup, storyGroups.length - 1)}
             onClose={() => setStoryViewerGroup(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Global search (Ctrl+K) */}
+      <AnimatePresence>
+        {showGlobalSearch && (
+          <GlobalSearchModal
+            open={showGlobalSearch}
+            onClose={() => setShowGlobalSearch(false)}
+            onSelect={handleGlobalSearchSelect}
           />
         )}
       </AnimatePresence>

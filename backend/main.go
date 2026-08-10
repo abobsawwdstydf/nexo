@@ -127,6 +127,9 @@ func main() {
 	// Start dead man switch checker (checks every 60 seconds)
 	handlers.StartDeadManSwitchLoop()
 
+	// Start self-destruct message expiry (checks every 5 seconds)
+	handlers.StartSelfDestructLoop()
+
 	ws.HubInstance = ws.NewHub()
 	go ws.HubInstance.Run()
 
@@ -150,6 +153,7 @@ func main() {
 
 	// Middleware
 	app.Use(metricsMiddleware)
+	app.Use(middleware.StructuredLogging())
 	app.Use(recover.New())
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelDefault,
@@ -323,6 +327,7 @@ nexo_up 1
 	api.Post("/auth/login/code", handlers.AuthRateLimit(5, time.Minute), handlers.SendLoginCode)
 	api.Post("/auth/login/confirm", handlers.AuthRateLimit(10, time.Minute), handlers.LoginConfirm)
 	api.Post("/auth/refresh", handlers.AuthRateLimit(10, time.Minute), handlers.RefreshToken)
+	api.Post("/auth/login/totp", handlers.AuthRateLimit(10, time.Minute), handlers.Login2FA)
 	api.Post("/auth/email/send-code", handlers.AuthRateLimit(3, 15*time.Minute), handlers.SendEmailCode)
 	api.Post("/auth/email/confirm", handlers.AuthRateLimit(5, time.Minute), handlers.ConfirmEmailCode)
 
@@ -344,6 +349,16 @@ nexo_up 1
 	auth.Get("/users/settings", handlers.GetUserSettings)
 	auth.Put("/users/settings", handlers.UpdateUserSettings)
 	auth.Get("/users/notifications", handlers.GetUserNotifications)
+
+	// Directories (must be registered before /users/:id and /sticker-packs/:packId)
+	auth.Get("/channels/directory", handlers.ChannelDirectory)
+	auth.Post("/channels/:id/subscribe", handlers.SubscribeToChannel)
+	auth.Get("/sticker-packs/directory", handlers.StickerDirectory)
+
+	// TOTP 2FA management
+	auth.Post("/2fa/setup", handlers.Setup2FA)
+	auth.Post("/2fa/verify", handlers.Verify2FA)
+	auth.Post("/2fa/disable", handlers.Disable2FA)
 	auth.Post("/users/push-subscription", handlers.SavePushSubscriptionHandler)
 	auth.Delete("/users/push-subscription", handlers.DeletePushSubscriptionHandler)
 
@@ -387,6 +402,7 @@ nexo_up 1
 	auth.Post("/chats/:chatId/comments/:messageId/open", handlers.OpenComments)
 	auth.Put("/messages/:messageId", handlers.EditMessage)
 	auth.Delete("/messages/:messageId", handlers.DeleteMessage)
+	auth.Patch("/messages/:messageId/self-destruct", handlers.SetMessageSelfDestruct)
 	auth.Post("/messages/:messageId/reactions", handlers.AddReaction)
 	auth.Delete("/messages/:messageId/reactions/:emoji", handlers.RemoveReaction)
 	auth.Post("/reactions/:messageId", handlers.AddReaction)
@@ -415,6 +431,7 @@ nexo_up 1
 	auth.Post("/sticker-packs", handlers.CreateUserStickerPack)
 	auth.Get("/sticker-packs", handlers.GetMyStickerPacks)
 	auth.Post("/sticker-packs/:packId/stickers", handlers.UploadUserSticker)
+	auth.Post("/sticker-packs/:packId/install", handlers.InstallStickerPack)
 	auth.Delete("/sticker-packs/:packId", handlers.DeleteUserStickerPack)
 	auth.Delete("/stickers/:stickerId", handlers.DeleteUserSticker)
 	// Public (auth'd) list of another user's packs — used to render received

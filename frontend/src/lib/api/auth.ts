@@ -1,10 +1,15 @@
 import type { User, Chat, SmartFolder, StoryGroup } from '../types';
 import { ApiClient } from './core';
 
+export type LoginConfirmResult =
+  | { requiresTwoFactor: true; tentativeToken: string }
+  | { user: User; accessToken?: string; refreshToken?: string; csrfToken?: string; requiresTwoFactor?: false };
+
 declare module './core' {
   interface ApiClient {
     sendLoginCode(email: string): Promise<{ requiresCode: boolean; expiresAt?: string }>;
-    loginConfirm(email: string, code: string): Promise<{ user: User; accessToken?: string; refreshToken?: string; csrfToken?: string }>;
+    loginConfirm(email: string, code: string): Promise<LoginConfirmResult>;
+    loginWith2FA(tentativeToken: string, code: string): Promise<{ user: User; accessToken?: string; refreshToken?: string; csrfToken?: string }>;
     sendEmailCode(email: string): Promise<{ success: boolean; expiresAt: string }>;
     confirmEmailCode(email: string, code: string): Promise<{ success: boolean; email: string }>;
     register(data: {
@@ -42,9 +47,16 @@ export function installAuth(api: ApiClient): void {
   };
 
   api.loginConfirm = async (email: string, code: string) => {
-    return api.request<{ user: User; accessToken?: string; refreshToken?: string; csrfToken?: string }>('/auth/login/confirm', {
+    return api.request<LoginConfirmResult>('/auth/login/confirm', {
       method: 'POST',
       body: JSON.stringify({ email, code }),
+    });
+  };
+
+  api.loginWith2FA = async (tentativeToken: string, code: string) => {
+    return api.request<{ user: User; accessToken?: string; refreshToken?: string; csrfToken?: string }>('/auth/login/totp', {
+      method: 'POST',
+      body: JSON.stringify({ tentativeToken, code }),
     });
   };
 

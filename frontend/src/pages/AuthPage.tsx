@@ -318,6 +318,7 @@ type Screen =
   | 'choose'
   | 'login-email'
   | 'login-code'
+  | 'login-2fa'
   | 'login-success'
   | 'login-error'
   | 'reg-name'
@@ -328,12 +329,14 @@ type Screen =
   | 'reg-error';
 
 export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?: (tab: 'privacy' | 'terms' | 'cookies') => void; onInfoClick?: () => void }) {
-  const { sendLoginCode, loginConfirm, register } = useAuthStore();
+  const { sendLoginCode, loginConfirm, login2FA, register } = useAuthStore();
   const [muted, setMuted] = useState(!getSoundsEnabled());
   const [screen, setScreen] = useState<Screen>('greeting');
   const [email, setEmail] = useState('');
   const [emailDraft, setEmailDraft] = useState('');
   const [code, setCode] = useState('');
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [tentativeToken, setTentativeToken] = useState('');
   const [error, setError] = useState('');
   const [otpError, setOtpError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -501,7 +504,13 @@ export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?:
     sendingRef.current = true;
     setSubmitting(true); setError('');
     try {
-      await loginConfirm(email, codeStr);
+      const result = await loginConfirm(email, codeStr);
+      if (result.requiresTwoFactor) {
+        setTentativeToken(result.tentativeToken || '');
+        setTwoFaCode('');
+        setScreen('login-2fa');
+        return;
+      }
       playSuccessSound(muted);
       setScreen('login-success');
       setTimeout(() => window.location.reload(), 2000);
@@ -512,6 +521,22 @@ export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?:
       setScreen('login-error');
     } finally { setSubmitting(false); sendingRef.current = false; }
   }, [email, loginConfirm, muted]);
+
+  const handle2FAConfirm = useCallback(async (codeStr: string) => {
+    if (sendingRef.current || !tentativeToken) return;
+    sendingRef.current = true;
+    setSubmitting(true); setError(''); setOtpError(false);
+    try {
+      await login2FA(tentativeToken, codeStr);
+      playSuccessSound(muted);
+      setScreen('login-success');
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (err: unknown) {
+      playErrorSound(muted);
+      setError(err instanceof Error ? err.message : 'Неверный код');
+      setOtpError(true);
+    } finally { setSubmitting(false); sendingRef.current = false; }
+  }, [tentativeToken, login2FA, muted]);
 
   // ─── Register handlers ──────────────────────────────────────────────────
   const handleRegisterEmail = async (emailToUse: string) => {
@@ -918,6 +943,63 @@ export default function AuthPage({ onLegalClick, onInfoClick }: { onLegalClick?:
                 >Изменить email</motion.button>
               </motion.div>
             )}
+          </motion.div>
+        )}
+
+        {/* ═══ LOGIN: 2FA ═══ */}
+        {screen === 'login-2fa' && (
+          <motion.div
+            key="login-2fa"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
+            style={{ position: 'absolute', textAlign: 'center', width: '100%', maxWidth: 420, padding: '0 24px' }}
+          >
+            <div style={{
+              fontSize: AUTH_FONT_SIZE,
+              fontWeight: 500,
+              color: D.textPrimary,
+              letterSpacing: '-0.01em',
+              fontFamily: FONT,
+              marginBottom: 8,
+              wordBreak: 'keep-all',
+            }}>
+              Двухфакторный код
+            </div>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              style={{ color: D.textMuted, fontSize: 16, fontFamily: FONT, marginBottom: 32 }}
+            >Введи код из приложения-аутентификатора</motion.p>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              <AnimatedOtpInput
+                value={twoFaCode}
+                onChange={setTwoFaCode}
+                onComplete={handle2FAConfirm}
+                error={otpError}
+                theme={OTP_THEME}
+                fontFamily={FONT}
+                onSlotType={() => playTypeClick(muted)}
+                onSlotErase={() => playEraseClick(muted)}
+              />
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ color: D.error, fontSize: 13, fontFamily: FONT, marginTop: 8 }}
+                >{error}</motion.p>
+              )}
+              <motion.button
+                onClick={() => { setScreen('login-email'); setCode(''); setTwoFaCode(''); setError(''); setOtpError(false); }}
+                whileHover={{ color: D.primary }}
+                style={{
+                  marginTop: 20, background: 'none', border: 'none',
+                  color: D.textMuted, fontSize: 16, fontFamily: FONT, cursor: 'pointer',
+                }}
+              >Назад</motion.button>
+            </motion.div>
           </motion.div>
         )}
 

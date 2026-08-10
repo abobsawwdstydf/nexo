@@ -161,7 +161,25 @@ func InitJWT() error {
 type Claims struct {
 	UserID   string `json:"userId"`
 	Username string `json:"username"`
+	Stage    string `json:"stage,omitempty"` // "2fa" for tentative login tokens
 	jwt.RegisteredClaims
+}
+
+// Generate2FAToken issues a short-lived token that only proves the email-code
+// step of login succeeded. The holder must still pass TOTP to get real tokens.
+func Generate2FAToken(userID, username string) (string, error) {
+	claims := Claims{
+		UserID:   userID,
+		Username: username,
+		Stage:    "2fa",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "nexo",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(JWTSecret)
 }
 
 func GenerateAccessToken(userID, username string) (string, error) {

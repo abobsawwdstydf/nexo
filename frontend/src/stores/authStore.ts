@@ -14,7 +14,8 @@ interface AuthState {
   error: string | null;
   isPremium: () => boolean;
   sendLoginCode: (email: string) => Promise<{ requiresCode: boolean; expiresAt?: string }>;
-  loginConfirm: (email: string, code: string) => Promise<void>;
+  loginConfirm: (email: string, code: string) => Promise<{ requiresTwoFactor?: boolean; tentativeToken?: string }>;
+  login2FA: (tentativeToken: string, code: string) => Promise<void>;
   register: (data: {
     username: string;
     displayName?: string;
@@ -98,6 +99,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
         localStorage.removeItem('nexo_access_token');
         localStorage.removeItem('nexo_refresh_token');
         const result = await api.loginConfirm(email, code);
+        if (result.requiresTwoFactor) {
+          // 2FA enabled: keep the tentative token, wait for the second step
+          set({ error: null, isLoading: false });
+          return { requiresTwoFactor: true, tentativeToken: result.tentativeToken };
+        }
+        completeLogin(result);
+        return {};
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        set({ error: msg, isLoading: false });
+        throw err;
+      }
+    },
+
+    login2FA: async (tentativeToken, code) => {
+      try {
+        set({ error: null, isLoading: true });
+        const result = await api.loginWith2FA(tentativeToken, code);
         completeLogin(result);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);

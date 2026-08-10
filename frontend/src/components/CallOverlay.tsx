@@ -22,6 +22,7 @@ import { getSocket, wsRequest } from '../lib/socket';
 import type { UserBasic } from '../lib/types';
 import { getSessionInfo } from '../lib/e2e';
 import { playRingtone, playSoundFile } from '../lib/sounds';
+import { api } from '../lib/api';
 
 interface CallOverlayProps {
   open: boolean;
@@ -70,6 +71,29 @@ export function CallOverlay({ open, type, target, chatId, incoming, initialOffer
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require',
   });
+
+  // Fetch TURN credentials from the server (if configured) and merge them
+  // into the ICE config before the peer connection is created. STUN-only
+  // fallback keeps calls working when TURN is not set up.
+  useEffect(() => {
+    let cancelled = false;
+    api.request<{ iceServers?: { urls: string | string[]; username?: string; credential?: string }[] }>('/turn/credentials')
+      .then((res) => {
+        if (cancelled || !Array.isArray(res?.iceServers) || res.iceServers.length === 0) return;
+        const remote = res.iceServers.filter(s => {
+          const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+          return urls.some(u => typeof u === 'string' && u.length > 0);
+        });
+        if (remote.length > 0) {
+          iceConfigRef.current = {
+            ...iceConfigRef.current,
+            iceServers: [...(iceConfigRef.current.iceServers || []), ...remote],
+          };
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (chatId) {

@@ -46,26 +46,33 @@ var (
 )
 
 func wsCheckRateLimit(userID string) bool {
+	return wsCheckTypeRateLimit(userID, wsRateLimitMax, wsRateLimitWindow)
+}
+
+// wsCheckTypeRateLimit is a sliding-window limiter for a composite key
+// (e.g. "userID|send_message"), used to throttle mutation-heavy WS events
+// tighter than the global per-user cap.
+func wsCheckTypeRateLimit(key string, max int, window time.Duration) bool {
 	wsRateLimitMu.Lock()
 	defer wsRateLimitMu.Unlock()
 
 	now := time.Now()
-	entry, exists := wsRateLimit[userID]
+	entry, exists := wsRateLimit[key]
 
-	if !exists || now.Sub(entry.WindowStart) > wsRateLimitWindow {
+	if !exists || now.Sub(entry.WindowStart) > window {
 		// Opportunistic cleanup: drop stale entries to prevent unbounded growth
-		if len(wsRateLimit) > 1000 {
-			for uid, e := range wsRateLimit {
-				if now.Sub(e.WindowStart) > wsRateLimitWindow {
-					delete(wsRateLimit, uid)
+		if len(wsRateLimit) > 2000 {
+			for k, e := range wsRateLimit {
+				if now.Sub(e.WindowStart) > window {
+					delete(wsRateLimit, k)
 				}
 			}
 		}
-		wsRateLimit[userID] = &wsRateEntry{Count: 1, WindowStart: now}
+		wsRateLimit[key] = &wsRateEntry{Count: 1, WindowStart: now}
 		return true
 	}
 
-	if entry.Count >= wsRateLimitMax {
+	if entry.Count >= max {
 		return false
 	}
 
@@ -437,6 +444,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 		IsEncrypted      bool           `json:"isEncrypted"`
 		EncryptedContent string         `json:"encryptedContent"`
 		EncryptedIV      string         `json:"encryptedIv"`
+		SelfDestructTimer int           `json:"selfDestructTimer"`
 	}
 	if env.Payload != nil {
 		if err := json.Unmarshal(env.Payload, &payload); err != nil {
@@ -515,6 +523,15 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 		EncryptedIV:      payload.EncryptedIV,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
+	}
+	timer := validSelfDestructSeconds(payload.SelfDestructTimer)
+	if timer < 0 {
+		return &wsError{Code: "invalid_field", Message: "Invalid self-destruct timer"}
+	}
+	msg.SelfDestructTimer = timer
+	if timer > 0 {
+		expiresAt := time.Now().Add(time.Duration(timer) * time.Second)
+		msg.SelfDestructAt = &expiresAt
 	}
 	if msg.Type == "" {
 		msg.Type = "text"
@@ -959,6 +976,15 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 	}
 
 	// Route by type
+	// Per-type limits: mutations are the abuse hot path. Tighten the global
+	// 30/s cap with event-specific budgets before dispatch.
+	if max, ok := map[string]int{"send_message": 10, "reaction": 20, "typing": 20}[env.Type]; ok {
+		if !wsCheckTypeRateLimit(client.UserID+"|"+env.Type, max, time.Second) {
+			wsResponse(client, env.ID, &wsError{Code: "rate_limited", Message: "Too many requests"})
+			return
+		}
+	}
+
 	switch env.Type {
 	case "typing":
 		wsHandle(client, &env, handleTyping)

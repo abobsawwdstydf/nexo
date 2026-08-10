@@ -35,6 +35,8 @@ import {
   Gamepad2,
   Cloud,
   Crown,
+  Timer,
+  Check,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -72,6 +74,41 @@ const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Символы', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚧️', '🚻', '🚹', '🚺', '♿', '🚭', '📵', '🔞', '☢️', '☣️', '⚠️', '🚸', '⛔', '🚫'] },
 ];
 
+/** Все эмодзи без дубликатов — для глобального поиска в пикере. */
+const ALL_EMOJIS: string[] = (() => {
+  const set = new Set<string>();
+  EMOJI_CATEGORIES.forEach(cat => cat.emojis.forEach(e => set.add(e)));
+  return [...set];
+})();
+
+/** Сжимает изображение через canvas (max 1920px, JPEG q0.82), если это даёт выигрыш. */
+async function compressImage(file: File, maxDim = 1920, quality = 0.82): Promise<File> {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 1.5 * 1024 * 1024) {
+      bitmap.close();
+      return file;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', quality));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.(png|jpe?g|webp|gif|bmp)$/i, '.jpg'), { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
+
 interface StickerPackManifest {
   name: string;
   stickers: { filename: string; fileUrl: string; emoji: string }[];
@@ -97,6 +134,7 @@ interface MessageAreaProps {
   onOpenProfile?: (userId: string) => void;
   onOpenCommentsChat?: (chatId: string) => void;
   onOpenChannelProfile?: (chatId: string) => void;
+  focusMessageId?: string | null;
 }
 
 function formatTime(dateStr: string): string {
@@ -1040,7 +1078,7 @@ function MessageInput({
   chatId,
   e2eReady,
 }: {
-  onSend: (text: string, options?: { replyToId?: string; media?: any[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string }) => void;
+  onSend: (text: string, options?: { replyToId?: string; media?: any[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; selfDestructTimer?: number }) => void;
   replyTo?: { id: string; content: string; sender: string } | null;
   onCancelReply?: () => void;
   chatId: string;
@@ -1050,6 +1088,18 @@ function MessageInput({
   const [showAttach, setShowAttach] = useState(false);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const [emojiTab, setEmojiTab] = useState<'emoji' | 'stickers' | 'gif' | 'my'>('emoji');
+  const [emojiQuery, setEmojiQuery] = useState('');
+  const [recentEmojis, setRecentEmojis] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('nexo_recent_emojis');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter(e => typeof e === 'string').slice(0, 40) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [selfDestruct, setSelfDestruct] = useState(0);
+  const [showTimerMenu, setShowTimerMenu] = useState(false);
   const [myPackType, setMyPackType] = useState<'sticker' | 'emoji'>('sticker');
   const [stickerPacks, setStickerPacks] = useState<StickerPack[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -1170,7 +1220,7 @@ function MessageInput({
   const handleSubmit = (media?: any[]) => {
     const trimmed = text.trim();
     if (!trimmed && (!media || media.length === 0)) return;
-    onSend(trimmed, { replyToId: replyTo?.id, media });
+    onSend(trimmed, { replyToId: replyTo?.id, media, selfDestructTimer: selfDestruct || undefined });
     setText('');
     onCancelReply?.();
     setPreviewImages([]);
@@ -1186,6 +1236,25 @@ function MessageInput({
     }
   };
 
+  /** Вставляет эмодзи в текст и сохраняет в «Недавние». */
+  const useEmoji = (emoji: string) => {
+    setText(prev => prev + emoji);
+    inputRef.current?.focus();
+    setRecentEmojis(prev => {
+      const next = [emoji, ...prev.filter(e => e !== emoji)].slice(0, 40);
+      try { localStorage.setItem('nexo_recent_emojis', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const SELF_DESTRUCT_OPTIONS = [
+    { sec: 0, label: 'Выкл' },
+    { sec: 30, label: '30 секунд' },
+    { sec: 300, label: '5 минут' },
+    { sec: 3600, label: '1 час' },
+    { sec: 86400, label: '24 часа' },
+  ];
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -1193,16 +1262,21 @@ function MessageInput({
     const newPreviews: string[] = [];
     const newFiles: File[] = [];
 
-    for (const file of files.slice(0, 10)) {
-      if (file.type.startsWith('image/')) {
+    for (const raw of files.slice(0, 10)) {
+      if (raw.type.startsWith('image/')) {
+        const optimized = await compressImage(raw);
         const reader = new FileReader();
-        reader.onload = (ev) => {
-          newPreviews.push(ev.target?.result as string);
-          setPreviewImages([...newPreviews]);
-        };
-        reader.readAsDataURL(file);
+        const dataUrl = await new Promise<string>((res, rej) => {
+          reader.onload = () => res(reader.result as string);
+          reader.onerror = rej;
+          reader.readAsDataURL(optimized);
+        });
+        newPreviews.push(dataUrl);
+        setPreviewImages([...newPreviews]);
+        newFiles.push(optimized);
+      } else {
+        newFiles.push(raw);
       }
-      newFiles.push(file);
     }
 
     setSelectedFiles(prev => [...prev, ...newFiles]);
@@ -1907,6 +1981,48 @@ function MessageInput({
               />
             </div>
 
+            {/* Timer Button (self-destruct) */}
+            <div className="relative flex-shrink-0">
+              <motion.button
+                onClick={() => setShowTimerMenu(!showTimerMenu)}
+                title="Таймер самоуничтожения"
+                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/[0.06] transition-colors mb-px ${selfDestruct ? 'text-accent' : 'text-white/35'}`}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+              >
+                <Timer size={18} />
+              </motion.button>
+
+              <AnimatePresence>
+                {showTimerMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute bottom-full right-0 mb-2 p-2 rounded-2xl liquid-glass-strong z-50 min-w-[170px]"
+                  >
+                    <p className="text-[10px] text-white/30 px-2 pb-1">Самоуничтожение</p>
+                    {SELF_DESTRUCT_OPTIONS.map(opt => (
+                      <button
+                        key={opt.sec}
+                        onClick={() => {
+                          setSelfDestruct(opt.sec);
+                          setShowTimerMenu(false);
+                        }}
+                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.06] transition-colors text-xs"
+                      >
+                        <span className={selfDestruct === opt.sec ? 'text-accent font-medium' : 'text-white/70'}>
+                          {opt.label}
+                        </span>
+                        {selfDestruct === opt.sec && <Check size={14} className="text-accent" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {/* Attach Button */}
             <div className="relative flex-shrink-0">
               <motion.button
@@ -2045,35 +2161,82 @@ function MessageInput({
             <div className="p-3 max-h-[250px] overflow-y-auto">
               {emojiTab === 'emoji' && (
                 <div>
-                  <div className="flex gap-0.5 mb-2 overflow-x-auto scrollbar-hide">
-                    {EMOJI_CATEGORIES.map((cat, i) => (
+                  <div className="relative mb-2">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={emojiQuery}
+                      onChange={e => setEmojiQuery(e.target.value)}
+                      placeholder="Поиск эмодзи..."
+                      className="w-full h-8 pl-9 pr-8 text-xs bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/70 placeholder:text-white/20 outline-none"
+                    />
+                    {emojiQuery && (
                       <button
-                        key={cat.name}
-                        onClick={() => setEmojiCategory(i)}
-                        className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
-                          emojiCategory === i
-                            ? 'bg-white/10 text-white/80'
-                            : 'text-white/30 hover:text-white/50'
-                        }`}
+                        onClick={() => setEmojiQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-white/[0.08] transition-colors"
                       >
-                        {cat.name}
+                        <X size={12} className="text-white/40" />
                       </button>
-                    ))}
+                    )}
                   </div>
-                  <div className="grid grid-cols-8 gap-1">
-                    {EMOJI_CATEGORIES[emojiCategory].emojis.map(emoji => (
-                      <button
-                        key={emoji}
-                        onClick={() => {
-                          setText(prev => prev + emoji);
-                          inputRef.current?.focus();
-                        }}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/[0.08] transition-colors text-xl"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+                  {emojiQuery ? (
+                    <div className="grid grid-cols-8 gap-1">
+                      {ALL_EMOJIS.filter(e => e.includes(emojiQuery)).slice(0, 96).map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => useEmoji(emoji)}
+                          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/[0.08] transition-colors text-xl"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      {recentEmojis.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-[10px] text-white/30 mb-1">Недавние</p>
+                          <div className="grid grid-cols-8 gap-1">
+                            {recentEmojis.slice(0, 32).map(emoji => (
+                              <button
+                                key={emoji}
+                                onClick={() => useEmoji(emoji)}
+                                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/[0.08] transition-colors text-xl"
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-0.5 mb-2 overflow-x-auto scrollbar-hide">
+                        {EMOJI_CATEGORIES.map((cat, i) => (
+                          <button
+                            key={cat.name}
+                            onClick={() => setEmojiCategory(i)}
+                            className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                              emojiCategory === i
+                                ? 'bg-white/10 text-white/80'
+                                : 'text-white/30 hover:text-white/50'
+                            }`}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-8 gap-1">
+                        {EMOJI_CATEGORIES[emojiCategory].emojis.map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => useEmoji(emoji)}
+                            className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/[0.08] transition-colors text-xl"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -2503,7 +2666,7 @@ function TypingDots({ names }: { names: string[] }) {
   );
 }
 
-export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, onOpenChannelProfile }: MessageAreaProps) {
+export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, onOpenChannelProfile, focusMessageId }: MessageAreaProps) {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2517,6 +2680,23 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
   const e2eReadyRef = useRef(false);
   const [decryptedMediaUrls, setDecryptedMediaUrls] = useState<Record<string, string>>({});
   const decryptedMediaUrlsRef = useRef<Record<string, string>>({});
+  const [flashMsgId, setFlashMsgId] = useState<string | null>(null);
+
+  // Jump to a message opened from global search (Ctrl+K): scroll to it and
+  // flash a highlight once it is loaded into `messages`.
+  useEffect(() => {
+    if (!focusMessageId) return;
+    const t = setTimeout(() => {
+      const el = containerRef.current?.querySelector(`[data-mid="${focusMessageId}"]`);
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        setFlashMsgId(focusMessageId);
+        const t2 = setTimeout(() => setFlashMsgId(null), 2500);
+        return () => clearTimeout(t2);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [focusMessageId, messages]);
 
   // Revoke blob URLs of decrypted media when leaving the chat or unmounting,
   // otherwise every decrypted photo/video leaks its object URL forever.
@@ -2699,7 +2879,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
   }, []);
 
   // Send message
-  const handleSend = useCallback(async (text: string, options?: { replyToId?: string; media?: any[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string }) => {
+  const handleSend = useCallback(async (text: string, options?: { replyToId?: string; media?: any[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; selfDestructTimer?: number }) => {
     try {
       const optimisticId = `opt_${Date.now()}`;
       const media = options?.media;
@@ -3005,6 +3185,12 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
     };
     addListener('message:new', newMessageHandler);
 
+    const messageExpiredHandler = (data: { messageId: string }) => {
+      if (cancelled || !data?.messageId) return;
+      setMessages(prev => prev.filter(m => m.id !== data.messageId));
+    };
+    addListener('message:expired', messageExpiredHandler);
+
     async function initTyping() {
       try {
         const { getSocket } = await import('../lib/socket');
@@ -3225,11 +3411,11 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
           <div className="min-h-full flex flex-col justify-end">
             <AnimatePresence initial={false}>
               {messages.map((msg, idx) => (
-                <div key={msg.id}>
+                <div key={msg.id} data-mid={msg.id}>
                   {shouldShowDateSeparator(messages, idx) && (
                     <DateSeparator dateStr={msg.createdAt} />
                   )}
-                  <div className="relative">
+                  <div className={`relative ${flashMsgId === msg.id ? 'rounded-xl bg-accent/10 ring-1 ring-accent/20' : ''}`}>
                     <MessageBubble
                       message={msg}
                       isOwn={msg.senderId === user?.id}

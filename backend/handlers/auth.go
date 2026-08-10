@@ -281,6 +281,21 @@ func LoginConfirm(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
+	// TOTP 2FA gate: email code confirmed, but the user must still prove the
+	// authenticator code. We hand out a short-lived tentative token instead of
+	// real tokens; the second step is POST /api/auth/login/totp.
+	if user.TwoFactorEnabled {
+		tentativeToken, err := middleware.Generate2FAToken(user.ID, user.Username)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to generate session token"})
+		}
+		return c.Status(202).JSON(fiber.Map{
+			"requiresTwoFactor": true,
+			"tentativeToken":    tentativeToken,
+			"email":             user.Email,
+		})
+	}
+
 	db.GetDB().Model(&user).Update("is_online", true)
 
 	accessToken, err := middleware.GenerateAccessToken(user.ID, user.Username)
@@ -437,7 +452,8 @@ func UpdateUserSettings(c *fiber.Ctx) error {
 	allowed := map[string]bool{
 		"notify_all": true, "notify_messages": true,
 		"notify_calls": true, "notify_friends": true,
-		"two_factor_enabled": true,
+		// NOTE: two_factor_enabled is intentionally NOT settable here — it can
+		// only be flipped through the verified /api/2fa/* flow (handlers/totp.go).
 	}
 
 	safeUpdates := map[string]interface{}{}

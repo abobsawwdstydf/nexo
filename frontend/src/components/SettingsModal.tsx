@@ -464,6 +464,85 @@ function PrivacySettings() {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [whoCanSeeProfile, setWhoCanSeeProfile] = useState('everyone');
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [setupActive, setSetupActive] = useState(false);
+  const [setupSecret, setSetupSecret] = useState('');
+  const [setupCode, setSetupCode] = useState('');
+  const [disableMode, setDisableMode] = useState(false);
+  const [disableCode, setDisableCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [twoFaError, setTwoFaError] = useState('');
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [codesSaved, setCodesSaved] = useState(false);
+
+  useEffect(() => {
+    api.getInit().then((d) => {
+      setTwoFactorEnabled(!!d.settings?.twoFactorEnabled);
+    }).catch(() => {});
+  }, []);
+
+  const start2FASetup = async () => {
+    setTwoFaError('');
+    setBusy(true);
+    try {
+      const res = await api.request<{ secret: string; uri: string }>('/2fa/setup', { method: 'POST' });
+      setSetupSecret(res.secret);
+      setSetupActive(true);
+    } catch {
+      setTwoFaError('Не удалось начать настройку 2FA');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    if (setupCode.length < 6) return;
+    setTwoFaError('');
+    setBusy(true);
+    try {
+      const res = await api.request<{ enabled: boolean; recoveryCodes: string[] }>('/2fa/verify', {
+        method: 'POST',
+        body: JSON.stringify({ code: setupCode }),
+      });
+      setTwoFactorEnabled(true);
+      setRecoveryCodes(res.recoveryCodes || []);
+      setSetupCode('');
+    } catch {
+      setTwoFaError('Неверный код — попробуйте ещё раз');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (disableCode.length < 6) return;
+    setTwoFaError('');
+    setBusy(true);
+    try {
+      await api.request('/2fa/disable', {
+        method: 'POST',
+        body: JSON.stringify({ code: disableCode }),
+      });
+      setTwoFactorEnabled(false);
+      setDisableMode(false);
+      setDisableCode('');
+      toast.success('2FA отключена');
+    } catch {
+      setTwoFaError('Неверный код — попробуйте ещё раз');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveRecoveryCodes = () => {
+    try {
+      navigator.clipboard.writeText(recoveryCodes.join('\n'));
+      setCodesSaved(true);
+      toast.success('Коды скопированы в буфер обмена', 'Сохраните их в надёжном месте!');
+    } catch {
+      toast.error('Не удалось скопировать коды');
+    }
+  };
 
   useEffect(() => {
     api.getPrivacySettings().then((s) => {
@@ -532,7 +611,150 @@ function PrivacySettings() {
       <SettingRow icon={EyeOff} label="Статус в сети" value="Все" />
       <SettingRow icon={Check} label="Подтверждение прочтения" value="Вкл" toggle />
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
-      <SettingRow icon={Shield} label="Безопасность" value="" />
+
+      {/* ─── 2FA ─── */}
+      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 pb-2 pt-3">Безопасность</h3>
+
+      {twoFactorEnabled ? (
+        <div className="space-y-1">
+          <div className="flex items-center gap-3 px-3 py-2.5">
+            <Shield size={15} className="text-green-400/70" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-white/70">Двухфакторная аутентификация</p>
+              <p className="text-[10px] text-white/30">TOTP включён</p>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400/80 border border-green-500/20">Вкл</span>
+          </div>
+
+          {!disableMode && (
+            <motion.button
+              onClick={() => { setDisableMode(true); setDisableCode(''); setTwoFaError(''); }}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.03] transition-colors"
+              whileTap={{ scale: 0.99 }}
+            >
+              <Shield size={14} className="text-white/25" />
+              <span className="text-xs text-white/50">Отключить 2FA</span>
+              <ChevronRight size={12} className="text-white/15 ml-auto" />
+            </motion.button>
+          )}
+
+          {disableMode && (
+            <div className="px-3 py-2 space-y-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={disableCode}
+                onChange={e => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-значный код"
+                className="w-full h-9 px-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none focus:border-accent/40"
+              />
+              {twoFaError && <p className="text-[11px] text-red-400/80">{twoFaError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDisableMode(false)}
+                  className="flex-1 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white/60 transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleDisable2FA}
+                  disabled={busy || disableCode.length < 6}
+                  className="flex-1 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-xs text-white font-medium transition-colors disabled:opacity-40"
+                >
+                  {busy ? 'Проверка...' : 'Отключить'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {!setupActive ? (
+            <motion.button
+              onClick={start2FASetup}
+              disabled={busy}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors disabled:opacity-50"
+              whileTap={{ scale: 0.99 }}
+            >
+              <Shield size={15} className="text-white/25" />
+              <span className="text-xs text-white/60 flex-1 text-left">Двухфакторная аутентификация</span>
+              {busy ? <Loader size={12} className="text-white/30 animate-spin" /> : <ChevronRight size={12} className="text-white/15" />}
+            </motion.button>
+          ) : (
+            <div className="px-3 py-3 space-y-3">
+              {recoveryCodes.length === 0 ? (
+                <>
+                  <p className="text-[11px] text-white/50 leading-relaxed">
+                    Откройте приложение-аутентификатор (Google Authenticator, 1Password, Aegis)
+                    и добавьте новый аккаунт, введя ключ ниже (или по ссылке{' '}
+                    <a href={`otpauth://totp/${encodeURIComponent('Нексо')}?secret=${setupSecret}&issuer=Нексо`} className="text-accent underline" style={{ textDecorationColor: 'rgba(255,255,255,0.3)' }}>
+                      otpauth
+                    </a>):
+                  </p>
+                  <div className="rounded-xl bg-black/30 border border-white/[0.06] p-3">
+                    <p className="text-[10px] text-white/30 mb-1 uppercase tracking-wider">Секретный ключ</p>
+                    <p className="text-xs font-mono text-white/80 break-all select-all">{setupSecret}</p>
+                  </div>
+                  <button
+                    onClick={() => { try { navigator.clipboard.writeText(setupSecret); toast.success('Ключ скопирован'); } catch {} }}
+                    className="text-[11px] text-accent hover:text-accent/80 transition-colors"
+                  >
+                    Скопировать ключ
+                  </button>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={setupCode}
+                    onChange={e => setSetupCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="6-значный код из приложения"
+                    className="w-full h-9 px-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none focus:border-accent/40"
+                  />
+                  {twoFaError && <p className="text-[11px] text-red-400/80">{twoFaError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setSetupActive(false); setSetupSecret(''); setSetupCode(''); setTwoFaError(''); }}
+                      className="flex-1 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white/60 transition-colors"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={handleVerify2FA}
+                      disabled={busy || setupCode.length < 6}
+                      className="flex-1 py-2 rounded-xl bg-accent hover:bg-accent/90 text-xs text-white font-medium transition-colors disabled:opacity-40"
+                    >
+                      {busy ? 'Проверка...' : 'Проверить'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-white/50 leading-relaxed">
+                    2FA включена! Сохраните одноразовые коды восстановления — они нужны,
+                    если вы потеряете доступ к аутентификатору. Каждый код можно использовать один раз.
+                  </p>
+                  <div className="rounded-xl bg-black/30 border border-white/[0.06] p-3 grid grid-cols-2 gap-1.5">
+                    {recoveryCodes.map((c, i) => (
+                      <p key={c} className="text-xs font-mono text-white/80 break-all">{c}</p>
+                    ))}
+                  </div>
+                  <button
+                    onClick={saveRecoveryCodes}
+                    className="w-full py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white/70 transition-colors"
+                  >
+                    {codesSaved ? 'Скопировано ✓' : 'Скопировать коды'}
+                  </button>
+                  <button
+                    onClick={() => { setSetupActive(false); setRecoveryCodes([]); setCodesSaved(false); }}
+                    className="w-full py-2 rounded-xl bg-accent hover:bg-accent/90 text-xs text-white font-medium transition-colors"
+                  >
+                    Готово
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
 
