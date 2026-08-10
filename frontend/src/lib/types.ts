@@ -204,6 +204,8 @@ export interface Message {
   forwardedFromId?: string | null;
   isEdited: boolean;
   isDeleted: boolean;
+  selfDestructTimer?: number;
+  selfDestructAt?: string | null;
   scheduledAt?: string | null;
   createdAt: string;
   updatedAt?: string;

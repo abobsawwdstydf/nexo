@@ -16,6 +16,7 @@ import {
   Reply,
   Forward,
   CheckCheck,
+  Pencil,
   Camera,
   Video,
   MapPin,
@@ -722,7 +723,13 @@ const MessageBubble = memo(function MessageBubble({
 
           {/* Time & Read Status */}
           <div className={`flex items-center gap-2 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            {!!message.selfDestructTimer && (
+              <span title={`Самоуничтожение через ${message.selfDestructTimer} сек`} className="text-[10px] text-accent/70 flex items-center gap-0.5">
+                <Timer size={10} />
+              </span>
+            )}
             <span className="text-[10px] text-white/30">{time}</span>
+            {message.isEdited && <span className="text-[10px] text-white/25 italic">изменено</span>}
             {isOwn && (
               message.readBy && message.readBy.length > 1 ? (
                 <span className="text-[10px] text-white/40 flex items-center gap-0.5">
@@ -1077,12 +1084,18 @@ function MessageInput({
   onCancelReply,
   chatId,
   e2eReady,
+  editMessage,
+  onCancelEdit,
+  onEditSubmit,
 }: {
   onSend: (text: string, options?: { replyToId?: string; media?: any[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; selfDestructTimer?: number }) => void;
   replyTo?: { id: string; content: string; sender: string } | null;
   onCancelReply?: () => void;
   chatId: string;
   e2eReady?: boolean;
+  editMessage?: Message | null;
+  onCancelEdit?: () => void;
+  onEditSubmit?: (content: string) => void;
 }) {
   const [text, setText] = useState('');
   const [showAttach, setShowAttach] = useState(false);
@@ -1140,6 +1153,14 @@ function MessageInput({
       if (draft) setText(draft);
     } catch {}
   }, [chatId]);
+
+  // Edit mode: seed the textarea with the message content.
+  useEffect(() => {
+    if (editMessage) {
+      setText(editMessage.content || '');
+      setTimeout(() => inputRef.current?.focus(), 30);
+    }
+  }, [editMessage?.id]);
 
   // Load sticker packs from manifest
   useEffect(() => {
@@ -1219,6 +1240,13 @@ function MessageInput({
 
   const handleSubmit = (media?: any[]) => {
     const trimmed = text.trim();
+    if (editMessage) {
+      if (trimmed) {
+        onEditSubmit?.(trimmed);
+        setText('');
+      }
+      return;
+    }
     if (!trimmed && (!media || media.length === 0)) return;
     onSend(trimmed, { replyToId: replyTo?.id, media, selfDestructTimer: selfDestruct || undefined });
     setText('');
@@ -1745,6 +1773,32 @@ function MessageInput({
 
   return (
     <div className="flex-shrink-0 border-t border-white/[0.06]">
+      {/* Edit preview bar */}
+      <AnimatePresence>
+        {editMessage && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-accent/[0.08] border-b border-white/[0.04]"
+          >
+            <Pencil size={12} className="text-accent/70 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-accent/80 font-medium">Редактирование</p>
+              <p className="text-[11px] text-white/30 truncate">{editMessage.content}</p>
+            </div>
+            <motion.button
+              onClick={() => { onCancelEdit?.(); setText(''); }}
+              className="p-1 rounded-lg hover:bg-white/[0.08] transition-colors flex-shrink-0"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <X size={12} className="text-white/40" />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Reply preview bar */}
       <AnimatePresence>
         {replyTo && (
@@ -2714,6 +2768,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
 
   // Feature states
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; sender: string } | null>(null);
+  const [editMessage, setEditMessage] = useState<Message | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2811,6 +2866,11 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
             data = await decryptLoadedMessages(data);
           }
           if (!cancelled) setMessages(data || []);
+          // Mark the last incoming message as read so the sender sees checkmarks.
+          if (!cancelled && data && data.length) {
+            const lastIncoming = [...data].reverse().find(m => m.senderId !== user?.id);
+            if (lastIncoming) api.readMessage(chat.id, lastIncoming.id);
+          }
         }
       } catch (err) {
         console.error('Failed to load messages:', err);
@@ -3180,10 +3240,83 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
           }
           return [...prev, decryptedMsg];
         });
+        // Mark incoming messages as read (Telegram-style), except local chats.
+        if (decryptedMsg.senderId !== user?.id && chat.id !== NOTES_CHAT_ID && chat.id !== AI_CHAT_ID) {
+          api.readMessage(chat.id, decryptedMsg.id);
+        }
         setAutoScroll(true);
       })();
     };
     addListener('message:new', newMessageHandler);
+
+    const messageEditedHandler = (data: { message?: Message }) => {
+      if (cancelled) return;
+      const msg = data.message;
+      if (!msg || msg.chatId !== chat.id) return;
+      setMessages(prev =>
+        prev.some(m => m.id === msg.id)
+          ? prev.map(m => (m.id === msg.id ? msg : m))
+          : prev
+      );
+      setEditMessage(prev => (prev && prev.id === msg.id ? null : prev));
+    };
+    addListener('message:edited', messageEditedHandler);
+
+    const messageDeletedHandler = (data: { messageId?: string; chatId?: string }) => {
+      if (cancelled || !data?.messageId) return;
+      if (data.chatId && data.chatId !== chat.id) return;
+      setMessages(prev => prev.filter(m => m.id !== data.messageId));
+      setEditMessage(prev => (prev && prev.id === data.messageId ? null : prev));
+    };
+    addListener('message:deleted', messageDeletedHandler);
+
+    const reactionAddHandler = (data: { messageId?: string; userId?: string; emoji?: string }) => {
+      if (cancelled || !data?.messageId || !data.emoji) return;
+      const msgId = data.messageId;
+      const emoji = data.emoji;
+      const uid = data.userId || '';
+      setMessages(prev =>
+        prev.map(m => {
+          if (m.id !== msgId) return m;
+          const exists = m.reactions?.some(r => r.userId === uid && r.emoji === emoji);
+          if (exists) return m;
+          return {
+            ...m,
+            reactions: [
+              ...(m.reactions || []),
+              { id: `ws-${uid}-${emoji}`, emoji, userId: uid, user: { id: uid, username: '', displayName: '' } },
+            ],
+          };
+        })
+      );
+    };
+    addListener('message:reaction_added', reactionAddHandler);
+
+    const reactionRemoveHandler = (data: { messageId?: string; userId?: string; emoji?: string }) => {
+      if (cancelled || !data?.messageId) return;
+      setMessages(prev =>
+        prev.map(m =>
+          m.id !== data.messageId
+            ? m
+            : { ...m, reactions: (m.reactions || []).filter(r => !(r.userId === data.userId && r.emoji === data.emoji)) }
+        )
+      );
+    };
+    addListener('message:reaction_removed', reactionRemoveHandler);
+
+    const messageReadHandler = (data: { messageId?: string; userId?: string }) => {
+      if (cancelled || !data?.messageId || !data.userId || data.userId === user?.id) return;
+      const msgId = data.messageId;
+      const uid = data.userId;
+      setMessages(prev =>
+        prev.map(m => {
+          if (m.id !== msgId) return m;
+          if (m.readBy?.some(r => r.userId === uid)) return m;
+          return { ...m, readBy: [...(m.readBy || []), { userId: uid }] };
+        })
+      );
+    };
+    addListener('message:read', messageReadHandler);
 
     const messageExpiredHandler = (data: { messageId: string }) => {
       if (cancelled || !data?.messageId) return;
@@ -3251,6 +3384,30 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
 
     return () => { cancelled = true; clearTimeout(timer); };
   }, [searchQuery, searchMode, chat.id, decryptLoadedMessages]);
+
+  const handleEditSubmit = useCallback(async (content: string) => {
+    if (!editMessage) return;
+    const msgId = editMessage.id;
+    try {
+      await api.editMessage(msgId, content);
+      setMessages(prev =>
+        prev.map(m => (m.id === msgId ? { ...m, content, isEdited: true, updatedAt: new Date().toISOString() } : m))
+      );
+      if (chat.id === NOTES_CHAT_ID) {
+        saveNotesMessage({ ...editMessage, content, isEdited: true });
+      } else if (chat.id === AI_CHAT_ID) {
+        saveAIMessage({ ...editMessage, content, isEdited: true });
+      }
+      toast.info('Изменено', 'Сообщение обновлено');
+    } catch (err) {
+      console.error('[Edit] Failed:', err);
+      toast.error('Не удалось изменить сообщение');
+    }
+    setEditMessage(null);
+    if (chat.id === NOTES_CHAT_ID || chat.id === AI_CHAT_ID) {
+      // Local chats: the input's text is cleared by MessageInput on submit.
+    }
+  }, [editMessage, chat.id]);
 
   const handleForward = useCallback(async (targetChatId: string) => {
     if (!forwardingMsg) return;
@@ -3529,6 +3686,9 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
         onCancelReply={() => setReplyTo(null)}
         chatId={chat.id}
         e2eReady={e2eReady}
+        editMessage={editMessage}
+        onCancelEdit={() => setEditMessage(null)}
+        onEditSubmit={handleEditSubmit}
       />
 
       {/* Bot web app overlay */}
@@ -3591,7 +3751,11 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
             onForward={(msg) => { setShowForward(msg); setShowContextMenu(null); }}
             onPin={handlePinMessage}
             onCopy={handleCopyText}
-            onEdit={(msg) => { setReplyTo({ id: msg.id, content: msg.content || '', sender: msg.sender?.displayName || '' }); setShowContextMenu(null); }}
+            onEdit={(msg) => {
+              setEditMessage(msg);
+              setReplyTo(null);
+              setShowContextMenu(null);
+            }}
             onDelete={handleDeleteMessage}
             canDelete={chat.type !== 'comments' || chat.members?.some(m => m.userId === user?.id && m.role === 'owner')}
           />
