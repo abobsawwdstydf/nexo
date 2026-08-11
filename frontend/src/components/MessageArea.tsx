@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+﻿import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -48,7 +48,7 @@ import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/no
 import { AI_CHAT_ID, AI_SENDER, loadAIHistory, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import { getInitials } from '../lib/initials';
-import type { Chat, Message, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup } from '../lib/types';
+import type { Chat, Message, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup, MediaItem } from '../lib/types';
 import type { SocketInterface } from '../lib/socket';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
@@ -62,6 +62,17 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { AnimatedEmoji, ANIMATED_EMOJI_MAP } from './AnimatedEmoji';
 import { QuickReactions } from './QuickReactions';
 import { MessageContextMenu } from './MessageContextMenu';
+
+const forwardableMedia = (msg: Message): MediaItem[] => {
+  if (!msg.media?.length) return [];
+  return msg.media
+    .filter(m => !!m.url)
+    .map(m => ({
+      id: m.id, type: m.type, url: m.url, filename: m.filename,
+      thumbnail: m.thumbnail, size: m.size, duration: m.duration,
+      width: m.width, height: m.height,
+    }));
+};
 
 const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Лица', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🫨', '🤗', '🫡', '🤔', '🫣', '🤫', '😶', '😏'] },
@@ -3420,7 +3431,13 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
         const decrypted = await e2eManager.decryptChatMessage(chat.id, forwardingMsg.encryptedContent, forwardingMsg.encryptedIv);
         if (decrypted) content = decrypted;
       }
-      await api.sendMessageWS(targetChatId, `📩 Переслано: ${content}`);
+      const fwType = forwardingMsg.type === 'voice' ? 'voice' : forwardingMsg.type === 'video' ? 'video' : forwardingMsg.type === 'photo' ? 'photo' : (forwardingMsg.media?.length ? 'photo' : 'text');
+      const fwMedia = forwardableMedia(forwardingMsg);
+      await api.sendMessageWS(targetChatId, content, {
+        type: fwType,
+        ...(fwMedia.length ? { media: fwMedia } : {}),
+        forwardedFromId: forwardingMsg.sender?.id,
+      });
     } catch (err) {
       console.error('[Forward] Failed:', err);
     }

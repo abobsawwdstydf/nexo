@@ -1,4 +1,4 @@
-import type { Message, FriendWithId, FriendRequest, MediaItem } from '../types';
+﻿import type { Message, FriendWithId, FriendRequest, MediaItem } from '../types';
 import { ApiClient } from './core';
 import { wsRequest, getSocket } from '../socket';
 
@@ -9,7 +9,7 @@ export interface PushSubscriptionJSON {
 
 declare module './core' {
   interface ApiClient {
-    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string; selfDestructTimer?: number }): Promise<{ messageId: string; createdAt: string }>;
+    sendMessageWS(chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string; selfDestructTimer?: number; forwardedFromId?: string }): Promise<{ messageId: string; createdAt: string }>;
     // WS RPC data fetchers
     fetchMessagesWS(chatId: string, cursor?: string, limit?: number): Promise<{ messages: Message[]; hasMore: boolean }>;
     fetchFriendsWS(): Promise<FriendWithId[]>;
@@ -26,7 +26,7 @@ export function installRealtime(api: ApiClient): void {
    * Send message via WebSocket.
    * Falls back to HTTP if WS is not connected.
    */
-  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string; selfDestructTimer?: number }): Promise<{ messageId: string; createdAt: string }> => {
+  api.sendMessageWS = async (chatId: string, content: string, options?: { type?: string; replyToId?: string; media?: MediaItem[]; gifUrl?: string; isEncrypted?: boolean; encryptedContent?: string; encryptedIv?: string; selfDestructTimer?: number; forwardedFromId?: string }): Promise<{ messageId: string; createdAt: string }> => {
     const socket = getSocket();
     if (socket?.connected) {
       return wsRequest('send_message', {
@@ -40,6 +40,7 @@ export function installRealtime(api: ApiClient): void {
         encryptedContent: options?.encryptedContent,
         encryptedIv: options?.encryptedIv,
         selfDestructTimer: options?.selfDestructTimer,
+        forwardedFromId: options?.forwardedFromId,
       });
     }
     const result = await api.request<Message>(`/chats/${chatId}/messages`, {
@@ -53,6 +54,7 @@ export function installRealtime(api: ApiClient): void {
         encryptedContent: options?.encryptedContent,
         encryptedIv: options?.encryptedIv,
         selfDestructTimer: options?.selfDestructTimer,
+        forwardedFromId: options?.forwardedFromId,
       }),
     });
     return { messageId: result.id, createdAt: result.createdAt };

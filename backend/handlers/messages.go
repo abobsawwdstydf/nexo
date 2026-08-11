@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"encoding/json"
@@ -46,6 +46,7 @@ type MessageJSON struct {
 	Type             string            `json:"type"`
 	ReplyToID        string            `json:"replyToId"`
 	ForwardedFromID  string            `json:"forwardedFromId"`
+	ForwardedFrom    *SenderJSON       `json:"forwardedFrom,omitempty"`
 	IsEdited         bool              `json:"isEdited"`
 	IsDeleted        bool              `json:"isDeleted"`
 	IsEncrypted      bool              `json:"isEncrypted"`
@@ -134,6 +135,15 @@ func messageToJSON(msg models.Message) string {
 		replyMarkup = json.RawMessage(msg.ReplyMarkup)
 	}
 
+	var forwardedFrom *SenderJSON
+	if msg.ForwardedFromID != "" {
+		var fu models.User
+		if err := db.GetDB().First(&fu, "id = ?", msg.ForwardedFromID).Error; err == nil {
+			fj := senderToJSON(fu)
+			forwardedFrom = &fj
+		}
+	}
+
 	msgJSON := MessageJSON{
 		ID:               msg.ID,
 		ChatID:           msg.ChatID,
@@ -142,6 +152,7 @@ func messageToJSON(msg models.Message) string {
 		Type:             msg.Type,
 		ReplyToID:        msg.ReplyToID,
 		ForwardedFromID:  msg.ForwardedFromID,
+		ForwardedFrom:    forwardedFrom,
 		IsEdited:         msg.IsEdited,
 		IsDeleted:        msg.IsDeleted,
 		IsEncrypted:      msg.IsEncrypted,
