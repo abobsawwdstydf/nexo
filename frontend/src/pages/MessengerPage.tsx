@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
@@ -16,6 +16,7 @@ import ContactProfileModal from '../components/ContactProfileModal';
 import SettingsModal from '../components/SettingsModal';
 import AccountManager from '../components/AccountManager';
 import AccountStrip from '../components/AccountStrip';
+import BotManagerModal from '../components/BotManagerModal';
 import { toast } from '../lib/toast';
 import { Confetti } from '../components/Confetti';
 import { CallOverlay } from '../components/CallOverlay';
@@ -84,6 +85,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [showFriends, setShowFriends] = useState(false);
   const [createTab, setCreateTab] = useState<null | 'personal' | 'group' | 'channel'>(null);
   const [showAccountManager, setShowAccountManager] = useState(false);
+  const [showBots, setShowBots] = useState(false);
   const [showStoryCreate, setShowStoryCreate] = useState(false);
   const [storyViewerGroup, setStoryViewerGroup] = useState<number | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -381,7 +383,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
       <Confetti trigger={confettiTrigger} />
 
       {/* ─── Account strip (в самом верху, в потоке — не поверх) ───── */}
-      <AccountStrip onManage={() => setShowAccountManager(true)} />
+      <AccountStrip onManage={() => setShowAccountManager(true)} onManageBots={() => setShowBots(true)} />
 
       {/* Main layout */}
       <div className="relative z-10 flex-1 flex p-2 h-full overflow-hidden">
@@ -537,6 +539,16 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
             onClose={() => setChannelProfileChat(null)}
             onOpenUser={handleOpenContactProfile}
             onSubscribed={syncChat}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Bot manager (BotFather-style) */}
+      <AnimatePresence>
+        {showBots && (
+          <BotManagerModal
+            onClose={() => setShowBots(false)}
+            onBotInstalled={(chatId) => { setShowBots(false); setSelectedChatId(chatId); setMobileView('chat'); }}
           />
         )}
       </AnimatePresence>

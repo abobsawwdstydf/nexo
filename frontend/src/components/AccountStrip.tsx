@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, UserRound } from 'lucide-react';
+﻿import { useState, useEffect } from 'react';
+import { Plus, UserRound, Bot } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 
@@ -17,13 +17,14 @@ interface Account {
 
 interface AccountStripProps {
   onManage: () => void;
+  onManageBots: () => void;
 }
 
 /**
  * Плашка аккаунтов в самой верхней части мессенджера (в потоке, НЕ поверх).
  * Быстрое переключение между сохранёнными аккаунтами + «Добавить».
  */
-export default function AccountStrip({ onManage }: AccountStripProps) {
+export default function AccountStrip({ onManage, onManageBots }: AccountStripProps) {
   const { user, loginWithToken } = useAuthStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
 
@@ -110,6 +111,15 @@ export default function AccountStrip({ onManage }: AccountStripProps) {
             {renderAvatar(a.avatar, a.displayName, 'md')}
           </button>
         ))}
+
+        <button
+          onClick={onManageBots}
+          title="Мои боты"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.07] text-white/60 hover:text-white transition-colors flex-shrink-0"
+        >
+          <Bot size={13} />
+          <span className="text-[11px] hidden sm:block">Боты</span>
+        </button>
 
         <button
           onClick={onManage}
