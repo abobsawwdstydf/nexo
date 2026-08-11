@@ -1,20 +1,52 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Users, MessageSquareText, Star } from 'lucide-react';
+import { X, Users, MessageSquareText, Star, BellPlus, BellOff, Loader2, Eye } from 'lucide-react';
 import type { Chat } from '../lib/types';
 import { getInitials } from '../lib/initials';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import { VerifiedBadge } from './VerifiedBadge';
+import { useAuthStore } from '../stores/authStore';
+import { api } from '../lib/api';
+import { toast } from '../lib/toast';
 
 interface ChannelProfileModalProps {
   chat: Chat;
   onClose: () => void;
   onOpenUser?: (userId: string) => void;
+  onSubscribed?: (chat: Chat) => void;
 }
 
-export default function ChannelProfileModal({ chat, onClose, onOpenUser }: ChannelProfileModalProps) {
+export default function ChannelProfileModal({ chat, onClose, onOpenUser, onSubscribed }: ChannelProfileModalProps) {
+  const { user } = useAuthStore();
+  const [busy, setBusy] = useState(false);
+
   const initials = getInitials(chat.name);
   const members = chat.members || [];
   const isChannel = chat.type === 'channel';
+  const isMember = !!members.find(m => m.userId === user?.id);
+  const isOwner = !!members.find(m => m.userId === user?.id && m.role === 'owner');
+
+  const handleSubscribe = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (isMember) {
+        await api.leaveChat(chat.id);
+        toast.info('Вы отписались от канала');
+        onSubscribed?.({ ...chat, members: members.filter(m => m.userId !== user?.id) });
+      } else {
+        const res = await api.subscribeChannel(chat.id);
+        toast.success('Вы подписались на канал');
+        if (res.chat) onSubscribed?.(res.chat);
+      }
+      onClose();
+    } catch (err) {
+      console.error('[Channel] subscribe failed:', err);
+      toast.error('Не удалось обновить подписку');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <motion.div
@@ -96,6 +128,35 @@ export default function ChannelProfileModal({ chat, onClose, onOpenUser }: Chann
               </p>
             )}
           </div>
+
+          {/* Subscribe / Unsubscribe (public channels only, non-owners) */}
+          {isChannel && !isOwner && (
+            <button
+              onClick={handleSubscribe}
+              disabled={busy}
+              className={`mt-5 w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border text-xs font-medium transition-all disabled:opacity-50 ${
+                isMember
+                  ? 'bg-white/[0.06] hover:bg-white/[0.1] border-white/[0.1] text-white/80'
+                  : 'bg-accent hover:bg-accent/90 border-transparent text-white'
+              }`}
+            >
+              {busy ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : isMember ? (
+                <><BellOff size={15} /> Отписаться</>
+              ) : (
+                <><BellPlus size={15} /> Подписаться</>
+              )}
+            </button>
+          )}
+
+          {/* Owner extra info */}
+          {isChannel && isOwner && (
+            <p className="mt-4 flex items-center justify-center gap-1.5 text-[10px] text-white/30">
+              <Eye size={11} />
+              Это ваш канал — статистика: {chat.subscribersCount || members.length} подписчиков
+            </p>
+          )}
 
           {/* Members */}
           {members.length > 0 && (

@@ -9,6 +9,10 @@ declare module './core' {
     createGroup(name: string, memberIds: string[], username?: string): Promise<Chat>;
     createChannel(name: string, username: string, description?: string): Promise<Chat>;
     addChatMember(chatId: string, userId: string): Promise<{ id: string }>;
+    subscribeChannel(chatId: string): Promise<{ chat: Chat; status: string }>;
+    leaveChat(chatId: string): Promise<{ ok: boolean }>;
+    kickMember(chatId: string, userId: string): Promise<{ ok: boolean }>;
+    getChat(chatId: string): Promise<Chat>;
     getOrCreateFeedbackChat(): Promise<Chat>;
     openComments(chatId: string, messageId: string): Promise<{ chatId: string; chat: Chat }>;
     adminListFeedback(): Promise<{ items: Array<{ chatId: string; name: string; avatar: string; members: number; messageCount: number; lastMessage: { content: string } | null; lastAt: string }>; total: number }>;
@@ -49,6 +53,25 @@ export function installChats(api: ApiClient): void {
       method: 'POST',
       body: JSON.stringify({ userId }),
     });
+  };
+
+  api.subscribeChannel = async (chatId: string) => {
+    return api.request<{ chat: Chat; status: string }>(`/channels/${chatId}/subscribe`, { method: 'POST' });
+  };
+
+  api.leaveChat = async (chatId: string) => {
+    return api.request<{ ok: boolean }>(`/chats/${chatId}/leave`, { method: 'POST' });
+  };
+
+  api.kickMember = async (chatId: string, userId: string) => {
+    return api.request<{ ok: boolean }>(`/chats/${chatId}/moderation/kick`, {
+      method: 'POST',
+      body: JSON.stringify({ targetId: userId }),
+    });
+  };
+
+  api.getChat = async (chatId: string) => {
+    return api.request<Chat>(`/chats/${chatId}`);
   };
 
   // ─── System Feedback Chat ─────────────────────────────────────────

@@ -135,6 +135,7 @@ interface MessageAreaProps {
   onOpenProfile?: (userId: string) => void;
   onOpenCommentsChat?: (chatId: string) => void;
   onOpenChannelProfile?: (chatId: string) => void;
+  onOpenGroupProfile?: (chatId: string) => void;
   focusMessageId?: string | null;
 }
 
@@ -810,6 +811,7 @@ function ChatHeader({
   onUnpinMessage,
   e2eReady,
   e2eFingerprint,
+  onOpenMembers,
 }: {
   chat: Chat;
   onBack: () => void;
@@ -819,6 +821,7 @@ function ChatHeader({
   onUnpinMessage?: (id: string) => void;
   e2eReady?: boolean;
   e2eFingerprint?: string | null;
+  onOpenMembers?: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [callMenuOpen, setCallMenuOpen] = useState(false);
@@ -1013,7 +1016,7 @@ function ChatHeader({
                   <ChatMenuItem icon={Search} label="Поиск" onClick={onSearchToggle} />
                   <ChatMenuItem icon={BellOff} label="Отключить звук" />
                   <ChatMenuItem icon={Image} label="Медиафайлы" />
-                  {chat.type === 'group' && <ChatMenuItem icon={Users} label="Участники" />}
+                  {chat.type === 'group' && <ChatMenuItem icon={Users} label="Участники" onClick={onOpenMembers} />}
                   <div className="mx-3 my-1 h-px bg-white/[0.06]" />
                   <ChatMenuItem icon={Flag} label="Пожаловаться" className="text-red-400" onClick={handleReportChat} />
                   {chat.type !== 'comments' && (
@@ -2720,7 +2723,7 @@ function TypingDots({ names }: { names: string[] }) {
   );
 }
 
-export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, onOpenChannelProfile, focusMessageId }: MessageAreaProps) {
+export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, onOpenChannelProfile, onOpenGroupProfile, focusMessageId }: MessageAreaProps) {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3446,13 +3449,17 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
       onOpenChannelProfile?.(chat.linkedChatId || '');
       return;
     }
+    if (chat.type === 'group') {
+      onOpenGroupProfile?.(chat.id);
+      return;
+    }
     if (!onOpenProfile) return;
     if (chat.type !== 'personal') return;
     const otherId = chat.otherMember?.id ||
       chat.members?.find(m => m.userId !== user?.id)?.userId ||
       null;
     if (otherId) onOpenProfile(otherId);
-  }, [onOpenProfile, onOpenChannelProfile, chat, user?.id]);
+  }, [onOpenProfile, onOpenChannelProfile, onOpenGroupProfile, chat, user?.id]);
 
   const handleOpenComments = useCallback(async (msg: Message) => {
     try {
@@ -3473,6 +3480,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
         pinnedMessages={pinnedMessages}
         e2eReady={e2eReady}
         e2eFingerprint={e2eFingerprint}
+        onOpenMembers={chat.type === 'group' ? () => onOpenGroupProfile?.(chat.id) : undefined}
       />
 
       {/* Search bar */}

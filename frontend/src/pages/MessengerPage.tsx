@@ -8,6 +8,7 @@ import { enrichChat } from '../lib/enrichChat';
 import { ChatList } from '../components/ChatList';
 import { MessageArea } from '../components/MessageArea';
 import ChannelProfileModal from '../components/ChannelProfileModal';
+import GroupProfileModal from '../components/GroupProfileModal';
 import FriendsPanel from '../components/FriendsPanel';
 import NewChatModal from '../components/NewChatModal';
 import UserProfileModal from '../components/UserProfileModal';
@@ -88,6 +89,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [showAdmin, setShowAdmin] = useState(false);
   const [contactUserId, setContactUserId] = useState<string | null>(null);
   const [channelProfileChat, setChannelProfileChat] = useState<Chat | null>(null);
+  const [groupProfileChat, setGroupProfileChat] = useState<Chat | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [firstLoad, setFirstLoad] = useState(true);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
@@ -282,6 +284,34 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
     const target = chatsRef.current.find(c => c.id === chatId) || null;
     setChannelProfileChat(target);
   }, []);
+  const handleOpenGroupProfile = useCallback((chatId: string) => {
+    if (!chatId) return;
+    const target = chatsRef.current.find(c => c.id === chatId) || null;
+    setGroupProfileChat(target);
+  }, []);
+
+  const syncChat = useCallback((fresh: Chat) => {
+    if (!user) return;
+    const enriched = enrichChat(fresh, user);
+    setChats(prev => {
+      if (prev.some(c => c.id === enriched.id)) {
+        return prev.map(c => (c.id === enriched.id ? enriched : c));
+      }
+      useInitStore.getState().addChat(enriched);
+      return prev;
+    });
+    setChannelProfileChat(prev => (prev && prev.id === enriched.id ? enriched : prev));
+    setGroupProfileChat(prev => (prev && prev.id === enriched.id ? enriched : prev));
+  }, [user]);
+
+  const handleChatLeft = useCallback((chatId: string) => {
+    setGroupProfileChat(null);
+    setChannelProfileChat(null);
+    setSelectedChatId(prev => (prev === chatId ? null : prev));
+    setMobileView('list');
+    setChats(prev => prev.filter(c => c.id !== chatId));
+    useAuthStore.getState().checkAuth();
+  }, []);
   const handleOpenNewChat = useCallback(() => setCreateTab('personal'), []);
   const handleChatCreated = useCallback((chat: Chat | null) => {
     if (chat && user) {
@@ -413,6 +443,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
                   onOpenProfile={handleOpenContactProfile}
                   onOpenCommentsChat={handleOpenCommentsChat}
                   onOpenChannelProfile={handleOpenChannelProfile}
+                  onOpenGroupProfile={handleOpenGroupProfile}
                   focusMessageId={focusMessageId}
                 />
               </motion.div>
@@ -505,6 +536,20 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
             chat={channelProfileChat}
             onClose={() => setChannelProfileChat(null)}
             onOpenUser={handleOpenContactProfile}
+            onSubscribed={syncChat}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Group profile (opened from chat header) */}
+      <AnimatePresence>
+        {groupProfileChat && (
+          <GroupProfileModal
+            chat={groupProfileChat}
+            onClose={() => setGroupProfileChat(null)}
+            onOpenUser={handleOpenContactProfile}
+            onMembersChanged={syncChat}
+            onLeave={handleChatLeft}
           />
         )}
       </AnimatePresence>
