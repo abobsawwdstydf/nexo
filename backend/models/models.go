@@ -1,4 +1,4 @@
-package models
+﻿package models
 
 import "time"
 
@@ -113,6 +113,21 @@ type ChatMember struct {
 }
 
 func (ChatMember) TableName() string { return "chat_members" }
+
+// InviteLink — ссылка-приглашение в чат (канал/группу)
+type InviteLink struct {
+	ID        string     `json:"id" gorm:"primaryKey"`
+	ChatID    string     `json:"chatId" gorm:"index"`
+	Code      string     `json:"code" gorm:"uniqueIndex"`
+	CreatedBy string     `json:"createdBy"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	MaxUses   int        `json:"maxUses" gorm:"default:0"` // 0 = без лимита
+	Uses      int        `json:"uses" gorm:"default:0"`
+	Active    bool       `json:"active" gorm:"default:true"`
+	CreatedAt time.Time  `json:"createdAt" gorm:"autoCreateTime"`
+}
+
+func (InviteLink) TableName() string { return "invite_links" }
 
 type Message struct {
 	ID                string     `json:"id" gorm:"primaryKey"`

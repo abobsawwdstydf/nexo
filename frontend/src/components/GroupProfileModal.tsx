@@ -1,6 +1,6 @@
-import { useState } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Users, MessageSquareText, UserPlus, LogOut, UserMinus, Search, Loader2, Check } from 'lucide-react';
+import { X, Users, MessageSquareText, UserPlus, LogOut, UserMinus, Search, Loader2, Check, Link2, Copy } from 'lucide-react';
 import type { Chat } from '../lib/types';
 import { getInitials } from '../lib/initials';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
@@ -8,6 +8,7 @@ import { VerifiedBadge } from './VerifiedBadge';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../lib/toast';
+import type { InviteLink } from '../lib/api/inviteLinks';
 
 interface GroupProfileModalProps {
   chat: Chat;
@@ -39,6 +40,52 @@ export default function GroupProfileModal({
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [kickingId, setKickingId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [links, setLinks] = useState<InviteLink[]>([]);
+  const [linksOpen, setLinksOpen] = useState(false);
+  const [creatingLink, setCreatingLink] = useState(false);
+
+  const loadLinks = useCallback(async () => {
+    try {
+      setLinks(await api.getInviteLinks(chat.id));
+    } catch { /* ignore */ }
+  }, [chat.id]);
+
+  useEffect(() => {
+    if (linksOpen) loadLinks();
+  }, [linksOpen, loadLinks]);
+
+  const handleCreateLink = async () => {
+    setCreatingLink(true);
+    try {
+      const link = await api.createInviteLink(chat.id);
+      setLinks(prev => [link, ...prev]);
+      toast.success('Ссылка-приглашение создана');
+    } catch (err: any) {
+      toast.error(err?.message || 'Не удалось создать ссылку');
+    } finally {
+      setCreatingLink(false);
+    }
+  };
+
+  const handleCopyLink = async (code: string) => {
+    const url = `${window.location.origin}${window.location.pathname}#join/${code}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Ссылка скопирована');
+    } catch {
+      toast.error('Не удалось скопировать');
+    }
+  };
+
+  const handleRevokeLink = async (code: string) => {
+    try {
+      await api.revokeInviteLink(chat.id, code);
+      setLinks(prev => prev.map(l => (l.code === code ? { ...l, active: false } : l)));
+      toast.success('Ссылка отозвана');
+    } catch (err: any) {
+      toast.error(err?.message || 'Не удалось отозвать ссылку');
+    }
+  };
 
   const members = chat.members || [];
   const me = members.find(m => m.userId === user?.id);
@@ -256,6 +303,73 @@ export default function GroupProfileModal({
                 </motion.div>
               )}
             </>
+          )}
+
+          {/* Invite links */}
+          {isAdmin && (
+            <div className="mt-6 text-left">
+              <button
+                onClick={() => setLinksOpen(o => !o)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] transition-all"
+              >
+                <span className="flex items-center gap-2 text-xs text-white/80">
+                  <Link2 size={14} className="text-white/40" />
+                  Ссылки-приглашения
+                </span>
+                <span className="text-[10px] text-white/30">{linksOpen ? 'скрыть' : 'открыть'}</span>
+              </button>
+
+              {linksOpen && (
+                <div className="mt-2 space-y-1.5">
+                  <button
+                    onClick={handleCreateLink}
+                    disabled={creatingLink}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/30 text-[11px] font-medium text-white/85 transition-colors disabled:opacity-50"
+                  >
+                    {creatingLink ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
+                    Создать ссылку
+                  </button>
+
+                  {links.length === 0 ? (
+                    <p className="text-center text-[10px] text-white/25 py-2">Ссылок пока нет</p>
+                  ) : (
+                    links.map(link => (
+                      <div
+                        key={link.id}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/80 truncate">
+                            {window.location.origin}{window.location.pathname}#join/{link.code}
+                          </p>
+                          <p className="mt-0.5 text-[9px] text-white/30">
+                            {link.active ? `${link.uses} использован(о)${link.maxUses > 0 ? ` из ${link.maxUses}` : ''}` : 'Отозвана'}
+                          </p>
+                        </div>
+                        {link.active && (
+                          <>
+                            <button
+                              onClick={() => handleCopyLink(link.code)}
+                              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white/60 transition-colors"
+                              title="Скопировать"
+                            >
+                              <Copy size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleRevokeLink(link.code)}
+                              className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                              title="Отозвать"
+                            >
+                              <LogOut size={12} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Members */}

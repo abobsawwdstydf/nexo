@@ -11,6 +11,7 @@ import { installBots } from './bots';
 import { installUserStickers } from './userStickers';
 import { installStories } from './stories';
 import { installAdmin } from './admin';
+import { installInviteLinks } from './inviteLinks';
 
 const api = new ApiClient();
 
@@ -27,6 +28,7 @@ installBots(api);
 installUserStickers(api);
 installStories(api);
 installAdmin(api);
+installInviteLinks(api);
 
 export { api };
 export default api;

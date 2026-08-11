@@ -1,4 +1,4 @@
-package db
+﻿package db
 
 import (
 	"database/sql"
@@ -173,6 +173,8 @@ func InitLocal(dsn string) error {
 		&models.AIMessage{},
 		// Promo codes
 		&models.PromoCode{},
+		// Invite links
+		&models.InviteLink{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)

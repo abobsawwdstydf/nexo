@@ -1,4 +1,4 @@
-package beta
+﻿package beta
 
 import (
 	"os"
@@ -26,6 +26,7 @@ var publicPrefixes = []string{
 	"/api/bot/",
 	"/api/stickers/",
 	"/api/dev/",
+	"/api/invite/",
 }
 
 func BetaGuard() fiber.Handler {

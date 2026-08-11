@@ -17,6 +17,7 @@ import SettingsModal from '../components/SettingsModal';
 import AccountManager from '../components/AccountManager';
 import AccountStrip from '../components/AccountStrip';
 import BotManagerModal from '../components/BotManagerModal';
+import JoinInviteModal from '../components/JoinInviteModal';
 import { toast } from '../lib/toast';
 import { Confetti } from '../components/Confetti';
 import { CallOverlay } from '../components/CallOverlay';
@@ -86,6 +87,7 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const [createTab, setCreateTab] = useState<null | 'personal' | 'group' | 'channel'>(null);
   const [showAccountManager, setShowAccountManager] = useState(false);
   const [showBots, setShowBots] = useState(false);
+  const [joinCode, setJoinCode] = useState<string | null>(null);
   const [showStoryCreate, setShowStoryCreate] = useState(false);
   const [storyViewerGroup, setStoryViewerGroup] = useState<number | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -549,6 +551,26 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
           <BotManagerModal
             onClose={() => setShowBots(false)}
             onBotInstalled={(chatId) => { setShowBots(false); setSelectedChatId(chatId); setMobileView('chat'); }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Invite link join (from #join/CODE url) */}
+      <AnimatePresence>
+        {joinCode && (
+          <JoinInviteModal
+            code={joinCode}
+            onClose={() => { setJoinCode(null); history.replaceState(null, '', window.location.pathname); }}
+            onJoined={async (chatId) => {
+              setJoinCode(null);
+              history.replaceState(null, '', window.location.pathname);
+              setSelectedChatId(chatId);
+              setMobileView('chat');
+              try {
+                const fresh = await api.getChat(chatId);
+                syncChat(fresh);
+              } catch { /* ignore */ }
+            }}
           />
         )}
       </AnimatePresence>

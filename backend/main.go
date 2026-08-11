@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"context"
@@ -337,6 +337,9 @@ nexo_up 1
 		api.Post("/dev/login", handlers.DevLogin)
 	}
 
+	// Invite links: public info lookup + protected management/join
+	api.Get("/invite/:code", handlers.GetInviteInfo)
+
 	// Protected routes
 	auth := api.Group("", middleware.AuthenticateToken, middleware.CSRFProtection())
 	auth.Get("/init", handlers.GetInit)
@@ -392,6 +395,10 @@ nexo_up 1
 	auth.Post("/chats/favorites", handlers.GetOrCreateFavorites) // BEFORE /chats/:id
 	auth.Get("/chats/:id", handlers.GetChat)
 	auth.Post("/chats/:id/members", handlers.AddChatMember)
+	auth.Post("/chats/:id/invite-links", handlers.CreateInviteLink)
+	auth.Get("/chats/:id/invite-links", handlers.GetInviteLinks)
+	auth.Delete("/chats/:id/invite-links/:code", handlers.RevokeInviteLink)
+	auth.Post("/invite/:code/join", handlers.JoinInvite)
 	auth.Post("/chats/:id/leave", handlers.LeaveChat)
 	auth.Post("/chats/:id/pin", handlers.PinChat)
 	auth.Post("/chats/:id/archive", handlers.ArchiveChat)
