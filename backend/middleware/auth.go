@@ -234,6 +234,12 @@ func AuthenticateToken(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid or expired token"})
 	}
 
+	// Tentative 2FA tokens must not be accepted by protected routes: they only
+	// prove the email-code step and require TOTP to be promoted to real tokens.
+	if claims.Stage == "2fa" {
+		return c.Status(401).JSON(fiber.Map{"error": "2FA required"})
+	}
+
 	// Ban check
 	var user models.User
 	if result := db.GetDB().First(&user, "id = ?", claims.UserID); result.Error != nil {

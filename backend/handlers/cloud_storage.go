@@ -84,6 +84,14 @@ func CloudUpload(c *fiber.Ctx) error {
 		}
 	}
 
+	// SECURITY: uploaded files are served by Fiber SendFile, which derives the
+	// Content-Type from the file extension on the app origin. Only allow
+	// extensions that cannot execute script in the browser — .svg/.html/.xml
+	// (stored XSS), .php/.sh etc. are rejected.
+	if !isSafeCloudExtension(ext) {
+		return c.Status(400).JSON(fiber.Map{"error": "Недопустимый тип файла"})
+	}
+
 	// Generate unique filename
 	filename := generateID() + ext
 	savePath := filepath.Join(cloudDir(), filename)

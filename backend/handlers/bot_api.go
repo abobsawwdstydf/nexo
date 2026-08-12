@@ -1028,6 +1028,13 @@ func notifyBotsOfMessage(chatID string, msg models.Message, senderUser models.Us
 					}(bot, chatID, command.Response)
 				}
 				if command.HandlerURL != "" {
+					// SECURITY (SSRF): validate the handler URL before calling it —
+					// otherwise a bot owner could point the server at internal
+					// endpoints (metadata, admin panels).
+					if !isURLSafe(command.HandlerURL) {
+						log.Printf("[bot_api] blocked unsafe handler URL for command %s", cmdName)
+						continue
+					}
 					data, _ := json.Marshal(handlerUpdate)
 					url := command.HandlerURL
 					go func() {
@@ -1074,6 +1081,11 @@ func BotCallback(c *fiber.Ctx) error {
 	}
 	if msg.ChatID != req.ChatID {
 		return c.Status(403).JSON(fiber.Map{"error": "Message is not in this chat"})
+	}
+
+	// SECURITY: only chat members may press inline buttons
+	if !isChatMember(req.ChatID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
 	}
 
 	var user models.User

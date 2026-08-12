@@ -30,10 +30,16 @@ func CreateCalendarEvent(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "endTime must be after startTime"})
 	}
 
+	// SECURITY: events may only be attached to chats the user belongs to
+	chatID := c.Query("chatId")
+	if chatID != "" && !isChatMember(chatID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
+
 	event := models.CalendarEvent{
 		ID:          generateID(),
 		UserID:      userID,
-		ChatID:      c.Query("chatId"),
+		ChatID:      chatID,
 		Title:       req.Title,
 		Description: req.Description,
 		Location:    req.Location,
@@ -48,8 +54,25 @@ func CreateCalendarEvent(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create event"})
 	}
 
-	// Create invites
+	// Create invites — SECURITY: only friends or members of a shared chat may
+	// be invited, otherwise any user could spam event invites to strangers.
 	for _, inviteID := range req.InviteIDs {
+		if inviteID == userID {
+			continue
+		}
+		var sharedChat int64
+		db.GetDB().Model(&models.ChatMember{}).
+			Where("user_id = ? AND chat_id IN (SELECT chat_id FROM chat_members WHERE user_id = ?)", inviteID, userID).
+			Count(&sharedChat)
+		var friendship int64
+		db.GetDB().Model(&models.Friendship{}).
+			Where("((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = ?",
+				userID, inviteID, inviteID, userID, "accepted").
+			Count(&friendship)
+		if sharedChat == 0 && friendship == 0 {
+			return c.Status(403).JSON(fiber.Map{"error": "Cannot invite this user (not a friend and no shared chat)"})
+		}
+
 		invite := models.CalendarEventInvite{
 			ID:        generateID(),
 			EventID:   event.ID,

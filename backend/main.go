@@ -205,10 +205,23 @@ func main() {
 			return false
 		},
 	}))
-	app.Use(limiter.New(limiter.Config{
+	// Rate limiter. Behind Cloudflare the remote IP is a shared edge IP, so
+	// all users would hit the same bucket. When CLIENT_IP_HEADER is set
+	// (e.g. "cf-connecting-ip" or "x-forwarded-for") and the deployment is
+	// behind a proxy that overwrites that header, key by it instead.
+	limiterConfig := limiter.Config{
 		Max:        100,
 		Expiration: 1 * time.Minute,
-	}))
+	}
+	if clientIPHeader := os.Getenv("CLIENT_IP_HEADER"); clientIPHeader != "" {
+		limiterConfig.KeyGenerator = func(c *fiber.Ctx) string {
+			if v := c.Get(clientIPHeader); v != "" {
+				return v
+			}
+			return c.IP()
+		}
+	}
+	app.Use(limiter.New(limiterConfig))
 
 	// Security middleware stack
 	app.Use(middleware.SecurityHeaders())

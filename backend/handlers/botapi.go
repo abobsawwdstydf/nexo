@@ -198,6 +198,12 @@ func AddBotCommand(c *fiber.Ctx) error {
 		return c.Status(409).JSON(fiber.Map{"error": "Command already exists"})
 	}
 
+	// SECURITY (SSRF): the server POSTs to HandlerURL on every command use,
+	// so it must never point at internal/private hosts.
+	if req.HandlerURL != "" && !isURLSafe(req.HandlerURL) {
+		return c.Status(400).JSON(fiber.Map{"error": "Handler URL must be a public HTTP(S) address"})
+	}
+
 	cmd := models.BotCommand{
 		ID:          generateID(),
 		BotID:       botID,

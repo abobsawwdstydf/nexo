@@ -108,8 +108,6 @@ func JoinIncognitoChat(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to join incognito chat"})
 	}
 
-	db.GetDB().Model(&chat).Update("message_count", count+1)
-
 	return c.JSON(chat)
 }
 

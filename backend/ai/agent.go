@@ -77,7 +77,15 @@ func (tm *TaskManager) CreateTask(id, userID, chatID, query, context string) *Ta
 func (tm *TaskManager) GetTask(id string) *Task {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
-	return tm.tasks[id]
+	t, ok := tm.tasks[id]
+	if !ok {
+		return nil
+	}
+	// Return a copy: the stored task is mutated by background goroutines
+	// under mu.Lock, so handing out the raw pointer is a data race.
+	copy := *t
+	copy.Sources = append([]string(nil), t.Sources...)
+	return &copy
 }
 
 func (tm *TaskManager) UpdateTask(id string, fn func(t *Task)) {
@@ -96,7 +104,10 @@ func (tm *TaskManager) GetUserTasks(userID string, limit int) []*Task {
 	var tasks []*Task
 	for _, t := range tm.tasks {
 		if t.UserID == userID {
-			tasks = append(tasks, t)
+			// Copy under RLock to avoid racing background writers.
+			copy := *t
+			copy.Sources = append([]string(nil), t.Sources...)
+			tasks = append(tasks, &copy)
 			if limit > 0 && len(tasks) >= limit {
 				break
 			}

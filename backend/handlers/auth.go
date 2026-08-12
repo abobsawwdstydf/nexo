@@ -206,7 +206,9 @@ func Register(c *fiber.Ctx) error {
 		Bio:           req.Bio,
 		IsOnline:      true,
 		EmailVerified: false,
-		IsAdmin:       req.Email == PlatformAdminEmail,
+		// SECURITY: admin is never granted from a registration payload. Admin
+		// status can only be set on an existing account by the platform owner.
+		IsAdmin: false,
 	}
 
 	if err := db.GetDB().Create(&user).Error; err != nil {
@@ -561,8 +563,11 @@ func GetUser(c *fiber.Ctx) error {
 		if result := db.GetDB().First(&me, "id = ?", viewerID); result.Error != nil {
 			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 		}
+		own := sanitizeUser(me, viewerID)
+		// sanitizeUser hides admin status from others — restore it for self.
+		own.IsAdmin = isPlatformAdmin(viewerID)
 		return c.JSON(fiber.Map{
-			"user":         sanitizeUser(me, viewerID),
+			"user":         own,
 			"friendship":   "none",
 			"friendshipId": "",
 			"blockedByMe":  false,

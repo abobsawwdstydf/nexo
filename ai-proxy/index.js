@@ -8,13 +8,18 @@ export default {
     const ch = (h) => Object.assign(h, corsHeaders(origin));
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: ch({}) });
+    if (request.method === 'GET' && path === '/v1/models') {
+      return j2({ object: 'list', data: MODELS_LIST }, 200, ch);
+    }
     if (request.method !== 'POST') return j2({ error: 'POST only' }, 405, ch);
 
     // Refuse to serve when the shared secret is not configured (no auth bypass)
     const SECRET = getSecret();
     if (!SECRET) return j2({ error: 'Proxy secret not configured' }, 503, ch);
 
-    const secret = request.headers.get('X-Proxy-Secret');
+    // Auth: X-Proxy-Secret header OR OpenAI-style `Authorization: Bearer <secret>`
+    const authHeader = request.headers.get('Authorization') || '';
+    const secret = request.headers.get('X-Proxy-Secret') || authHeader.replace(/^Bearer\s+/i, '').trim();
     if (secret !== SECRET) return j2({ error: 'Unauthorized' }, 401, ch);
 
     // Speech-to-text: raw audio body, no JSON parsing
@@ -46,7 +51,16 @@ export default {
       return j2({ error: 'Invalid JSON body' }, 400, ch);
     }
 
-    if (path.startsWith('/chat') && !body.messages) return j2({ error: 'messages required' }, 400, ch);
+    if (path !== '/chat/prov' && path.startsWith('/chat') && !body.messages) return j2({ error: 'messages required' }, 400, ch);
+
+    // OpenAI-compatible endpoint: /v1/chat/completions
+    if (path === '/v1/chat/completions') {
+      if (!Array.isArray(body.messages) || body.messages.length === 0) {
+        return j2({ error: 'messages required' }, 400, ch);
+      }
+      return openaiChat(body, ch);
+    }
+
     const msgs = [{ role: 'system', content: SYS }].concat(sanitizeMessages(body.messages || []));
 
     if (path === '/chat/auto') {
@@ -93,7 +107,7 @@ export default {
 
 // SECRET is set via `npx wrangler secret put SECRET` (available as env.SECRET)
 function getSecret() {
-  return ENV.SECRET || '';
+  return 'de81d39544af5a957dacdbfe57fec8fa4a5da1182eee4c8ebc51e4cc2ff8e04e';
 }
 const SYS = 'You are Nexo AI. Reply in Russian briefly. Use markdown.';
 
@@ -101,21 +115,10 @@ const MAX_BODY_BYTES = 256 * 1024;
 const MAX_MESSAGES = 50;
 const MAX_MESSAGE_CHARS = 50000;
 
-// ── CORS: exact origin matching (no substring bypass) ──────────────────────
-const ALLOWED_ORIGINS = [
-  'https://nexo.hakerone.ru', 'https://nexo.darkheavens.ru',
-  'https://msg.hakerone.ru', 'https://msg.darkheavens.ru',
-  'https://n.hakerone.ru', 'https://n.darkheavens.ru',
-  'https://xn--e1akhgo.hakerone.ru', 'https://xn--e1akhgo.darkheavens.ru',
-  'https://neexoobeec.hakerone.ru', 'https://nneexion.darkheavens.ru',
-  'http://localhost:2273', 'http://localhost:3000', 'http://localhost:3001',
-];
-
+// ── CORS: allow any origin (no domain restrictions) ────────────────────────
 function corsOrigin(origin) {
-  if (!origin) return null;
-  const normalized = origin.replace(/\/+$/, '');
-  if (ALLOWED_ORIGINS.includes(normalized)) return normalized;
-  return null;
+  if (!origin) return '*';
+  return origin.replace(/\/+$/, '');
 }
 
 function corsHeaders(origin) {
@@ -123,7 +126,7 @@ function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': allowed || 'null',
     'Access-Control-Allow-Methods': 'POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type,X-Proxy-Secret',
+    'Access-Control-Allow-Headers': 'Content-Type,X-Proxy-Secret,Authorization',
   };
 }
 
@@ -177,21 +180,29 @@ function sanitizeMessages(messages) {
 // Keys are env bindings (set via `wrangler secret put <NAME>_<N>`)
 const KEYS = {
   cerebras: [
-    () => ENV.CEREBRAS_KEY_1 || '', () => ENV.CEREBRAS_KEY_2 || '',
-    () => ENV.CEREBRAS_KEY_3 || '', () => ENV.CEREBRAS_KEY_4 || '',
+    () => 'REDACTED_CEREBRAS_KEY_1',
+    () => 'REDACTED_CEREBRAS_KEY_2',
+    () => 'REDACTED_CEREBRAS_KEY_3',
+    () => 'REDACTED_CEREBRAS_KEY_4',
   ],
   groq: [
-    () => ENV.GROQ_KEY_1 || '', () => ENV.GROQ_KEY_2 || '',
-    () => ENV.GROQ_KEY_3 || '', () => ENV.GROQ_KEY_4 || '',
+    () => 'REDACTED_GROQ_KEY_1',
+    () => 'REDACTED_GROQ_KEY_2',
+    () => 'REDACTED_GROQ_KEY_3',
+    () => 'REDACTED_GROQ_KEY_4',
   ],
   sambanova: [
-    () => ENV.SAMBANOVA_KEY_1 || '', () => ENV.SAMBANOVA_KEY_2 || '',
-    () => ENV.SAMBANOVA_KEY_3 || '', () => ENV.SAMBANOVA_KEY_4 || '',
+    () => 'REDACTED_SAMBANOVA_KEY_1',
+    () => 'REDACTED_SAMBANOVA_KEY_2',
+    () => 'REDACTED_SAMBANOVA_KEY_3',
+    () => 'REDACTED_SAMBANOVA_KEY_4',
   ],
   mistral: [() => ENV.MISTRAL_KEY_1 || ''],
   openrouter: [
-    () => ENV.OPENROUTER_KEY_1 || '', () => ENV.OPENROUTER_KEY_2 || '',
-    () => ENV.OPENROUTER_KEY_3 || '', () => ENV.OPENROUTER_KEY_4 || '',
+    () => 'REDACTED_OPENROUTER_KEY_1',
+    () => 'REDACTED_OPENROUTER_KEY_2',
+    () => 'REDACTED_OPENROUTER_KEY_3',
+    () => 'REDACTED_OPENROUTER_KEY_4',
   ],
   fal: [
     () => ENV.FAL_KEY_1 || '', () => ENV.FAL_KEY_2 || '',
@@ -210,6 +221,88 @@ const PROV = {
 const ORDER = ['workersai', 'cerebras', 'groq', 'sambanova', 'mistral', 'openrouter'];
 const ki = {};
 
+// ── OpenAI-compatible API (/v1/chat/completions) ──────────────────────────
+const MODELS_LIST = Object.keys(PROV).map((p) => ({ id: PROV[p].model, object: 'model', owned_by: p }));
+
+// Map OpenAI-style model names to proxy providers (unknown → auto failover)
+function providerForModel(model) {
+  const m = (model || '').toLowerCase();
+  if (m.includes('gpt-oss')) return 'cerebras';
+  if (m.includes('meta-llama') || m.includes('sambanova')) return 'sambanova';
+  if (m.includes('llama') || m.includes('groq')) return 'groq';
+  if (m.includes('mistral')) return 'mistral';
+  if (m.includes('openrouter') || m.includes('openai/')) return 'openrouter';
+  if (m.includes('cerebras')) return 'cerebras';
+  return null;
+}
+
+async function openaiChat(body, ch) {
+  const stream = body.stream === true;
+  const reqModel = typeof body.model === 'string' ? body.model : '';
+  const opts = {
+    temperature: typeof body.temperature === 'number' ? body.temperature : 0.7,
+    maxTokens: typeof body.max_tokens === 'number' ? body.max_tokens : 2048,
+  };
+  const msgs = [{ role: 'system', content: SYS }].concat(sanitizeMessages(body.messages || []));
+  const target = providerForModel(reqModel);
+  const provs = target ? [target] : ORDER;
+  let err = '';
+  for (let p = 0; p < provs.length; p++) {
+    try {
+      const r = await call(provs[p], msgs, stream, opts);
+      if (stream) return openaiSSE(r, provs[p], ch);
+      const d = await r.json();
+      return j2(openaiCompletion(d, provs[p], reqModel), 200, ch);
+    } catch (e) { err = e.message; }
+  }
+  return j2({ error: err || 'All failed' }, 503, ch);
+}
+
+function openaiCompletion(d, provider, model) {
+  const choice = d && d.choices && d.choices[0];
+  const text = choice && choice.message ? (choice.message.content || '') : '';
+  return {
+    id: 'chatcmpl-' + Math.random().toString(36).slice(2, 10),
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model: model || provider,
+    provider: provider,
+    choices: [{ index: 0, message: { role: 'assistant', content: text }, finish_reason: 'stop' }],
+    usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+  };
+}
+
+function openaiSSE(r, name, ch) {
+  const ts = new TransformStream();
+  const w = ts.writable.getWriter();
+  const d = new TextDecoder();
+  const rd = r.body.getReader();
+  (async () => {
+    try {
+      while (true) {
+        const res = await rd.read();
+        if (res.done) break;
+        const lines = d.decode(res.value, { stream: true }).split('\n');
+        for (let k = 0; k < lines.length; k++) {
+          if (lines[k].indexOf('data: ') === 0 && lines[k] !== 'data: [DONE]') {
+            try {
+              const o = JSON.parse(lines[k].substring(6));
+              if (o.choices && o.choices[0] && o.choices[0].delta && o.choices[0].delta.content) {
+                await w.write(new TextEncoder().encode('data:' + JSON.stringify({ choices: [{ delta: { content: o.choices[0].delta.content } }] }) + '\n\n'));
+              }
+            } catch (e) {}
+          }
+        }
+      }
+      await w.write(new TextEncoder().encode('data: [DONE]\n\n'));
+    } catch (e) {
+      await w.write(new TextEncoder().encode('data: {"error":{"message":"Stream error"}}\n\n'));
+    }
+    await w.close();
+  })();
+  return new Response(ts.readable, { headers: ch({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' }) });
+}
+
 function getKey(name) {
   const k = KEYS[name] || [];
   const valid = k.map((f) => f()).filter((x) => x);
@@ -223,8 +316,9 @@ function j2(d, s, ch) {
   return new Response(JSON.stringify(d), { status: s || 200, headers: ch({ 'Content-Type': 'application/json' }) });
 }
 
-// Workers AI streams raw text, not OpenAI SSE. Adapt it into OpenAI-format
-// SSE so the existing sse2() parser works unchanged.
+// Workers AI may stream either raw text or OpenAI-format SSE lines
+// (depending on the model/backend). Handle both: extract the delta from
+// `data: {...}` lines, otherwise treat the chunk as plain text.
 function workersAISSE(out) {
   const ts = new TransformStream();
   const w = ts.writable.getWriter();
@@ -232,12 +326,36 @@ function workersAISSE(out) {
   const rd = out.getReader();
   (async () => {
     try {
+      let buf = '';
       while (true) {
         const res = await rd.read();
         if (res.done) break;
-        const text = d.decode(res.value, { stream: true });
-        if (text) {
-          await w.write(new TextEncoder().encode('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n'));
+        buf += d.decode(res.value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          let content = null;
+          if (trimmed.startsWith('data:')) {
+            const payload = trimmed.substring(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const o = JSON.parse(payload);
+              content = (o.choices && o.choices[0] && o.choices[0].delta && o.choices[0].delta.content) || null;
+            } catch (e) { content = trimmed; }
+          } else {
+            content = trimmed;
+          }
+          if (content) {
+            await w.write(new TextEncoder().encode('data: ' + JSON.stringify({ choices: [{ delta: { content: content } }] }) + '\n\n'));
+          }
+        }
+      }
+      if (buf.trim()) {
+        const tail = buf.trim();
+        if (!tail.startsWith('data:')) {
+          await w.write(new TextEncoder().encode('data: ' + JSON.stringify({ choices: [{ delta: { content: tail } }] }) + '\n\n'));
         }
       }
       await w.write(new TextEncoder().encode('data: [DONE]\n\n'));
@@ -249,15 +367,17 @@ function workersAISSE(out) {
   return new Response(ts.readable);
 }
 
-async function call(name, msgs, stream) {
+async function call(name, msgs, stream, opts) {
   const c = PROV[name];
   if (!c) throw new Error('No provider: ' + name);
+  const temperature = opts && opts.temperature !== undefined ? opts.temperature : 0.7;
+  const maxTokens = opts && opts.maxTokens !== undefined ? opts.maxTokens : 2048;
   if (name === 'workersai') {
     if (!ENV.AI) throw new Error('AI binding missing');
     const out = await ENV.AI.run(c.model, {
       messages: msgs,
-      temperature: 0.7,
-      max_tokens: 2048,
+      temperature: temperature,
+      max_tokens: maxTokens,
       stream: stream,
     });
     if (stream) return workersAISSE(out);
@@ -268,8 +388,8 @@ async function call(name, msgs, stream) {
   }
   const key = getKey(name);
   if (!key) throw new Error('No key for: ' + name);
-  const body = { model: c.model, messages: msgs, stream: stream, temperature: 0.7, max_tokens: 2048 };
-  if (name === 'cerebras') { body.max_completion_tokens = 2048; delete body.max_tokens; }
+  const body = { model: c.model, messages: msgs, stream: stream, temperature: temperature, max_tokens: maxTokens };
+  if (name === 'cerebras') { body.max_completion_tokens = maxTokens; delete body.max_tokens; }
   const h = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key };
   if (name === 'openrouter') { h['HTTP-Referer'] = 'https://nexo.cloudpub.ru'; h['X-Title'] = 'Nexo AI'; }
   const ctrl = new AbortController();

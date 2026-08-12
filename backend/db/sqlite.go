@@ -136,6 +136,9 @@ func InitLocal(dsn string) error {
 		&models.VoiceRoomParticipant{},
 		// Anonymous Chats
 		&models.AnonymousChat{},
+		// Incognito Chats
+		&models.IncognitoChat{},
+		&models.IncognitoMember{},
 		// Gamification
 		&models.UserXP{},
 		&models.Achievement{},
@@ -155,6 +158,54 @@ func InitLocal(dsn string) error {
 		&models.ChatSnooze{},
 		// Chat Reminders
 		&models.ChatReminder{},
+		// Scheduled Messages
+		&models.ScheduledMessage{},
+		// Dead Man's Switch
+		&models.DeadManSwitch{},
+		&models.DeadManSwitchRecipient{},
+		// Cloud Files
+		&models.CloudFile{},
+		// Vault Files
+		&models.VaultFile{},
+		// AI Browse Tasks
+		&models.AIBrowseTask{},
+		// Moderation Actions
+		&models.ModerationAction{},
+		// Whiteboards
+		&models.Whiteboard{},
+		&models.WhiteboardEdit{},
+		// Chat Themes
+		&models.ChatTheme{},
+		// Calendar
+		&models.CalendarEvent{},
+		&models.CalendarEventInvite{},
+		// Kanban
+		&models.KanbanBoard{},
+		&models.KanbanColumn{},
+		&models.KanbanTask{},
+		// Message Bookmarks & Templates
+		&models.MessageBookmark{},
+		&models.MessageTemplate{},
+		// Moderation Config
+		&models.ModerationConfig{},
+		// Photo Albums
+		&models.PhotoAlbum{},
+		&models.PhotoAlbumItem{},
+		// Privacy Audit
+		&models.PrivacyAudit{},
+		// Screen Recordings
+		&models.ScreenRecording{},
+		// Smart Reminders
+		&models.SmartReminder{},
+		// Translation Log
+		&models.TranslationLog{},
+		// Voice Commands & Room Activity
+		&models.VoiceCommand{},
+		&models.VoiceRoomActivity{},
+		// Auto-Reply Config
+		&models.AutoReplyConfig{},
+		// User Sessions
+		&models.UserSession{},
 		// Contact Tags
 		&models.ContactTag{},
 		// Public Rooms
@@ -228,7 +279,7 @@ func addIndexes(db *gorm.DB) {
 		"CREATE INDEX IF NOT EXISTS idx_bot_installations_chat_id ON bot_installations(chat_id)",
 
 		// Search history
-		"CREATE INDEX IF NOT EXISTS idx_search_history_user_id ON search_history(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_search_history_user_id ON search_histories(user_id)",
 
 		// Webhooks
 		"CREATE INDEX IF NOT EXISTS idx_webhook_configs_user_id ON webhook_configs(user_id)",
@@ -311,8 +362,8 @@ func addIndexes(db *gorm.DB) {
 		"CREATE INDEX IF NOT EXISTS idx_audit_log_success ON audit_log_entries(success)",
 
 		// E2E sessions & key bundles
-		"CREATE INDEX IF NOT EXISTS idx_e2e_sessions_chat_created ON e2e_sessions(chat_id, created_at)",
-		"CREATE INDEX IF NOT EXISTS idx_e2e_key_bundles_user_device ON e2e_key_bundles(user_id, device_id)",
+		"CREATE INDEX IF NOT EXISTS idx_e2e_sessions_chat_created ON e2_e_sessions(chat_id, created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_e2e_key_bundles_user_device ON e2_e_key_bundles(user_id, device_id)",
 
 		// Voice room participants
 		"CREATE INDEX IF NOT EXISTS idx_voice_room_participants_room_user ON voice_room_participants(room_id, user_id)",

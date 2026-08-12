@@ -34,6 +34,9 @@ func sanitizeUser(u models.User, viewerID string) models.User {
 	u.AllowGroupInvites = false
 	u.BanReason = ""
 	u.PremiumUntil = nil
+	// Admin/ban status is internal — never leak it to other users
+	u.IsAdmin = false
+	u.IsBanned = false
 	return u
 }
 

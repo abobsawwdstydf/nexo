@@ -8,6 +8,7 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -115,6 +116,12 @@ func ConfirmEmailCode(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Email and code required"})
 	}
 
+	// SECURITY: brute-force protection — 6-digit codes are brute-forceable
+	// from distributed IPs, so cap failed attempts per email.
+	if !checkEmailConfirmBruteForce(req.Email) {
+		return c.Status(429).JSON(fiber.Map{"error": "Too many attempts. Try again in 15 minutes."})
+	}
+
 	// До старта беты подтверждение закрыто, кроме аккаунта раннего доступа
 	if !BetaAccessAllowed(req.Email) {
 		return c.Status(403).JSON(fiber.Map{"error": "beta_not_started", "message": beta.StartMessage})
@@ -135,6 +142,7 @@ func ConfirmEmailCode(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid code"})
 	}
 
+	resetEmailConfirmAttempts(req.Email)
 	db.GetDB().Model(&verification).Update("status", "confirmed")
 
 	return c.JSON(fiber.Map{
@@ -142,6 +150,57 @@ func ConfirmEmailCode(c *fiber.Ctx) error {
 		"email":   req.Email,
 		"message": "Email verified successfully",
 	})
+}
+
+// ─── Email code brute-force protection ────────────────────────────────────
+
+type emailConfirmAttempt struct {
+	Count       int
+	LockedUntil time.Time
+	LastSeen    time.Time
+}
+
+var (
+	emailConfirmAttempts   = make(map[string]*emailConfirmAttempt)
+	emailConfirmAttemptsMu sync.Mutex
+)
+
+func checkEmailConfirmBruteForce(email string) bool {
+	emailConfirmAttemptsMu.Lock()
+	defer emailConfirmAttemptsMu.Unlock()
+	now := time.Now()
+
+	// Opportunistic cleanup: drop stale entries to prevent unbounded growth
+	if len(emailConfirmAttempts) > 5000 {
+		for k, e := range emailConfirmAttempts {
+			if now.Sub(e.LastSeen) > time.Hour || (!e.LockedUntil.IsZero() && now.After(e.LockedUntil)) {
+				delete(emailConfirmAttempts, k)
+			}
+		}
+	}
+
+	entry, exists := emailConfirmAttempts[email]
+	if !exists {
+		emailConfirmAttempts[email] = &emailConfirmAttempt{Count: 1, LastSeen: now}
+		return true
+	}
+	entry.LastSeen = now
+	if !entry.LockedUntil.IsZero() && now.Before(entry.LockedUntil) {
+		return false
+	}
+	if entry.Count >= 5 {
+		entry.LockedUntil = now.Add(15 * time.Minute)
+		entry.Count = 0
+		return false
+	}
+	entry.Count++
+	return true
+}
+
+func resetEmailConfirmAttempts(email string) {
+	emailConfirmAttemptsMu.Lock()
+	defer emailConfirmAttemptsMu.Unlock()
+	delete(emailConfirmAttempts, email)
 }
 
 func sendVerificationEmail(to, code string) {

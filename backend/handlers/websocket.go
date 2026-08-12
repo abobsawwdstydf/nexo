@@ -15,8 +15,6 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
 
-	"gorm.io/gorm"
-
 	"nexo/db"
 	"nexo/middleware"
 	"nexo/models"
@@ -244,17 +242,25 @@ func handleReaction(client *ws.Client, env *wsEnvelope) error {
 
 	userID := client.UserID
 
-	var count int64
-	db.GetDB().Model(&models.ChatMember{}).
-		Where("chat_id = ? AND user_id = ?", payload.ChatID, userID).
-		Count(&count)
-	if count == 0 {
-		return errWSNotMember
-	}
-
 	var msg models.Message
 	if result := db.GetDB().First(&msg, "id = ?", payload.MessageID); result.Error != nil {
 		return errWSNotFound("message")
+	}
+
+	// SECURITY: the message's real chat must be the one the client claims to
+	// be reacting in — otherwise a member of chat A could react to messages
+	// from chat B by spoofing chatId.
+	actualChatID := msg.ChatID
+	if payload.ChatID != actualChatID {
+		return errWSNotMember
+	}
+
+	var count int64
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", actualChatID, userID).
+		Count(&count)
+	if count == 0 {
+		return errWSNotMember
 	}
 
 	// Toggle reaction
@@ -263,7 +269,7 @@ func handleReaction(client *ws.Client, env *wsEnvelope) error {
 		if err := db.GetDB().Delete(&existing).Error; err != nil {
 			return errWSServerError
 		}
-		ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("message:reaction_removed", map[string]string{
+		ws.HubInstance.SendToChat(actualChatID, mustWSMap("message:reaction_removed", map[string]string{
 			"messageId": payload.MessageID,
 			"userId":    userID,
 			"emoji":     payload.Emoji,
@@ -281,7 +287,7 @@ func handleReaction(client *ws.Client, env *wsEnvelope) error {
 		return errWSServerError
 	}
 
-	ws.HubInstance.SendToChat(payload.ChatID, mustWSMap("message:reaction_added", map[string]string{
+	ws.HubInstance.SendToChat(actualChatID, mustWSMap("message:reaction_added", map[string]string{
 		"messageId": payload.MessageID,
 		"userId":    userID,
 		"emoji":     payload.Emoji,
@@ -479,6 +485,11 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 	var member models.ChatMember
 	if result := db.GetDB().Where("chat_id = ? AND user_id = ?", payload.ChatID, userID).First(&member); result.Error != nil {
 		return errWSNotMember
+	}
+
+	// Blocked users must not be able to message you in a 1-on-1 chat.
+	if isPersonalChatBlocked(payload.ChatID, userID) {
+		return &wsError{Code: "blocked", Message: "You cannot message this user"}
 	}
 
 	// Instant GIF import: download the GIF server-side before creating the
@@ -713,22 +724,7 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 		Where("user_id = ?", userID).
 		Pluck("chat_id", &memberChatIDs)
 
-	chats := make([]models.Chat, 0)
-	if len(memberChatIDs) > 0 {
-		db.GetDB().
-			Preload("Members").
-			Preload("Members.User").
-			Preload("Messages", func(db *gorm.DB) *gorm.DB {
-				return db.Order("created_at DESC").Limit(1)
-			}).
-			Where("id IN ?", memberChatIDs).
-			Order("updated_at DESC").
-			Limit(50).
-			Find(&chats)
-		for i := range chats {
-			sanitizeChatMembers(chats[i].Members)
-		}
-	}
+	chats := loadChatsWithLastMessage(memberChatIDs)
 
 	// 3. Settings
 	settings := UserSettingsJSON{
@@ -805,6 +801,11 @@ func handleCallRelay(client *ws.Client, env *wsEnvelope) error {
 	}
 	if payload.TargetUserID == client.UserID {
 		return errWSInvalidField("targetUserId")
+	}
+
+	// A blocked user cannot ring you (offer), nor join ongoing signaling.
+	if env.Type == "call:offer" && hasBlockedUser(payload.TargetUserID, client.UserID) {
+		return &wsError{Code: "blocked", Message: "You cannot call this user"}
 	}
 
 	from := clientUserInfo(client.UserID)
@@ -1083,7 +1084,21 @@ func HandleWebSocket(c *websocket.Conn) {
 		return
 	}
 
+	// Tentative 2FA tokens must not grant WS access: TOTP is still required.
+	if claims.Stage == "2fa" {
+		c.Close()
+		return
+	}
+
 	userID := claims.UserID
+
+	// Ban check: banned users must not be able to chat over WS
+	var wsUser models.User
+	if err := db.GetDB().First(&wsUser, "id = ?", userID).Error; err != nil || wsUser.IsBanned {
+		log.Printf("WS rejected: banned or missing user=%s", userID)
+		c.Close()
+		return
+	}
 
 	// Dedup: count connections per user; allow max 3 concurrent
 	activeWSConnectionsMu.Lock()

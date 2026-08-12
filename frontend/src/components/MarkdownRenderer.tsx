@@ -6,17 +6,17 @@ import { normalizeMediaUrl } from '../lib/mediaUrl';
 interface MarkdownRendererProps {
   content: string;
   isOwn?: boolean;
-  /** РћС‚РїСЂР°РІРёС‚РµР»СЊ СЃРѕРѕР±С‰РµРЅРёСЏ вЂ” РЅСѓР¶РµРЅ, С‡С‚РѕР±С‹ РїРѕРґРіСЂСѓР·РёС‚СЊ РµРіРѕ Р»РёС‡РЅС‹Рµ СЃС‚РёРєРµСЂ/СЌРјРѕРґР·Рё-РїР°РєРё */
+  /** Отправитель сообщения — нужен, чтобы подгрузить его личные стикер/эмодзи-паки */
   senderId?: string;
 }
 
-// Token в†’ URL for sticker/emoji blocks. Sticker packs come from the bundle
+// Token → URL for sticker/emoji blocks. Sticker packs come from the bundle
 // manifest; user packs come from the sender's profile (fetched on demand).
 const STICKER_TOKEN_RE = /\[(sticker|mysticker|myemoji):([^:\]]+):([^:\]]+)\]/g;
 
 let manifestPromise: Promise<Map<string, string>> | null = null;
 
-/** [{pack}.{filename}] в†’ real URL from /stickers/manifest.json (bundle packs). */
+/** [{pack}.{filename}] → real URL from /stickers/manifest.json (bundle packs). */
 function loadStickerManifest(): Promise<Map<string, string>> {
   if (manifestPromise) return manifestPromise;
   manifestPromise = fetch('/stickers/manifest.json?v=2')
@@ -193,7 +193,7 @@ function parseInlineFormatting(str: string, isOwn: boolean | undefined, stickerU
     } else if (line.startsWith('- ') || line.startsWith('* ')) {
       lineContent = (
         <div className="flex items-start gap-1.5 my-0.5 pl-1">
-          <span className="text-accent font-bold">вЂў</span>
+          <span className="text-accent font-bold">•</span>
           <span>{parseInlineStyles(line.slice(2), isOwn, stickerUrls)}</span>
         </div>
       );

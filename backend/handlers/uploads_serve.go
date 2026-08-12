@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +15,22 @@ import (
 
 	"nexo/middleware"
 )
+
+// validatePublicHost resolves a host and rejects any private/reserved address
+// (loopback, RFC1918, link-local, metadata). Used to prevent SSRF.
+func validatePublicHost(host string) error {
+	ips, err := net.LookupIP(host)
+	if err != nil || len(ips) == 0 {
+		return fmt.Errorf("invalid gif url host")
+	}
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+			ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return fmt.Errorf("blocked gif url host")
+		}
+	}
+	return nil
+}
 
 // ServeUploadedFile serves files from the uploads directory, gated behind a
 // valid access token (Authorization: Bearer or ?token= query param).
@@ -62,7 +79,19 @@ func ImportGifFromURL(rawURL string) (MediaPayload, error) {
 		return MediaPayload{}, fmt.Errorf("invalid gif url")
 	}
 
-	client := &http.Client{Timeout: 15 * time.Second}
+	// SECURITY (SSRF): only public hosts are allowed, and redirects are not
+	// followed — otherwise https://evil/ could bounce the server into the
+	// internal network (metadata endpoints, admin panels).
+	if err := validatePublicHost(u.Hostname()); err != nil {
+		return MediaPayload{}, err
+	}
+
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := client.Get(rawURL)
 	if err != nil {
 		return MediaPayload{}, fmt.Errorf("gif download failed")

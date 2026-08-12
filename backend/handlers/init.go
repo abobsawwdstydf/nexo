@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/middleware"
@@ -65,22 +64,7 @@ func GetInit(c *fiber.Ctx) error {
 		Where("user_id = ?", userID).
 		Pluck("chat_id", &memberChatIDs)
 
-	chats := make([]models.Chat, 0)
-	if len(memberChatIDs) > 0 {
-		db.GetDB().
-			Preload("Members").
-			Preload("Members.User").
-			Preload("Messages", func(db *gorm.DB) *gorm.DB {
-				return db.Order("created_at DESC").Limit(1)
-			}).
-			Where("id IN ?", memberChatIDs).
-			Order("updated_at DESC").
-			Limit(50).
-			Find(&chats)
-		for i := range chats {
-			sanitizeChatMembers(chats[i].Members)
-		}
-	}
+	chats := loadChatsWithLastMessage(memberChatIDs)
 
 	// 3. User settings (already in user model, just format)
 	settings := UserSettingsJSON{
@@ -115,6 +99,54 @@ func GetInit(c *fiber.Ctx) error {
 		Stories:      storyGroups,
 		CsrfToken:    middleware.GenerateCSRFToken(userID),
 	})
+}
+
+// loadChatsWithLastMessage loads up to 50 chats for the given chat IDs
+// (ordered by last update) together with ONLY their most recent message.
+// GORM's Preload("Messages", Limit(1)) is a single batch query whose LIMIT
+// applies across ALL chats at once, so every chat but one would end up with
+// an empty preview — we load the last message per chat with a window-function
+// subquery instead.
+func loadChatsWithLastMessage(memberChatIDs []string) []models.Chat {
+	chats := make([]models.Chat, 0)
+	if len(memberChatIDs) == 0 {
+		return chats
+	}
+
+	db.GetDB().
+		Preload("Members").
+		Preload("Members.User").
+		Where("id IN ?", memberChatIDs).
+		Order("updated_at DESC").
+		Limit(50).
+		Find(&chats)
+	for i := range chats {
+		sanitizeChatMembers(chats[i].Members)
+	}
+
+	type lastMessageRow struct {
+		models.Message
+		Rank int64
+	}
+	var rows []lastMessageRow
+	db.GetDB().
+		Table("messages").
+		Select("*, ROW_NUMBER() OVER (PARTITION BY chat_id ORDER BY created_at DESC, id DESC) AS rank").
+		Where("chat_id IN ? AND is_deleted = ?", memberChatIDs, false).
+		Find(&rows)
+
+	lastByChat := make(map[string]models.Message, len(rows))
+	for _, r := range rows {
+		if r.Rank == 1 {
+			lastByChat[r.ChatID] = r.Message
+		}
+	}
+	for i := range chats {
+		if m, ok := lastByChat[chats[i].ID]; ok {
+			chats[i].Messages = []models.Message{m}
+		}
+	}
+	return chats
 }
 
 // buildStoryGroups groups raw stories by author, ordered by story count.

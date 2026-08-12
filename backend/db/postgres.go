@@ -65,6 +65,10 @@ func Init(dsn string) error {
 		&models.Bot{},
 		&models.BotCommand{},
 		&models.BotInstallation{},
+		&models.BotUpdate{},
+		&models.BotMessageSeq{},
+		&models.BotChatState{},
+		&models.UsernameAlias{},
 		// Search
 		&models.SearchHistory{},
 		// Moderation
@@ -80,6 +84,9 @@ func Init(dsn string) error {
 		&models.VoiceRoomParticipant{},
 		// Anonymous Chats
 		&models.AnonymousChat{},
+		// Incognito Chats
+		&models.IncognitoChat{},
+		&models.IncognitoMember{},
 		// Gamification
 		&models.UserXP{},
 		&models.Achievement{},
@@ -99,14 +106,74 @@ func Init(dsn string) error {
 		&models.ChatSnooze{},
 		// Chat Reminders
 		&models.ChatReminder{},
+		// Scheduled Messages
+		&models.ScheduledMessage{},
+		// Dead Man's Switch
+		&models.DeadManSwitch{},
+		&models.DeadManSwitchRecipient{},
+		// Cloud Files
+		&models.CloudFile{},
+		// Vault Files
+		&models.VaultFile{},
+		// AI Browse Tasks
+		&models.AIBrowseTask{},
+		// Moderation Actions
+		&models.ModerationAction{},
+		// Whiteboards
+		&models.Whiteboard{},
+		&models.WhiteboardEdit{},
+		// Chat Themes
+		&models.ChatTheme{},
+		// Calendar
+		&models.CalendarEvent{},
+		&models.CalendarEventInvite{},
+		// Kanban
+		&models.KanbanBoard{},
+		&models.KanbanColumn{},
+		&models.KanbanTask{},
+		// Message Bookmarks & Templates
+		&models.MessageBookmark{},
+		&models.MessageTemplate{},
+		// Moderation Config
+		&models.ModerationConfig{},
+		// Photo Albums
+		&models.PhotoAlbum{},
+		&models.PhotoAlbumItem{},
+		// Privacy Audit
+		&models.PrivacyAudit{},
+		// Screen Recordings
+		&models.ScreenRecording{},
+		// Smart Reminders
+		&models.SmartReminder{},
+		// Translation Log
+		&models.TranslationLog{},
+		// Voice Commands & Room Activity
+		&models.VoiceCommand{},
+		&models.VoiceRoomActivity{},
+		// Auto-Reply Config
+		&models.AutoReplyConfig{},
+		// User Sessions
+		&models.UserSession{},
 		// Contact Tags
 		&models.ContactTag{},
 		// Public Rooms
 		&models.PublicRoom{},
 		// Screenshot Detection
 		&models.ScreenshotLog{},
+		// Refresh Token Blacklist
+		&models.RefreshTokenBlacklist{},
 		// Web Push subscriptions
 		&models.PushSubscription{},
+		// CSRF Tokens (persistent)
+		&models.CSRFToken{},
+		// Security Audit Log (persistent)
+		&models.AuditLogEntry{},
+		// AI chat history
+		&models.AIMessage{},
+		// Promo codes
+		&models.PromoCode{},
+		// Invite links
+		&models.InviteLink{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)

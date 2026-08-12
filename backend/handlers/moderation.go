@@ -13,17 +13,16 @@ import (
 	"nexo/ws"
 )
 
-// PlatformAdminEmail — аккаунт техподдержки с полными правами платформы.
-// Админство определяется полем is_admin ИЛИ этим email (без правки БД).
-const PlatformAdminEmail = "nexo.su.support@gmail.com"
-
 // isPlatformAdmin checks if a user is a platform admin (is_admin field).
+// SECURITY: admin status comes only from the is_admin DB field. The old
+// email-based shortcut allowed any stranger to register the support address
+// and become a full platform admin.
 func isPlatformAdmin(userID string) bool {
 	var user models.User
-	if result := db.GetDB().Select("is_admin, email").First(&user, "id = ?", userID); result.Error != nil {
+	if result := db.GetDB().Select("is_admin").First(&user, "id = ?", userID); result.Error != nil {
 		return false
 	}
-	return user.IsAdmin || user.Email == PlatformAdminEmail
+	return user.IsAdmin
 }
 
 func BanUser(c *fiber.Ctx) error {
@@ -288,10 +287,12 @@ func SetUserBadge(c *fiber.Ctx) error {
 		"badgeType": req.BadgeType,
 		"badgeUrl":  req.BadgeURL,
 	}))
-	ws.HubInstance.SendToChat(target.ID, mustWSMsg("user:badge_updated",
+	// Notify the target's other devices too (was SendToChat(target.ID, ...),
+	// which sent to a chat with the user's ID — nothing ever received it).
+	ws.HubInstance.SendToUser(req.TargetID, mustWSMsg("user:badge_updated",
 		"targetId", req.TargetID,
 		"badgeType", req.BadgeType,
-	), "")
+	))
 
 	// Log moderation action
 	if err := db.GetDB().Create(&models.ModerationLog{

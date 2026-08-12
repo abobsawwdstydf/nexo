@@ -80,9 +80,21 @@ func checkRateLimit(key string, maxRequests int, window time.Duration) bool {
 	entry, exists := rateLimitStore[key]
 
 	if !exists || now.Sub(entry.WindowStart) > window {
-		// Refuse to grow store beyond limit even after eviction
+		// Bounded memory: if the store is still full after the sweep, evict the
+		// oldest entry — refusing here would turn an attacker's key-flood into
+		// a global DoS (every rate-limited endpoint would start returning 429).
 		if len(rateLimitStore) >= maxRateLimitEntries {
-			return false
+			var oldestKey string
+			var oldestTime time.Time
+			first := true
+			for k, e := range rateLimitStore {
+				if first || e.WindowStart.Before(oldestTime) {
+					oldestKey, oldestTime, first = k, e.WindowStart, false
+				}
+			}
+			if oldestKey != "" {
+				delete(rateLimitStore, oldestKey)
+			}
 		}
 		rateLimitStore[key] = &rateLimitEntry{
 			Count:       1,

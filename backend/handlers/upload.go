@@ -194,6 +194,21 @@ func isExtensionCompatible(ext, contentType string) bool {
 	return expectedMime == "" || expectedMime == contentType
 }
 
+// isSafeCloudExtension reports whether the extension yields a Content-Type
+// that cannot execute script when served from the app origin. Everything
+// unknown/scriptable (.svg, .html, .xml, .php, ...) is rejected.
+func isSafeCloudExtension(ext string) bool {
+	switch strings.ToLower(ext) {
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp",
+		".mp4", ".webm", ".mov", ".mp3", ".ogg", ".wav",
+		".pdf", ".txt", ".md", ".json", ".csv",
+		".zip", ".rar", ".7z", ".tar", ".gz", ".doc", ".docx",
+		".xls", ".xlsx", ".ppt", ".pptx":
+		return true
+	}
+	return false
+}
+
 func extToMime(ext string) string {
 	switch ext {
 	case ".png":

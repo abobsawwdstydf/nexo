@@ -187,6 +187,29 @@ func isChatMember(chatID, userID string) bool {
 	return count > 0
 }
 
+// hasBlockedUser reports whether blockerID blocked blockedID.
+func hasBlockedUser(blockerID, blockedID string) bool {
+	var b models.BlockedUser
+	return db.GetDB().
+		Where("user_id = ? AND blocked_user_id = ?", blockerID, blockedID).
+		First(&b).Error == nil
+}
+
+// isPersonalChatBlocked returns true when a 1-on-1 personal chat exists and
+// the OTHER member has blocked the sender — messages and calls must not pass.
+func isPersonalChatBlocked(chatID, userID string) bool {
+	var chat models.Chat
+	if err := db.GetDB().Select("type").First(&chat, "id = ?", chatID).Error; err != nil || chat.Type != "personal" {
+		return false
+	}
+	var otherID string
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id != ?", chatID, userID).
+		Limit(1).
+		Pluck("user_id", &otherID)
+	return otherID != "" && hasBlockedUser(otherID, userID)
+}
+
 func SendMessage(c *fiber.Ctx) error {
 	chatID := c.Params("id")
 	userID := c.Locals("userId").(string)
@@ -199,6 +222,11 @@ func SendMessage(c *fiber.Ctx) error {
 	var member models.ChatMember
 	if result := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&member); result.Error != nil {
 		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
+
+	// Blocked users must not be able to message you in a 1-on-1 chat.
+	if isPersonalChatBlocked(chatID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "You cannot message this user"})
 	}
 
 	if req.Type == "" {
@@ -780,7 +808,9 @@ func GetSearchSuggestions(c *fiber.Ctx) error {
 	q := db.GetDB().Where("user_id = ?", userID)
 
 	if query != "" {
-		q = q.Where("query LIKE ?", "%"+query+"%")
+		// Escape LIKE wildcards (same as SearchMessages) to prevent pattern injection
+		likeQuery := "%" + strings.ReplaceAll(strings.ReplaceAll(query, "%", "\\%"), "_", "\\_") + "%"
+		q = q.Where("query LIKE ? ESCAPE '\\'", likeQuery)
 	}
 
 	q.Select("query, COUNT(*) as result_count").

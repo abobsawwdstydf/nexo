@@ -613,6 +613,13 @@ func MarkMessageRead(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Message not found"})
 	}
 
+	// SECURITY: only members of the message's chat may trigger self-destruct —
+	// otherwise any user knowing a message ID could destroy content in a
+	// stranger's chat.
+	if !isChatMember(message.ChatID, userID) {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
+
 	// If message has self-destruct timer → track read and schedule deletion
 	if message.SelfDestructTimer > 0 {
 		// Check not already tracked
@@ -628,16 +635,25 @@ func MarkMessageRead(c *fiber.Ctx) error {
 			database.Create(&readRecord)
 
 			// Schedule deletion after timer
-			go func(msgID string, timerSec int) {
+			go func(msgID, chatID string, timerSec int) {
 				timer := time.NewTimer(time.Duration(timerSec) * time.Second)
 				defer timer.Stop()
 				select {
 				case <-timer.C:
-					database.Delete(&models.Message{}, "id = ?", msgID)
+					// Soft delete + broadcast so all clients stay in sync
+					database.Model(&models.Message{}).Where("id = ?", msgID).Updates(map[string]interface{}{
+						"is_deleted": true,
+						"content":    "",
+						"updated_at": time.Now(),
+					})
+					ws.HubInstance.SendToChat(chatID, mustWSMap("message:deleted", map[string]string{
+						"messageId": msgID,
+						"chatId":    chatID,
+					}), "")
 				case <-StopCh:
 					return
 				}
-			}(messageID, message.SelfDestructTimer)
+			}(messageID, message.ChatID, message.SelfDestructTimer)
 		}
 	}
 
