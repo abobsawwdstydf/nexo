@@ -14,31 +14,31 @@ func GetTurnCredentials(c *fiber.Ctx) error {
 	turnURL := os.Getenv("TURN_URL")
 	stunURLs := os.Getenv("STUN_URLS")
 
-	if turnSecret == "" || turnSecret == "your-turn-secret-here" {
-		return c.Status(503).JSON(fiber.Map{"error": "TURN server not configured"})
-	}
-
-	// Generate one short-lived credential pair. The username passed to coturn
-	// must be exactly the value used to calculate its HMAC.
-	username, credential := GenerateTURNHMAC(turnSecret, userID, 3600)
-
 	// Build ICE servers list
 	iceServers := []fiber.Map{}
 
-	// STUN servers
-	if stunURLs != "" {
-		for _, url := range strings.Split(stunURLs, ",") {
-			url = strings.TrimSpace(url)
-			if url != "" {
-				iceServers = append(iceServers, fiber.Map{
-					"urls": url,
-				})
-			}
+	// STUN servers: from env, or safe public defaults
+	stunList := stunURLs
+	if stunList == "" {
+		stunList = "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302"
+	}
+	for _, url := range strings.Split(stunList, ",") {
+		url = strings.TrimSpace(url)
+		if url != "" {
+			iceServers = append(iceServers, fiber.Map{
+				"urls": url,
+			})
 		}
 	}
 
-	// TURN server
-	if turnURL != "" {
+	// TURN server: only when a real secret + URL are configured
+	turnOK := turnSecret != "" && turnSecret != "your-turn-secret-here" &&
+		turnURL != "" && !strings.Contains(turnURL, "your-server-ip")
+	if turnOK {
+		// Generate one short-lived credential pair. The username passed to coturn
+		// must be exactly the value used to calculate its HMAC.
+		username, credential := GenerateTURNHMAC(turnSecret, userID, 3600)
+
 		iceServers = append(iceServers, fiber.Map{
 			"urls":       turnURL,
 			"username":   username + ":" + userID,
