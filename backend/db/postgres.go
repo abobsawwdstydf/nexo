@@ -45,6 +45,7 @@ func Init(dsn string) error {
 		&models.Story{},
 		&models.StoryView{},
 		&models.StoryReaction{},
+		&models.StoryKeyWrap{},
 		&models.Friendship{},
 		&models.CallLog{},
 		&models.TypingIndicator{},
@@ -95,6 +96,7 @@ func Init(dsn string) error {
 		// E2E Encryption
 		&models.E2EKeyBundle{},
 		&models.E2ESession{},
+		&models.E2EGroupKey{},
 		// AI Commands
 		&models.AICommandLog{},
 		// Webhooks

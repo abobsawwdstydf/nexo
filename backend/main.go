@@ -591,6 +591,10 @@ auth.Delete("/upload/chunk/:uploadId", handlers.ChunkCancel)
 	auth.Post("/e2e/session", handlers.InitSession)
 	auth.Get("/e2e/session/:chatId", handlers.GetSession)
 	auth.Delete("/e2e/session/:chatId", handlers.DeleteSession)
+	auth.Post("/e2e/group/session", handlers.InitGroupSession)
+	auth.Get("/e2e/group/session/:chatId", handlers.GetGroupSession)
+	auth.Post("/e2e/group/session/:chatId/rotate", handlers.RotateGroupSession)
+	auth.Delete("/e2e/group/session/:chatId", handlers.DeleteGroupSession)
 
 	// ─── Feature 7: Webhooks ─────────────────────────────────────────────
 	auth.Get("/webhooks", handlers.GetWebhookConfigs)

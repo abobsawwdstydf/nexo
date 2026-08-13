@@ -956,6 +956,13 @@ function ChatHeader({
 
         {/* Right actions */}
         <div className="flex items-center gap-1">
+          {!isAIChat && (chat.isSecret || chat.isE2E) && (
+            <EncryptionBadge
+              isE2E
+              e2eReady={e2eReady}
+              e2eFingerprint={e2eFingerprint ?? null}
+            />
+          )}
           <motion.button
             onClick={onSearchToggle}
             className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-white/60 hover:text-white"
@@ -2977,9 +2984,10 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
 
     e2eInitRef.current = true;
     const otherUserId = chat.otherMember?.id || chat.members?.find(m => m.userId !== user.id)?.userId || null;
+    const memberIds = chat.type === 'group' ? (chat.members || []).map(m => m.userId) : [];
 
     (async () => {
-      const status = await tryInitE2EForChat(user.id, chat.id, otherUserId, isSecret);
+      const status = await tryInitE2EForChat(user.id, chat.id, otherUserId, isSecret, memberIds);
       setE2eReady(status.isReady);
       e2eReadyRef.current = status.isReady;
       setE2eFingerprint(status.keyFingerprint);

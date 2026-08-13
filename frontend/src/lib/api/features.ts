@@ -8,6 +8,11 @@ export interface E2EKeyBundleData {
   deviceId: string;
 }
 
+export interface E2EGroupWrappedKey {
+  userId: string;
+  wrappedKey: string;
+}
+
 export interface E2EKeyBundleResponse {
   identityKey: string;
   signedPreKey: string;
@@ -29,11 +34,16 @@ declare module './core' {
     fetchKeyBundle(userId: string): Promise<{ bundles: E2EKeyBundleResponse[] }>;
     consumeOneTimePreKey(userId: string): Promise<{ oneTimePreKey: string }>;
     initE2ESession(data: { chatId: string; encryptedKey: string }): Promise<{ ok: boolean; sessionId: string; existed: boolean }>;
+    // E2E Group Sessions
+    initGroupE2ESession(data: { chatId: string; wrappedKeys: E2EGroupWrappedKey[] }): Promise<{ ok: boolean }>;
+    fetchGroupE2ESession(chatId: string): Promise<{ chatId: string; wrappedKeys: E2EGroupWrappedKey[] }>;
+    rotateGroupE2ESession(chatId: string, data: { wrappedKeys: E2EGroupWrappedKey[] }): Promise<{ ok: boolean }>;
+    deleteGroupE2ESession(chatId: string): Promise<{ ok: boolean }>;
   }
 }
 
 export function installFeatures(api: ApiClient): void {
-  // ─── Premium ──────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------- Premium
   api.getPremiumStatus = async () => {
     return api.request<{ isPremium: boolean; premiumUntil: string | null }>('/premium/status');
   };
@@ -59,7 +69,7 @@ export function installFeatures(api: ApiClient): void {
     );
   };
 
-  // ─── E2E Encryption ──────────────────────────────────────────────
+// ---------------------------------------------------------------------- E2E Encryption
   api.uploadKeyBundle = async (data) => {
     return api.request('/e2e/keybundle', {
       method: 'POST',
@@ -80,5 +90,28 @@ export function installFeatures(api: ApiClient): void {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  };
+
+  // ─── E2E Group Sessions ────────────────────────────────────────────
+  api.initGroupE2ESession = async (data) => {
+    return api.request<{ ok: boolean }>('/e2e/group/session', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  };
+
+  api.fetchGroupE2ESession = async (chatId) => {
+    return api.request<{ chatId: string; wrappedKeys: E2EGroupWrappedKey[] }>(`/e2e/group/session/${chatId}`);
+  };
+
+  api.rotateGroupE2ESession = async (chatId, data) => {
+    return api.request<{ ok: boolean }>(`/e2e/group/session/${chatId}/rotate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  };
+
+  api.deleteGroupE2ESession = async (chatId) => {
+    return api.request<{ ok: boolean }>(`/e2e/group/session/${chatId}`, { method: 'DELETE' });
   };
 }

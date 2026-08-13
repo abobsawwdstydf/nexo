@@ -8,6 +8,8 @@ import {
   saveSession,
   signData, getActiveSessionKey, setActiveSessionKey,
   saveSignedPreKey, loadSignedPreKey,
+  generateGroupSymmetricKey, importGroupKey, wrapGroupKeyFor, unwrapGroupKeyFor,
+  setActiveGroupKey, getActiveGroupKey, clearActiveGroupKey, groupKeyFingerprint, saveGroupSessionInfo, hasActiveGroup,
 } from './e2e';
 
 interface E2EInitOptions {
@@ -131,14 +133,14 @@ export class E2ESessionManager {
   }
 
   async encryptChatMessage(chatId: string, content: string): Promise<{ encryptedContent: string; iv: string } | null> {
-    const key = getActiveSessionKey(chatId);
+    const key = getActiveSessionKey(chatId) || getActiveGroupKey(chatId);
     if (!key) return null;
     const result = await encryptMessage(key, content);
     return { encryptedContent: result.ciphertext, iv: result.iv };
   }
 
   async decryptChatMessage(chatId: string, encryptedContent: string, iv: string): Promise<string | null> {
-    const key = getActiveSessionKey(chatId);
+    const key = getActiveSessionKey(chatId) || getActiveGroupKey(chatId);
     if (!key) return null;
     try {
       return await decryptMessage(key, { ciphertext: encryptedContent, iv });
@@ -148,19 +150,132 @@ export class E2ESessionManager {
   }
 
   async encryptChatMedia(chatId: string, blob: Blob): Promise<Blob | null> {
-    const key = getActiveSessionKey(chatId);
+    const key = getActiveSessionKey(chatId) || getActiveGroupKey(chatId);
     if (!key) return null;
     return encryptMedia(key, blob);
   }
 
   async decryptChatMedia(chatId: string, encryptedBlob: Blob, mimeType: string): Promise<Blob | null> {
-    const key = getActiveSessionKey(chatId);
+    const key = getActiveSessionKey(chatId) || getActiveGroupKey(chatId);
     if (!key) return null;
     try {
       return await decryptMedia(key, encryptedBlob, mimeType);
     } catch {
       return null;
     }
+  }
+
+
+  // ─── Group E2E sessions ─────────────────────────────────────────────
+
+  // Инициатор: генерирует общий ключ K, оборачивает его для себя и всех
+  // участников (ECDH shared secret + AES-GCM) и сохраняет обёртки на сервере.
+  async establishGroupSession(userId: string, chatId: string, memberIds: string[]): Promise<boolean> {
+    try {
+      const myKeyPair = loadIdentityKeyPair(userId);
+      if (!myKeyPair) throw new Error('Identity key pair not found');
+
+      const groupKeyB64 = generateGroupSymmetricKey();
+      const wrappedKeys: Array<{ userId: string; wrappedKey: string }> = [];
+
+      const wrapFor = async (targetId: string): Promise<string | null> => {
+        let theirPublic: string;
+        if (targetId === userId) {
+          theirPublic = myKeyPair.publicKey; // ECDH со своим ключом — обёртка для себя
+        } else {
+          const resp = await api.fetchKeyBundle(targetId);
+          const bundle = resp.bundles?.[0];
+          if (!bundle?.identityKey) return null;
+          theirPublic = bundle.identityKey;
+        }
+        const secret = await computeSharedSecret(myKeyPair.privateKey, theirPublic);
+        return wrapGroupKeyFor(secret, groupKeyB64);
+      };
+
+      const targets = Array.from(new Set([userId, ...memberIds]));
+      for (const t of targets) {
+        const wrapped = await wrapFor(t);
+        if (wrapped) wrappedKeys.push({ userId: t, wrappedKey: wrapped });
+      }
+      if (wrappedKeys.length === 0) return false;
+
+      await api.initGroupE2ESession({ chatId, wrappedKeys });
+
+      const key = await importGroupKey(groupKeyB64);
+      setActiveGroupKey(chatId, key);
+      saveGroupSessionInfo(chatId, await groupKeyFingerprint(key));
+      return true;
+    } catch (err) {
+      console.error('[E2E] Failed to establish group session:', err);
+      return false;
+    }
+  }
+
+  // Получение: разворачивает собственный wrapped-ключ из хранилища обёрток.
+  async fetchExistingGroupSession(userId: string, chatId: string): Promise<boolean> {
+    try {
+      if (hasActiveGroup(chatId)) return true;
+      const myKeyPair = loadIdentityKeyPair(userId);
+      if (!myKeyPair) throw new Error('Identity key pair not found');
+
+      const resp = await api.fetchGroupE2ESession(chatId);
+      const mine = resp.wrappedKeys.find(w => w.userId === userId);
+      if (!mine) return false;
+
+      const secret = await computeSharedSecret(myKeyPair.privateKey, myKeyPair.publicKey);
+      const groupKeyB64 = await unwrapGroupKeyFor(secret, mine.wrappedKey);
+      const key = await importGroupKey(groupKeyB64);
+      setActiveGroupKey(chatId, key);
+      saveGroupSessionInfo(chatId, await groupKeyFingerprint(key));
+      return true;
+    } catch (err) {
+      console.error('[E2E] Failed to fetch group session:', err);
+      return false;
+    }
+  }
+
+  // Ротация группового ключа (новые обёртки для всех участников)
+  async rotateGroupSession(userId: string, chatId: string, memberIds: string[]): Promise<boolean> {
+    try {
+      const myKeyPair = loadIdentityKeyPair(userId);
+      if (!myKeyPair) throw new Error('Identity key pair not found');
+
+      const groupKeyB64 = generateGroupSymmetricKey();
+      const wrappedKeys: Array<{ userId: string; wrappedKey: string }> = [];
+
+      for (const t of Array.from(new Set([userId, ...memberIds]))) {
+        let theirPublic: string;
+        if (t === userId) {
+          theirPublic = myKeyPair.publicKey;
+        } else {
+          const resp = await api.fetchKeyBundle(t);
+          const bundle = resp.bundles?.[0];
+          if (!bundle?.identityKey) continue;
+          theirPublic = bundle.identityKey;
+        }
+        const secret = await computeSharedSecret(myKeyPair.privateKey, theirPublic);
+        const wrapped = await wrapGroupKeyFor(secret, groupKeyB64);
+        wrappedKeys.push({ userId: t, wrappedKey: wrapped });
+      }
+      if (wrappedKeys.length === 0) return false;
+
+      await api.rotateGroupE2ESession(chatId, { wrappedKeys });
+
+      const key = await importGroupKey(groupKeyB64);
+      setActiveGroupKey(chatId, key);
+      saveGroupSessionInfo(chatId, await groupKeyFingerprint(key));
+      return true;
+    } catch (err) {
+      console.error('[E2E] Failed to rotate group session:', err);
+      return false;
+    }
+  }
+
+  async deleteGroupSession(chatId: string): Promise<void> {
+    try {
+      await api.deleteGroupE2ESession(chatId);
+    } catch { /* non-fatal */ }
+    clearActiveGroupKey(chatId);
   }
 }
 
