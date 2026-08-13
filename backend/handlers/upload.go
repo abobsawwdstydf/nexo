@@ -130,7 +130,7 @@ func UploadFile(c *fiber.Ctx) error {
 	// Derive thumbnails / formats / transcode via ffmpeg (non-fatal: on
 	// error the original file is kept as-is and served normally).
 	if err := ProcessMedia(savePath, media.ID, &media); err != nil {
-		log.Printf("[UPLOAD] ProcessMedia %s: %v", media.ID, err)
+		logging.Log.Error("[UPLOAD] ProcessMedia failed", "media_id", media.ID, "err", err)
 	}
 
 	return c.Status(201).JSON(media)

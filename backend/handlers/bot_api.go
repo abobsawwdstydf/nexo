@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -76,12 +78,12 @@ func tgUserFromUser(u models.User) map[string]interface{} {
 
 func tgUserFromBot(b models.Bot) map[string]interface{} {
 	out := map[string]interface{}{
-		"id":                        b.ID,
-		"is_bot":                    true,
-		"first_name":                b.Name,
-		"can_join_groups":           true,
+		"id":                          b.ID,
+		"is_bot":                      true,
+		"first_name":                  b.Name,
+		"can_join_groups":             true,
 		"can_read_all_group_messages": false,
-		"supports_inline_queries":   false,
+		"supports_inline_queries":     false,
 	}
 	if b.Username != "" {
 		out["username"] = b.Username
@@ -265,14 +267,14 @@ func createBotUpdate(bot models.Bot, payload map[string]interface{}) {
 func sendBotMessageToChat(bot models.Bot, chatID, content, msgType string, media []models.Media, replyMarkup string) (models.Message, error) {
 	now := time.Now()
 	msg := models.Message{
-		ID:           generateID(),
-		ChatID:       chatID,
-		SenderID:     bot.ID,
-		Content:      content,
-		Type:         msgType,
-		ReplyMarkup:  replyMarkup,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:          generateID(),
+		ChatID:      chatID,
+		SenderID:    bot.ID,
+		Content:     content,
+		Type:        msgType,
+		ReplyMarkup: replyMarkup,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 	if msg.Type == "" {
 		msg.Type = "text"
@@ -314,6 +316,8 @@ func BotAPI(c *fiber.Ctx) error {
 	}
 
 	switch method {
+	case "answerInlineQuery":
+		return botAnswerInlineQuery(c, bot)
 	case "getMe":
 		return tgOK(c, tgUserFromBot(bot))
 	case "getUpdates":
@@ -432,11 +436,11 @@ func botGetWebhookInfo(c *fiber.Ctx, bot models.Bot) error {
 	var pendingCount int64
 	db.GetDB().Model(&models.BotUpdate{}).Where("bot_id = ?", bot.ID).Count(&pendingCount)
 	return tgOK(c, map[string]interface{}{
-		"url":                  bot.WebhookURL,
+		"url":                    bot.WebhookURL,
 		"has_custom_certificate": false,
-		"pending_update_count": pendingCount,
-		"last_error_message":   "",
-		"max_connections":      40,
+		"pending_update_count":   pendingCount,
+		"last_error_message":     "",
+		"max_connections":        40,
 	})
 }
 
@@ -466,9 +470,15 @@ func parseReplyMarkup(c *fiber.Ctx, bot models.Bot, chatID string) (string, erro
 	if len(body.ReplyMarkup) == 0 || string(body.ReplyMarkup) == "null" {
 		return "", nil
 	}
+	return parseReplyMarkupJSON(bot, chatID, body.ReplyMarkup)
+}
 
+// parseReplyMarkupJSON — общий разбор reply_markup (JSON-объект):
+// reply-клавиатура → состояние чата, remove_keyboard → очистка,
+// inline-клавиатура → сохраняется в сообщении.
+func parseReplyMarkupJSON(bot models.Bot, chatID string, raw json.RawMessage) (string, error) {
 	var markup map[string]interface{}
-	if err := json.Unmarshal(body.ReplyMarkup, &markup); err != nil {
+	if err := json.Unmarshal(raw, &markup); err != nil {
 		return "", fmt.Errorf("invalid reply_markup")
 	}
 
@@ -476,7 +486,7 @@ func parseReplyMarkup(c *fiber.Ctx, bot models.Bot, chatID string) (string, erro
 
 	// Reply-клавиатура — состояние чата (не хранится в сообщении)
 	if _, ok := markup["keyboard"].([]interface{}); ok {
-		data, _ := json.Marshal(body.ReplyMarkup)
+		data, _ := json.Marshal(raw)
 		var state models.BotChatState
 		if err := db.GetDB().Where("id = ?", stateID).First(&state).Error; err != nil {
 			state = models.BotChatState{ID: stateID, BotID: bot.ID, ChatID: chatID, ReplyMarkup: string(data)}
@@ -485,9 +495,6 @@ func parseReplyMarkup(c *fiber.Ctx, bot models.Bot, chatID string) (string, erro
 			}
 		} else {
 			db.GetDB().Model(&state).Update("reply_markup", string(data))
-		}
-		if _, ok := markup["one_time_keyboard"].(bool); ok {
-			// один показ — фронт уберёт после первого нажатия
 		}
 		return "", nil
 	}
@@ -499,16 +506,15 @@ func parseReplyMarkup(c *fiber.Ctx, bot models.Bot, chatID string) (string, erro
 	}
 
 	// Inline-клавиатура — хранится в сообщении
-	return string(body.ReplyMarkup), nil
+	return string(raw), nil
 }
-
 func botSendMessage(c *fiber.Ctx, bot models.Bot) error {
 	var req struct {
-		ChatID          string `json:"chat_id"`
-		Text            string `json:"text"`
-		ParseMode       string `json:"parse_mode"`
-		ReplyTo         int64  `json:"reply_to_message_id"`
-		DisableNotif    bool   `json:"disable_notification"`
+		ChatID       string `json:"chat_id"`
+		Text         string `json:"text"`
+		ParseMode    string `json:"parse_mode"`
+		ReplyTo      int64  `json:"reply_to_message_id"`
+		DisableNotif bool   `json:"disable_notification"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return tgErr(c, 400, "Bad Request: invalid JSON body")
@@ -540,9 +546,9 @@ func botSendMessage(c *fiber.Ctx, bot models.Bot) error {
 
 func botEditMessage(c *fiber.Ctx, bot models.Bot, withText bool) error {
 	var req struct {
-		ChatID      string `json:"chat_id"`
-		MessageID   int64  `json:"message_id"`
-		Text        string `json:"text"`
+		ChatID      string          `json:"chat_id"`
+		MessageID   int64           `json:"message_id"`
+		Text        string          `json:"text"`
 		ReplyMarkup json.RawMessage `json:"reply_markup"`
 	}
 	if err := c.BodyParser(&req); err != nil {
@@ -831,6 +837,10 @@ func botDeleteMyCommands(c *fiber.Ctx, bot models.Bot) error {
 }
 
 func botSendFile(c *fiber.Ctx, bot models.Bot, method string) error {
+	// Multipart upload (Telegram Bot API: файл как form-data, поле "file")
+	if strings.HasPrefix(strings.ToLower(c.Get("Content-Type")), "multipart/form-data") {
+		return botSendFileMultipart(c, bot, method)
+	}
 	var req struct {
 		ChatID    string `json:"chat_id"`
 		Caption   string `json:"caption"`
@@ -1134,3 +1144,321 @@ func fileNameFromURL(url string) string {
 	return trimmed
 }
 
+// ─── Inline-режим (answerInlineQuery + пользовательские эндпоинты) ─────────
+
+// inlineQueryResultTTL — сколько живут одноразовые результаты inline-запроса
+const inlineQueryResultTTL = 10 * time.Minute
+
+// cleanupExpiredInlineResults — удаляет протухшие результаты (TTL 10 минут)
+func cleanupExpiredInlineResults() {
+	db.GetDB().Where("created_at < ?", time.Now().Add(-inlineQueryResultTTL)).Delete(&models.InlineQueryResult{})
+}
+
+// botAnswerInlineQuery — бот отвечает на inline_query: результаты одноразовые,
+// хранятся в InlineQueryResult (не попадают в bot_updates/getUpdates).
+func botAnswerInlineQuery(c *fiber.Ctx, bot models.Bot) error {
+	var req struct {
+		InlineQueryID string            `json:"inline_query_id"`
+		Results       []json.RawMessage `json:"results"`
+		CacheTime     int               `json:"cache_time"`
+	}
+	if err := botParseBody(c, &req); err != nil {
+		return tgErr(c, 400, "Bad Request: invalid JSON body")
+	}
+	if req.InlineQueryID == "" {
+		return tgErr(c, 400, "Bad Request: inline_query_id is required")
+	}
+	if len(req.Results) > 50 {
+		return tgErr(c, 400, "Bad Request: too many results (max 50)")
+	}
+	data, _ := json.Marshal(req.Results)
+	now := time.Now()
+	var existing models.InlineQueryResult
+	if err := db.GetDB().Where("inline_query_id = ?", req.InlineQueryID).First(&existing).Error; err == nil {
+		// повторный ответ на тот же запрос — перезаписываем
+		if err := db.GetDB().Model(&existing).Updates(map[string]interface{}{
+			"bot_id":     bot.ID,
+			"results":    string(data),
+			"created_at": now,
+		}).Error; err != nil {
+			return tgErr(c, 500, "Internal server error")
+		}
+	} else {
+		entry := models.InlineQueryResult{
+			InlineQueryID: req.InlineQueryID,
+			BotID:         bot.ID,
+			Results:       string(data),
+			CreatedAt:     now,
+		}
+		if err := db.GetDB().Create(&entry).Error; err != nil {
+			return tgErr(c, 500, "Internal server error")
+		}
+	}
+	cleanupExpiredInlineResults()
+	return tgOK(c, map[string]interface{}{"inline_query_id": req.InlineQueryID})
+}
+
+// BotInline — пользователь набирает «@bot <query>» в композере (auth):
+// создаёт апдейт inline_query, доставляет на webhook и ждёт ответ бота.
+func BotInline(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+
+	var req struct {
+		BotUsername string `json:"botUsername"`
+		Query       string `json:"query"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	username := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(req.BotUsername)), "@")
+	if username == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "botUsername is required"})
+	}
+	if len(req.Query) > 512 {
+		return c.Status(400).JSON(fiber.Map{"error": "query is too long"})
+	}
+
+	var bot models.Bot
+	if err := db.GetDB().Where("username = ?", username).First(&bot).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Bot not found"})
+	}
+	if !bot.IsActive {
+		return c.Status(403).JSON(fiber.Map{"error": "Bot is disabled"})
+	}
+
+	var user models.User
+	if err := db.GetDB().First(&user, "id = ?", userID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	inlineQueryID := generateID()
+	payload := map[string]interface{}{
+		"inline_query": map[string]interface{}{
+			"id":     inlineQueryID,
+			"from":   tgUserFromUser(user),
+			"query":  req.Query,
+			"offset": "",
+		},
+	}
+	createBotUpdate(bot, payload)
+
+	// Pre-create результат с query: botAnswerInlineQuery допишет results и
+	// сохранит query для chosen_inline_result. Пустые results = бот ещё не ответил.
+	pre := models.InlineQueryResult{InlineQueryID: inlineQueryID, Query: req.Query, Results: "", CreatedAt: time.Now()}
+	db.GetDB().Create(&pre)
+
+	// Webhook-доставка асинхронная: ждём ответ бота (answerInlineQuery)
+	// коротким опросом InlineQueryResult, максимум ~2.5с.
+	deadline := time.Now().Add(2500 * time.Millisecond)
+	var rec models.InlineQueryResult
+	found := false
+	for !found && time.Now().Before(deadline) {
+		if err := db.GetDB().Where("inline_query_id = ? AND results <> ''", inlineQueryID).First(&rec).Error; err == nil {
+			found = true
+		} else {
+			time.Sleep(120 * time.Millisecond)
+		}
+	}
+
+	results := make([]json.RawMessage, 0)
+	if found && time.Since(rec.CreatedAt) <= inlineQueryResultTTL {
+		_ = json.Unmarshal([]byte(rec.Results), &results)
+	}
+	return c.JSON(fiber.Map{
+		"ok":              true,
+		"results":         results,
+		"inline_query_id": inlineQueryID,
+	})
+}
+
+// BotInlineResult — пользователь выбрал результат (auth): апдейт
+// chosen_inline_result боту + возврат выбранного результата.
+func BotInlineResult(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+
+	var req struct {
+		InlineQueryID string `json:"inlineQueryId"`
+		ResultID      string `json:"resultId"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if req.InlineQueryID == "" || req.ResultID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "inlineQueryId and resultId are required"})
+	}
+
+	var rec models.InlineQueryResult
+	if err := db.GetDB().Where("inline_query_id = ?", req.InlineQueryID).First(&rec).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Inline query not found or expired"})
+	}
+	if time.Since(rec.CreatedAt) > inlineQueryResultTTL {
+		db.GetDB().Delete(&rec)
+		return c.Status(404).JSON(fiber.Map{"error": "Inline query not found or expired"})
+	}
+
+	var results []map[string]interface{}
+	if err := json.Unmarshal([]byte(rec.Results), &results); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load results"})
+	}
+	var chosen map[string]interface{}
+	for _, r := range results {
+		if id, _ := r["id"].(string); id == req.ResultID {
+			chosen = r
+			break
+		}
+	}
+	if chosen == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Result not found"})
+	}
+
+	var bot models.Bot
+	if err := db.GetDB().First(&bot, "id = ?", rec.BotID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Bot not found"})
+	}
+	var user models.User
+	if err := db.GetDB().First(&user, "id = ?", userID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	from := tgUserFromUser(user)
+	payload := map[string]interface{}{
+		"chosen_inline_result": map[string]interface{}{
+			"result_id": req.ResultID,
+			"from":      from,
+			"inline_query": map[string]interface{}{
+				"id":    req.InlineQueryID,
+				"from":  from,
+				"query": rec.Query,
+			},
+		},
+	}
+	createBotUpdate(bot, payload)
+
+	return c.JSON(fiber.Map{"ok": true, "result": chosen})
+}
+
+// botSendFileMultipart — метод send*File с файлом из multipart form-data
+// (поле "file", как у Telegram Bot API). Файл валидируется и сохраняется
+// тем же пайплайном, что и обычные аплоады (upload.go).
+func botSendFileMultipart(c *fiber.Ctx, bot models.Bot, method string) error {
+	chatID := c.FormValue("chat_id")
+	if chatID == "" {
+		return tgErr(c, 400, "Bad Request: chat_id is required")
+	}
+	if _, ok := checkBotInstalled(bot.ID, chatID); !ok {
+		return tgErr(c, 403, "Forbidden: bot is not a member of the chat")
+	}
+
+	var fh *multipart.FileHeader
+	for _, field := range []string{"file", "photo", "animation", "audio", "video", "document", "voice", "video_note", "sticker"} {
+		f, err := c.FormFile(field)
+		if err == nil {
+			fh = f
+			break
+		}
+	}
+	if fh == nil {
+		return tgErr(c, 400, "Bad Request: file is required (field \"file\")")
+	}
+
+	msgType := fileMethodToMsgType(method)
+	media, err := saveBotUploadedFile(c, fh, msgType)
+	if err != nil {
+		return tgErr(c, 400, "Bad Request: "+err.Error())
+	}
+
+	replyMarkup, err := parseReplyMarkupMultipart(c, bot, chatID)
+	if err != nil {
+		return tgErr(c, 400, "Bad Request: "+err.Error())
+	}
+
+	msg, err := sendBotMessageToChat(bot, chatID, c.FormValue("caption"), msgType, []models.Media{media}, replyMarkup)
+	if err != nil {
+		return tgErr(c, 500, "Internal server error")
+	}
+	return tgOK(c, tgMessageFromMsg(bot, msg))
+}
+
+// saveBotUploadedFile — сохраняет загруженный ботом файл в uploads с полной
+// валидацией (размер, magic bytes, расширение) — как в UploadFile.
+func saveBotUploadedFile(c *fiber.Ctx, fh *multipart.FileHeader, mediaType string) (models.Media, error) {
+	if fh.Size > 50*1024*1024 {
+		return models.Media{}, fmt.Errorf("file too large (max 50MB)")
+	}
+	src, err := fh.Open()
+	if err != nil {
+		return models.Media{}, fmt.Errorf("failed to open file")
+	}
+	defer src.Close()
+
+	buf := make([]byte, 512)
+	n, err := src.Read(buf)
+	if err != nil && n == 0 {
+		return models.Media{}, fmt.Errorf("failed to read file header")
+	}
+	contentType := detectContentType(buf[:n], fh.Filename, fh.Header.Get("Content-Type"))
+
+	allowedTypes := map[string]bool{
+		"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true,
+		"video/mp4": true, "video/webm": true, "video/quicktime": true,
+		"audio/mpeg": true, "audio/ogg": true, "audio/wav": true, "audio/webm": true,
+		"application/pdf": true,
+	}
+	if !allowedTypes[contentType] {
+		return models.Media{}, fmt.Errorf("file type not allowed: %s", contentType)
+	}
+
+	ext := strings.ToLower(filepath.Ext(fh.Filename))
+	if ext != "" {
+		if !isExtensionCompatible(ext, contentType) {
+			return models.Media{}, fmt.Errorf("file extension does not match content")
+		}
+	} else {
+		ext = mimeToExt(contentType)
+	}
+	filename := generateID() + ext
+	if err := c.SaveFile(fh, filepath.Join(UploadDir(), filename)); err != nil {
+		logging.Log.Info("[BotAPI] failed to save uploaded file", "filename", filename, "err", err)
+		return models.Media{}, fmt.Errorf("failed to save file")
+	}
+
+	return models.Media{
+		ID:             generateID(),
+		Type:           mediaType,
+		URL:            "/uploads/" + filename,
+		Filename:       fh.Filename,
+		Size:           int(fh.Size),
+		OriginalFormat: contentType,
+	}, nil
+}
+
+// parseReplyMarkupMultipart — reply_markup как form-поле в multipart-запросе
+func parseReplyMarkupMultipart(c *fiber.Ctx, bot models.Bot, chatID string) (string, error) {
+	raw := c.FormValue("reply_markup")
+	if raw == "" || raw == "null" {
+		return "", nil
+	}
+	return parseReplyMarkupJSON(bot, chatID, json.RawMessage(raw))
+}
+
+// fileMethodToMsgType — маппинг метода send*File на тип сообщения/медиа
+func fileMethodToMsgType(method string) string {
+	switch method {
+	case "sendPhoto":
+		return "photo"
+	case "sendAnimation":
+		return "animation"
+	case "sendVideo":
+		return "video"
+	case "sendAudio":
+		return "audio"
+	case "sendVoice":
+		return "voice"
+	case "sendVideoNote":
+		return "video_note"
+	case "sendSticker":
+		return "sticker"
+	default: // sendDocument и прочее
+		return "document"
+	}
+}

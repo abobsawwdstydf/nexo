@@ -121,6 +121,7 @@ func InitLocal(dsn string) error {
 		&models.BotUpdate{},
 		&models.BotMessageSeq{},
 		&models.BotChatState{},
+		&models.InlineQueryResult{},
 		&models.UsernameAlias{},
 		// Search
 		&models.SearchHistory{},

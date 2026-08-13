@@ -25,12 +25,38 @@ export interface BotCommandInfo {
   isActive: boolean;
 }
 
+export interface InlineBotResult {
+  type?: string;
+  id: string;
+  title?: string;
+  description?: string;
+  input_message_content?: {
+    message_text?: string;
+    parse_mode?: string;
+  };
+  [key: string]: unknown;
+}
+
+export interface InlineBotResponse {
+  ok: boolean;
+  results: InlineBotResult[];
+  inline_query_id: string;
+}
+
+export interface InlineBotResultResponse {
+  ok: boolean;
+  result: InlineBotResult;
+}
+
 declare module './core' {
   interface ApiClient {
     botCallback(chatId: string, messageId: string, callbackData: string, chatInstance?: string): Promise<{ ok: boolean }>;
     getUserAliases(): Promise<UserAlias[]>;
     createUserAlias(alias: string): Promise<UserAlias>;
     deleteUserAlias(aliasId: string): Promise<{ ok: boolean }>;
+    // ─── Inline-режим ──────────────────────────────────────────────────
+    botsInline(botUsername: string, query: string): Promise<InlineBotResponse>;
+    botsInlineResult(inlineQueryId: string, resultId: string): Promise<InlineBotResultResponse>;
     // BotFather
     createBot(data: { name: string; description?: string; avatar?: string; webhookUrl?: string }): Promise<BotInfo & { token: string }>;
     getBots(): Promise<BotInfo[]>;
@@ -73,6 +99,21 @@ export function installBots(api: ApiClient): void {
   api.deleteUserAlias = async (aliasId: string) => {
     return api.request<{ ok: boolean }>(`/users/me/aliases/${aliasId}`, {
       method: 'DELETE',
+    });
+  };
+
+  // ─── Inline-режим ────────────────────────────────────────────────────
+  api.botsInline = async (botUsername: string, query: string) => {
+    return api.request<InlineBotResponse>('/bots/inline', {
+      method: 'POST',
+      body: JSON.stringify({ botUsername, query }),
+    });
+  };
+
+  api.botsInlineResult = async (inlineQueryId: string, resultId: string) => {
+    return api.request<InlineBotResultResponse>('/bots/inline/result', {
+      method: 'POST',
+      body: JSON.stringify({ inlineQueryId, resultId }),
     });
   };
 

@@ -547,6 +547,10 @@ auth.Delete("/upload/chunk/:uploadId", handlers.ChunkCancel)
 	// Bot API callback (нажатие inline-кнопки, авторизованный)
 	auth.Post("/bots/callback", handlers.BotCallback)
 
+	// Bot API inline-режим (композер: @bot <query>)
+	auth.Post("/bots/inline", handlers.BotInline)
+	auth.Post("/bots/inline/result", handlers.BotInlineResult)
+
 	// Username aliases (premium feature)
 	auth.Get("/users/me/aliases", handlers.GetUserAliases)
 	auth.Post("/users/me/aliases", handlers.CreateUserAlias)

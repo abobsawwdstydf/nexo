@@ -673,7 +673,17 @@ type BotChatState struct {
 	UpdatedAt   time.Time `json:"-" gorm:"autoUpdateTime"`
 }
 
-// UsernameAlias вЂ” РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Р№ СЋР·РµСЂРЅРµР№Рј РґР»СЏ premium (user/chat/bot)
+// InlineQueryResult — одноразовые результаты inline-запроса (TTL 10 минут).
+// Бот пишет их через answerInlineQuery, фронт забирает через /api/bots/inline.
+type InlineQueryResult struct {
+	InlineQueryID string    `json:"inlineQueryId" gorm:"primaryKey;size:64"`
+	BotID         string    `json:"-" gorm:"index;size:64"`
+	Query         string    `json:"-" gorm:"type:text"`
+	Results       string    `json:"-" gorm:"type:text"` // JSON-массив результатов (Telegram format)
+	CreatedAt     time.Time `json:"-" gorm:"autoCreateTime"`
+}
+
+// UsernameAlias — дополнительный юзернейм для premium (user/chat/bot)
 type UsernameAlias struct {
 	ID         string    `json:"-" gorm:"primaryKey"`
 	SubjectType string   `json:"subjectType" gorm:"size:16"` // "user", "chat", "bot"

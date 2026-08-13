@@ -38,8 +38,10 @@ import {
   Crown,
   Timer,
   Check,
+  Bot,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import type { InlineBotResult } from '../lib/api/bots';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
 import { toast } from '../lib/toast';
@@ -1185,6 +1187,12 @@ function MessageInput({
   const audioCtxRef = useRef<AudioContext | null>(null);
   const eqRafRef = useRef<number | null>(null);
   const eqBarRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // ── Inline-режим ботов (@bot <query> в композере) ──────────────────
+  const [inlineResults, setInlineResults] = useState<InlineBotResult[]>([]);
+  const [inlineQueryId, setInlineQueryId] = useState('');
+  const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inlineSeqRef = useRef(0);
+  const inlineBotCacheRef = useRef<Map<string, { status: 'bot' | 'nobot'; expires: number }>>(new Map());
 
   // Draft: restore saved text
   useEffect(() => {
@@ -1277,6 +1285,82 @@ function MessageInput({
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
   }, [text]);
+
+  // Детекция inline-запроса: последнее слово — @bot... → панель результатов
+  useEffect(() => {
+    if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+    if (editMessage) {
+      setInlineResults([]);
+      setInlineQueryId('');
+      return;
+    }
+    const tokenMatch = text.match(/(?:^|\s)@([A-Za-z0-9_]{1,64})$/);
+    if (!tokenMatch) {
+      setInlineResults([]);
+      setInlineQueryId('');
+      return;
+    }
+    const botUsername = tokenMatch[1];
+    const query = text.slice(0, text.lastIndexOf('@')).trim();
+    const cacheKey = botUsername.toLowerCase();
+    const cached = inlineBotCacheRef.current.get(cacheKey);
+    if (cached && cached.status === 'nobot' && cached.expires > Date.now()) {
+      setInlineResults([]);
+      setInlineQueryId('');
+      return;
+    }
+    inlineDebounceRef.current = setTimeout(async () => {
+      const seq = ++inlineSeqRef.current;
+      try {
+        const res = await api.botsInline(botUsername, query);
+        if (seq !== inlineSeqRef.current) return;
+        if (res?.ok && Array.isArray(res.results) && res.results.length > 0) {
+          setInlineResults(res.results.slice(0, 10));
+          setInlineQueryId(res.inline_query_id);
+        } else {
+          setInlineResults([]);
+          setInlineQueryId('');
+        }
+      } catch (err) {
+        if (seq !== inlineSeqRef.current) return;
+        const msg = err instanceof Error ? err.message : '';
+        if (msg.includes('Bot not found') || msg.includes('Bot is disabled')) {
+          inlineBotCacheRef.current.set(cacheKey, { status: 'nobot', expires: Date.now() + 60_000 });
+        }
+        setInlineResults([]);
+        setInlineQueryId('');
+      }
+    }, 400);
+    return () => {
+      if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+    };
+  }, [text, editMessage, chatId]);
+
+  // Выбор результата: chosen_inline_result боту + вставка message_text в поле
+  const handleInlinePick = async (result: InlineBotResult) => {
+    const qid = inlineQueryId;
+    const fallbackText = result.input_message_content?.message_text;
+    const seq = ++inlineSeqRef.current;
+    setInlineResults([]);
+    setInlineQueryId('');
+    if (!qid) return;
+    try {
+      const res = await api.botsInlineResult(qid, result.id);
+      if (seq !== inlineSeqRef.current) return;
+      const picked = res?.result?.input_message_content?.message_text ?? fallbackText;
+      if (picked) {
+        const atIdx = text.lastIndexOf('@');
+        setText(atIdx >= 0 ? text.slice(0, atIdx) + picked : picked);
+      }
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        const el = inputRef.current;
+        if (el) el.setSelectionRange(el.value.length, el.value.length);
+      });
+    } catch {
+      /* молча — панель уже скрыта */
+    }
+  };
 
   const handleSubmit = (media?: any[]) => {
     const trimmed = text.trim();
@@ -2094,6 +2178,37 @@ function MessageInput({
                 Отмена
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Inline-результаты ботов (@bot) — панель над композером */}
+      <AnimatePresence>
+        {inlineResults.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="mx-3 mb-2 rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl liquid-glass-strong overflow-hidden z-30"
+          >
+            {inlineResults.map(r => (
+              <button
+                key={r.id}
+                onClick={() => handleInlinePick(r)}
+                className="w-full flex items-start gap-3 px-3.5 py-2.5 text-left hover:bg-white/[0.06] transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bot size={15} className="text-accent" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium text-white/90 truncate">{r.title || 'Без названия'}</p>
+                  {r.description && (
+                    <p className="text-[12px] text-white/50 truncate mt-0.5">{r.description}</p>
+                  )}
+                </div>
+              </button>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
