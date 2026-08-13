@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"crypto/rand"
-	"log"
 	"strings"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // inviteCodeChars — alphabet without lookalike chars (0/O, 1/I/l)
@@ -193,7 +193,7 @@ func JoinInvite(c *fiber.Ctx) error {
 		Role:   "member",
 	}
 	if err := db.GetDB().Create(&member).Error; err != nil {
-		log.Printf("[invite] failed to add member: %v", err)
+		logging.Log.Error("[invite] failed to add member", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to join"})
 	}
 

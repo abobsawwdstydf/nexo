@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // --- VAPID setup -----------------------------------------------------------
@@ -31,9 +31,9 @@ var vapidKeysFile = "vapid_keys.json"
 func InitPush() {
 	initVAPID()
 	if vapidPublicKey == "" || vapidPrivateKey == "" {
-		log.Println("[Push] WARNING: VAPID keys not configured — push notifications disabled")
+		logging.Log.Warn("[Push] VAPID keys not configured — push notifications disabled")
 	} else {
-		log.Println("[Push] Web Push initialized (VAPID keys loaded)")
+		logging.Log.Info("[Push] Web Push initialized (VAPID keys loaded)")
 	}
 }
 
@@ -54,7 +54,7 @@ func initVAPID() {
 			}
 			if json.Unmarshal(data, &stored) == nil && stored.Public != "" && stored.Private != "" {
 				vapidPublicKey, vapidPrivateKey = stored.Public, stored.Private
-				log.Println("[Push] VAPID keys loaded from", vapidKeysFile)
+				logging.Log.Info("[Push] VAPID keys loaded", "file", vapidKeysFile)
 				return
 			}
 		}
@@ -64,7 +64,7 @@ func initVAPID() {
 			vapidPublicKey, vapidPrivateKey = publicKey, privateKey
 			out, _ := json.Marshal(map[string]string{"public": vapidPublicKey, "private": vapidPrivateKey})
 			os.WriteFile(vapidKeysFile, out, 0o600)
-			log.Println("[Push] Generated new VAPID keys, saved to", vapidKeysFile)
+			logging.Log.Info("[Push] Generated new VAPID keys", "file", vapidKeysFile)
 		}
 	}
 }
@@ -126,7 +126,7 @@ func SavePushSubscriptionHandler(c *fiber.Ctx) error {
 	}
 
 	if err := SavePushSubscription(userID, *req.Subscription, c.Get("User-Agent")); err != nil {
-		log.Printf("[Push] REST save error user=%s: %v", userID, err)
+		logging.Log.Error("[Push] REST save error", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save subscription"})
 	}
 	return c.JSON(fiber.Map{"ok": true})
@@ -147,7 +147,7 @@ func DeletePushSubscriptionHandler(c *fiber.Ctx) error {
 	}
 
 	if err := DeletePushSubscription(userID, req.Endpoint); err != nil {
-		log.Printf("[Push] REST unsubscribe error user=%s: %v", userID, err)
+		logging.Log.Error("[Push] REST unsubscribe error", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove subscription"})
 	}
 	return c.JSON(fiber.Map{"ok": true})
@@ -219,7 +219,7 @@ func NotifyUser(userID string, title string, body string, data map[string]interf
 	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("[Push] marshal error: %v", err)
+		logging.Log.Error("[Push] marshal error", "err", err)
 		return 0
 	}
 
@@ -239,11 +239,11 @@ func NotifyUser(userID string, title string, body string, data map[string]interf
 			TTL:             120,
 		})
 		if err != nil {
-			log.Printf("[Push] send error user=%s: %v", userID, err)
+			logging.Log.Error("[Push] send error", "user_id", userID, "err", err)
 			// 404/410 = endpoint expired — clean up
 			if resp != nil && (resp.StatusCode == 404 || resp.StatusCode == 410) {
 				if err := db.GetDB().Delete(&models.PushSubscription{}, "id = ?", sub.ID).Error; err != nil {
-					log.Printf("[Push] failed to remove expired subscription %s: %v", sub.ID, err)
+					logging.Log.Error("[Push] failed to remove expired subscription", "subscription_id", sub.ID, "err", err)
 				}
 			}
 			continue
@@ -255,7 +255,7 @@ func NotifyUser(userID string, title string, body string, data map[string]interf
 	}
 
 	if notified > 0 {
-		log.Printf("[Push] notified user=%s devices=%d", userID, notified)
+		logging.Log.Info("[Push] notified", "user_id", userID, "devices", notified)
 	}
 	return notified
 }
@@ -353,3 +353,4 @@ func generatePushID() string {
 	}
 	return "push_" + id
 }
+

@@ -1,8 +1,7 @@
-﻿package handlers
+package handlers
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"nexo/logging"
 )
 
 const (
@@ -133,7 +133,7 @@ func StickerProxy(c *fiber.Ctx) error {
 
 	resp, err := fetch(remoteURL)
 	if err != nil {
-		log.Printf("[sticker-proxy] %s: %v", name, err)
+		logging.Log.Error("[sticker-proxy]", "name", name, "err", err)
 		return c.Status(502).SendString("upstream error")
 	}
 	defer resp.Body.Close()
@@ -170,3 +170,4 @@ func StickerProxy(c *fiber.Ctx) error {
 	c.Set("X-Cache", "MISS")
 	return c.Send(body)
 }
+

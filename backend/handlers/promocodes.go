@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +10,7 @@ import (
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 )
 
 var (
@@ -50,7 +50,7 @@ func applyPromoCode(code string, baseAmount int) (*models.PromoCode, int, error)
 		"UPDATE promo_codes SET used_count = used_count + 1, updated_at = ? WHERE id = ? AND active = ? AND (max_uses = 0 OR used_count < max_uses)",
 		time.Now(), promo.ID, true)
 	if result.Error != nil {
-		log.Printf("[PROMO] Failed to increment usage for %s: %v", code, result.Error)
+		logging.Log.Error("[PROMO] Failed to increment usage", "code", code, "err", result.Error)
 		return nil, baseAmount, errors.New("промокод не применился, попробуйте ещё раз")
 	}
 	if result.RowsAffected == 0 {
@@ -196,7 +196,7 @@ func CreatePromoCode(c *fiber.Ctx) error {
 		UpdatedAt:       time.Now(),
 	}
 	if err := db.GetDB().Create(&promo).Error; err != nil {
-		log.Printf("[PROMO] Failed to create %s: %v", code, err)
+		logging.Log.Error("[PROMO] Failed to create", "code", code, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create promo code"})
 	}
 	return c.JSON(promo)
@@ -252,7 +252,7 @@ func UpdatePromoCode(c *fiber.Ctx) error {
 	if len(updates) > 0 {
 		updates["updated_at"] = time.Now()
 		if err := db.GetDB().Model(&promo).Updates(updates).Error; err != nil {
-			log.Printf("[PROMO] Failed to update %s: %v", promo.Code, err)
+			logging.Log.Error("[PROMO] Failed to update", "code", promo.Code, "err", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to update promo code"})
 		}
 	}

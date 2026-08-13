@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +16,7 @@ import (
 	"nexo/db"
 	"nexo/helpers"
 	"nexo/models"
+	"nexo/logging"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -53,7 +53,7 @@ func persistCSRFToken(tokenHex, sessionID string) {
 			SessionID: sessionID,
 			ExpiresAt: time.Now().Add(1 * time.Hour),
 		}).Error; err != nil {
-			log.Printf("warn: failed to persist CSRF token: %v", err)
+			logging.Log.Warn("failed to persist CSRF token", "err", err)
 		}
 	}
 }
@@ -101,7 +101,7 @@ func GenerateCSRFToken(sessionID string) string {
 	var tokenHex string
 	if _, err := rand.Read(token); err != nil {
 		// Fallback: never block token issuance on RNG failure, but log it.
-		log.Printf("warn: rand.Read failed in GenerateCSRFToken: %v", err)
+		logging.Log.Warn("rand.Read failed in GenerateCSRFToken", "err", err)
 		h := sha256.Sum256([]byte(sessionID + strconv.FormatInt(time.Now().UnixNano(), 10)))
 		tokenHex = hex.EncodeToString(h[:])
 	} else {
@@ -196,7 +196,7 @@ func BlockIP(ip string, duration time.Duration) {
 	blockedIPsMu.Lock()
 	blockedIPs[ip] = time.Now().Add(duration)
 	blockedIPsMu.Unlock()
-	log.Printf("BLOCKED IP: %s for %v", ip, duration)
+	logging.Log.Warn("BLOCKED IP", "ip", ip, "duration", duration)
 }
 
 func IsIPBlocked(ip string) bool {
@@ -358,12 +358,12 @@ func LogAudit(c *fiber.Ctx, action string, success bool, details string) {
 	default:
 		dropped := auditDropped.Add(1)
 		if dropped == 1 || dropped%100 == 0 {
-			log.Printf("AUDIT: persistence queue full; dropped=%d", dropped)
+			logging.Log.Warn("AUDIT: persistence queue full", "dropped", dropped)
 		}
 	}
 
 	if !success {
-		log.Printf("AUDIT: %s from %s (user: %s) - FAILED: %s", action, userID, entry.IP, details)
+		logging.Log.Warn("AUDIT: action failed", "action", action, "user_id", userID, "ip", entry.IP, "details", details)
 	}
 }
 
@@ -381,7 +381,7 @@ func persistAuditEntries() {
 		}).Error; err != nil {
 			errors := auditWriteErrors.Add(1)
 			if errors == 1 || errors%100 == 0 {
-				log.Printf("AUDIT: persistence failed; errors=%d: %v", errors, err)
+				logging.Log.Error("AUDIT: persistence failed", "errors", errors, "err", err)
 			}
 		}
 	}
@@ -626,3 +626,4 @@ func init() {
 		}
 	}()
 }
+

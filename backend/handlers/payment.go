@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/netip"
 	"os"
@@ -22,6 +21,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 const maxYooKassaResponseBytes int64 = 2 * 1024 * 1024
@@ -226,8 +226,11 @@ func cleanupWebhookLocks() {
 	}
 }
 
-func init() {
+// StartWebhookLockCleanup starts the periodic sweep that removes stale
+// webhook idempotency locks. It stops when StopCh closes on shutdown.
+func StartWebhookLockCleanup() {
 	go cleanupWebhookLocks()
+	logging.Log.Info("Webhook lock cleanup: started (10 min tick)")
 }
 
 // ─── Valid payment types ────────────────────────────────────────────────────
@@ -284,7 +287,7 @@ func getPremiumPrice(months int) int {
 func activatePremium(userID string, months int) {
 	var user models.User
 	if result := db.GetDB().First(&user, "id = ?", userID); result.Error != nil {
-		log.Printf("[PREMIUM] User not found for activation: %s", userID)
+		logging.Log.Error("[PREMIUM] User not found for activation", "user_id", userID)
 		return
 	}
 
@@ -301,7 +304,7 @@ func activatePremium(userID string, months int) {
 		"premium_until": premiumUntil,
 	})
 
-	log.Printf("[PREMIUM] Activated %d months for user %s until %v", months, userID, premiumUntil)
+	logging.Log.Info("[PREMIUM] Premium activated", "months", months, "user_id", userID, "until", premiumUntil)
 }
 
 // ─── WebSocket helper ───────────────────────────────────────────────────────
@@ -418,7 +421,7 @@ func CreatePayment(c *fiber.Ctx) error {
 		Where("user_id = ? AND created_at > ?", userID, oneHourAgo).
 		Count(&recentCount)
 	if recentCount >= 3 {
-		log.Printf("[SECURITY] Payment rate limit hit: userId=%s count=%d", userID, recentCount)
+		logging.Log.Warn("[SECURITY] Payment rate limit hit", "user_id", userID, "count", recentCount)
 		return c.Status(429).JSON(fiber.Map{"error": "Too many payment attempts. Try again later."})
 	}
 
@@ -451,12 +454,12 @@ func CreatePayment(c *fiber.Ctx) error {
 	if receiptErr == nil {
 		ykReq.Receipt = receiptJSON
 	} else {
-		log.Printf("[YOOKASSA] Receipt skipped: %v", receiptErr)
+		logging.Log.Warn("[YOOKASSA] Receipt skipped", "err", receiptErr)
 	}
 
 	body, err := json.Marshal(ykReq)
 	if err != nil {
-		log.Printf("[YOOKASSA] Failed to marshal payment request: %v", err)
+		logging.Log.Error("[YOOKASSA] Failed to marshal payment request", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create payment request"})
 	}
 	httpReq, err := http.NewRequest("POST", "https://api.yookassa.ru/v3/payments", bytes.NewReader(body))
@@ -470,19 +473,19 @@ func CreatePayment(c *fiber.Ctx) error {
 
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
-		log.Printf("[YOOKASSA] API request failed: %v", err)
+		logging.Log.Error("[YOOKASSA] API request failed", "err", err)
 		return c.Status(502).JSON(fiber.Map{"error": "Payment service unavailable"})
 	}
 	defer resp.Body.Close()
 
 	respBody, err := readLimitedBody(resp.Body, maxYooKassaResponseBytes)
 	if err != nil {
-		log.Printf("[YOOKASSA] Failed to read response: %v", err)
+		logging.Log.Error("[YOOKASSA] Failed to read response", "err", err)
 		return c.Status(502).JSON(fiber.Map{"error": "Payment service unavailable"})
 	}
 
 	if resp.StatusCode != 200 {
-		log.Printf("[YOOKASSA] Payment creation failed: status=%d body=%s", resp.StatusCode, string(respBody))
+		logging.Log.Error("[YOOKASSA] Payment creation failed", "status", resp.StatusCode, "body", string(respBody))
 		return c.Status(502).JSON(fiber.Map{"error": "Payment creation failed"})
 	}
 
@@ -510,12 +513,12 @@ func CreatePayment(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Create(&payment).Error; err != nil {
-		log.Printf("[DB] Failed to save payment: %v", err)
+		logging.Log.Error("[DB] Failed to save payment", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save payment"})
 	}
 
-	log.Printf("[PAYMENT] Created: userId=%s paymentId=%s amount=%d type=%s months=%d",
-		userID, ykResp.ID, amount, req.Type, req.PremiumMonths)
+	logging.Log.Info("[PAYMENT] Created", "user_id", userID, "payment_id", ykResp.ID, "amount", amount, "type", req.Type, "months", req.PremiumMonths)
+		
 
 	return c.JSON(fiber.Map{
 		"paymentId":       ykResp.ID,
@@ -532,7 +535,7 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 	// ─── 1. IP WHITELIST (обов'язково для продакшену) ────────────────────
 	clientIP := c.IP()
 	if !isYooKassaIP(clientIP) {
-		log.Printf("[SECURITY] Webhook from unknown IP: %s", clientIP)
+		logging.Log.Warn("[SECURITY] Webhook from unknown IP", "ip", clientIP)
 		// В продакшені — повертаємо 200 щоб не виказувати що ми існуємо
 		return c.JSON(fiber.Map{"ok": true})
 	}
@@ -542,7 +545,7 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 	webhookSecret := getYooKassaWebhookSecret()
 
 	if webhookSecret == "" {
-		log.Printf("[SECURITY] YUKASSA_WEBHOOK_SECRET not configured — rejecting all webhooks")
+		logging.Log.Error("[SECURITY] YUKASSA_WEBHOOK_SECRET not configured — rejecting all webhooks")
 		// Return 200 so YooKassa does not retry indefinitely; IP whitelist
 		// above already restricted who can reach this handler.
 		return c.JSON(fiber.Map{"ok": true})
@@ -550,7 +553,7 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 
 	signature := c.Get("X-Signature")
 	if signature == "" {
-		log.Printf("[SECURITY] Webhook missing signature from IP: %s", clientIP)
+		logging.Log.Warn("[SECURITY] Webhook missing signature", "ip", clientIP)
 		return c.Status(403).JSON(fiber.Map{"error": "Missing signature"})
 	}
 
@@ -559,7 +562,7 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 	expectedSig := hex.EncodeToString(mac.Sum(nil))
 
 	if !hmac.Equal([]byte(signature), []byte(expectedSig)) {
-		log.Printf("[SECURITY] Webhook invalid signature from IP: %s", clientIP)
+		logging.Log.Warn("[SECURITY] Webhook invalid signature", "ip", clientIP)
 		return c.Status(403).JSON(fiber.Map{"error": "Invalid signature"})
 	}
 
@@ -578,7 +581,7 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 	}
 
 	if err := json.Unmarshal(body, &event); err != nil {
-		log.Printf("[SECURITY] Webhook invalid JSON from IP: %s", clientIP)
+		logging.Log.Warn("[SECURITY] Webhook invalid JSON", "ip", clientIP)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid event"})
 	}
 
@@ -594,14 +597,14 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 
 	// ─── 5. IDEMPOTENCY — запобігання подвійній обробці ──────────────────
 	if isWebhookProcessed(paymentID) {
-		log.Printf("[SECURITY] Duplicate webhook for payment %s — already processed", paymentID)
+		logging.Log.Info("[SECURITY] Duplicate webhook — already processed", "payment_id", paymentID)
 		return c.JSON(fiber.Map{"ok": true, "duplicate": true})
 	}
 
 	// ─── 6. Знаходимо платіж у БД ──────────────────────────────────────
 	var payment models.Payment
 	if result := db.GetDB().Where("yoo_kassa_id = ?", paymentID).First(&payment); result.Error != nil {
-		log.Printf("[SECURITY] Webhook for unknown payment: %s from IP: %s", paymentID, clientIP)
+		logging.Log.Warn("[SECURITY] Webhook for unknown payment", "payment_id", paymentID, "ip", clientIP)
 		return c.Status(404).JSON(fiber.Map{"error": "Payment not found"})
 	}
 
@@ -611,15 +614,15 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 	if event.Type == "payment.succeeded" && payment.Status != "succeeded" {
 		verifiedPayment, err := verifyPaymentWithYooKassa(paymentID)
 		if err != nil {
-			log.Printf("[SECURITY] Server-side verification failed for payment %s: %v", paymentID, err)
+			logging.Log.Error("[SECURITY] Server-side verification failed", "payment_id", paymentID, "err", err)
 			clearWebhookProcessing(paymentID)
 			return c.Status(502).JSON(fiber.Map{"error": "Payment verification failed"})
 		}
 
 		// Перевіряємо що YooKassa дійсно підтвердила платіж
 		if verifiedPayment.Status != "succeeded" {
-			log.Printf("[SECURITY] Payment %s status mismatch: webhook=%s api=%s",
-				paymentID, event.Payment.Status, verifiedPayment.Status)
+			logging.Log.Error("[SECURITY] Payment status mismatch", "payment_id", paymentID, "webhook_status", event.Payment.Status, "api_status", verifiedPayment.Status)
+				
 			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Payment not confirmed by provider"})
 		}
@@ -627,34 +630,34 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 		// ─── 8. ВЕРИФІКАЦІЯ СУМИ з YooKassa API ───────────────────────────
 		expectedAmount := payment.Amount
 		if expectedAmount <= 0 {
-			log.Printf("[SECURITY] Payment %s has invalid amount: %d", paymentID, payment.Amount)
+			logging.Log.Error("[SECURITY] Payment has invalid amount", "payment_id", paymentID, "amount", payment.Amount)
 			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid payment configuration"})
 		}
 
 		apiAmount, err := strconv.ParseFloat(verifiedPayment.Amount.Value, 64)
 		if err != nil {
-			log.Printf("[SECURITY] Payment %s: cannot parse API amount: %s", paymentID, verifiedPayment.Amount.Value)
+			logging.Log.Error("[SECURITY] cannot parse API amount", "payment_id", paymentID, "api_amount", verifiedPayment.Amount.Value)
 			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid amount format"})
 		}
 
 		if int(apiAmount) != expectedAmount {
-			log.Printf("[SECURITY] Payment %s amount mismatch: expected=%d api=%.0f webhook_amount=%s",
-				paymentID, expectedAmount, apiAmount, event.Payment.Amount.Value)
+			logging.Log.Error("[SECURITY] Payment amount mismatch", "payment_id", paymentID, "expected", expectedAmount, "api_amount", apiAmount, "webhook_amount", event.Payment.Amount.Value)
+				
 			clearWebhookProcessing(paymentID)
 			return c.Status(400).JSON(fiber.Map{"error": "Payment amount mismatch"})
 		}
 
 		// ─── 9. УСПІШНА ВЕРИФІКАЦІЯ — АКТИВУЄМО PREMIUM ──────────────────
-		log.Printf("[SECURITY] Payment %s VERIFIED: userId=%s amount=%.0f months=%d via=%s",
-			paymentID, payment.UserID, apiAmount, payment.PremiumMonths, clientIP)
+		logging.Log.Info("[SECURITY] Payment VERIFIED", "payment_id", paymentID, "user_id", payment.UserID, "amount", apiAmount, "months", payment.PremiumMonths, "via", clientIP)
+			
 
 		if err := db.GetDB().Model(&payment).Updates(map[string]interface{}{
 			"status":     "succeeded",
 			"updated_at": time.Now(),
 		}).Error; err != nil {
-			log.Printf("[PAYMENT] Failed to mark %s as succeeded: %v", paymentID, err)
+			logging.Log.Error("[PAYMENT] Failed to mark payment as succeeded", "payment_id", paymentID, "err", err)
 		}
 
 		activatePremium(payment.UserID, payment.PremiumMonths)
@@ -674,12 +677,12 @@ func YooKassaWebhook(c *fiber.Ctx) error {
 			"status":     "canceled",
 			"updated_at": time.Now(),
 		}).Error; err != nil {
-			log.Printf("[PAYMENT] Failed to mark %s as canceled: %v", paymentID, err)
+			logging.Log.Error("[PAYMENT] Failed to mark payment as canceled", "payment_id", paymentID, "err", err)
 		}
 		if payment.PromoCode != "" {
 			releasePromoCodeUse(payment.PromoCode)
 		}
-		log.Printf("[PAYMENT] Canceled: %s userId=%s", paymentID, payment.UserID)
+		logging.Log.Info("[PAYMENT] Canceled", "payment_id", paymentID, "user_id", payment.UserID)
 	}
 
 	return c.JSON(fiber.Map{"ok": true})
@@ -750,3 +753,4 @@ func GetPaymentHistory(c *fiber.Ctx) error {
 
 	return c.JSON(payments)
 }
+

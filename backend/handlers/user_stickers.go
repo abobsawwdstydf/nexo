@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 )
 
 // User-created sticker & emoji packs. Sticker files are stored on the file
@@ -263,10 +263,11 @@ func DeleteUserStickerPack(c *fiber.Ctx) error {
 	os.RemoveAll(userStickerPackDir(packID))
 
 	if err := db.GetDB().Delete(&models.Sticker{}, "pack_id = ?", packID).Error; err != nil {
-		log.Printf("[Stickers] failed to delete pack stickers: %v", err)
+		logging.Log.Error("[Stickers] failed to delete pack stickers", "err", err)
 	}
 	if err := db.GetDB().Delete(&models.StickerPack{}, "id = ?", packID).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete sticker pack"})
 	}
 	return c.JSON(fiber.Map{"ok": true})
 }
+

@@ -1,16 +1,12 @@
-package middleware
+﻿package middleware
 
 import (
-	"log/slog"
-	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-)
 
-var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-	Level: slog.LevelInfo,
-}))
+	"nexo/logging"
+)
 
 // StructuredLogging logs every request as a structured JSON line:
 // method, path, status, duration, remote IP. Slows down nothing measurable
@@ -20,7 +16,7 @@ func StructuredLogging() fiber.Handler {
 		start := time.Now()
 		err := c.Next()
 		status := c.Response().StatusCode()
-		logger.Info("http_request",
+		logging.Log.Info("http_request",
 			"method", c.Method(),
 			"path", c.Path(),
 			"status", status,

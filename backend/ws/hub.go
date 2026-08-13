@@ -1,10 +1,10 @@
-﻿package ws
+package ws
 
 import (
-	"log"
 	"sync"
 
 	"github.com/gofiber/websocket/v2"
+	"nexo/logging"
 )
 
 type Client struct {
@@ -62,7 +62,7 @@ func (h *Hub) Run() {
 			h.Metrics.CurrentConnections = h.totalConnectionsLocked()
 			h.Metrics.mu.Unlock()
 			h.mu.Unlock()
-			log.Printf("WS: user %s connected (%d connections)", client.UserID, connCount)
+			logging.Log.Info("WS: user connected", "user_id", client.UserID, "connections", connCount)
 
 		case client := <-h.unregister:
 			h.mu.Lock()
@@ -249,3 +249,4 @@ func (h *Hub) totalConnectionsLocked() int {
 	}
 	return count
 }
+

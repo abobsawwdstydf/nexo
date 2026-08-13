@@ -1,8 +1,7 @@
-﻿package handlers
+package handlers
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,7 @@ import (
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 )
 
 // Kept in sync with the /uploads static mount in main.go.
@@ -19,7 +19,7 @@ func cloudDir() string { return filepath.Join(UploadDir(), "cloud") }
 
 func init() {
 	if err := os.MkdirAll(cloudDir(), 0755); err != nil {
-		log.Printf("[CLOUD] Failed to create storage directory: %v", err)
+		logging.Log.Error("[CLOUD] Failed to create storage directory", "err", err)
 	}
 }
 
@@ -124,12 +124,12 @@ func CloudUpload(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Create(&cloudFile).Error; err != nil {
-		log.Printf("[CLOUD] Failed to save file record: %v", err)
+		logging.Log.Error("[CLOUD] Failed to save file record", "err", err)
 		os.Remove(savePath)
 		return c.Status(500).JSON(fiber.Map{"error": "Не удалось сохранить запись"})
 	}
 
-	log.Printf("[CLOUD] Uploaded: userId=%s fileId=%s filename=%s size=%d", userID, cloudFile.ID, file.Filename, file.Size)
+	logging.Log.Info("[CLOUD] Uploaded", "user_id", userID, "file_id", cloudFile.ID, "filename", file.Filename, "size", file.Size)
 
 	return c.Status(201).JSON(cloudFile)
 }
@@ -172,15 +172,15 @@ func CloudDelete(c *fiber.Ctx) error {
 	filename := filepath.Base(cloudFile.URL)
 	filePath := filepath.Join(cloudDir(), filename)
 	if err := os.Remove(filePath); err != nil {
-		log.Printf("[CLOUD] Failed to delete physical file: %v", err)
+		logging.Log.Error("[CLOUD] Failed to delete physical file", "err", err)
 	}
 
 	// Delete record
 	if err := db.GetDB().Delete(&cloudFile).Error; err != nil {
-		log.Printf("[CLOUD] Failed to delete file record: %v", err)
+		logging.Log.Error("[CLOUD] Failed to delete file record", "err", err)
 	}
 
-	log.Printf("[CLOUD] Deleted: userId=%s fileId=%s", userID, fileID)
+	logging.Log.Info("[CLOUD] Deleted", "user_id", userID, "file_id", fileID)
 
 	return c.JSON(fiber.Map{"ok": true})
 }
@@ -202,3 +202,4 @@ func CloudStats(c *fiber.Ctx) error {
 		"formatted": fmt.Sprintf("%.1f МБ", float64(totalSize)/(1024*1024)),
 	})
 }
+

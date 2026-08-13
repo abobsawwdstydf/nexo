@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"html"
-	"log"
 	"os"
 	"os/signal"
 	"runtime"
@@ -32,6 +31,7 @@ import (
 	"nexo/handlers"
 	"nexo/middleware"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 func generateSessionID() string {
@@ -71,6 +71,12 @@ func init() {
 	}
 }
 
+	// fatalLog logs a startup error and exits the process.
+func fatalLog(msg string, err error) {
+	logging.Log.Error(msg, "err", err)
+	os.Exit(1)
+}
+
 func metricsMiddleware(c *fiber.Ctx) error {
 	httpRequestsTotal.Add(1)
 	httpRequestsInFlight.Add(1)
@@ -93,16 +99,16 @@ func main() {
 		dbPath = "nexo.db"
 	}
 	if err := db.InitLocal(dbPath); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		fatalLog("Failed to initialize database", err)
 	}
 
 	// Initialize local KV store
 	if err := db.InitLocalKV(); err != nil {
-		log.Fatalf("Failed to initialize KV store: %v", err)
+		fatalLog("Failed to initialize KV store", err)
 	}
 
 	if err := middleware.InitJWT(); err != nil {
-		log.Fatalf("Failed to initialize JWT: %v", err)
+		fatalLog("Failed to initialize JWT", err)
 	}
 
 	// Initialize Web Push (VAPID)
@@ -113,7 +119,7 @@ func main() {
 
 	// Initialize AI agent (LLM + Browser)
 	ai.InitConfig()
-	log.Println("AI agent: initialized (LLM + browser embedded)")
+	logging.Log.Info("AI agent: initialized (LLM + browser embedded)")
 
 	// Start bot health checker (checks every 12 hours)
 	handlers.StartHealthChecker()
@@ -129,6 +135,9 @@ func main() {
 
 	// Start self-destruct message expiry (checks every 5 seconds)
 	handlers.StartSelfDestructLoop()
+
+	// Start webhook idempotency lock cleanup (checks every 10 minutes)
+	handlers.StartWebhookLockCleanup()
 
 	ws.HubInstance = ws.NewHub()
 	go ws.HubInstance.Run()
@@ -757,13 +766,13 @@ nexo_up 1
 			return c.SendFile(frontendDir + "/index.html")
 		})
 
-		log.Printf("Frontend: serving from %s", frontendDir)
+		logging.Log.Info("Frontend: serving", "dir", frontendDir)
 	} else {
-		log.Printf("Frontend: not found at %s (running in API-only mode)", frontendDir)
+		logging.Log.Info("Frontend: not found (running in API-only mode)", "dir", frontendDir)
 	}
 
-	log.Printf("Nexo Messenger starting on port %s", port)
-	log.Println("Database: connected")
+	logging.Log.Info("Nexo Messenger starting", "port", port)
+	logging.Log.Info("Database: connected")
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -771,18 +780,19 @@ nexo_up 1
 
 	go func() {
 		<-quit
-		log.Println("Shutting down server...")
+		logging.Log.Info("Shutting down server...")
 		close(handlers.StopCh)
 		ws.HubInstance.Stop()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := app.ShutdownWithContext(ctx); err != nil {
-			log.Printf("Server forced to shutdown: %v", err)
+			logging.Log.Error("Server forced to shutdown", "err", err)
 		}
 	}()
 
 	if err := app.Listen(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		fatalLog("Failed to start server", err)
 	}
-	log.Println("Server stopped gracefully")
+	logging.Log.Info("Server stopped gracefully")
 }
+

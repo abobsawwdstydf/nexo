@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+	"nexo/logging"
 )
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -44,13 +44,13 @@ func InitCloudflare() {
 	}
 
 	if CF.AccountID != "" && CF.D1DatabaseID != "" {
-		log.Println("Cloudflare D1: configured")
+		logging.Log.Info("Cloudflare D1: configured")
 	}
 	if CF.AccountID != "" && CF.KVNamespaceID != "" {
-		log.Println("Cloudflare KV: configured")
+		logging.Log.Info("Cloudflare KV: configured")
 	}
 	if CF.R2AccountID != "" && CF.R2BucketName != "" {
-		log.Println("Cloudflare R2: configured")
+		logging.Log.Info("Cloudflare R2: configured")
 	}
 }
 
@@ -380,3 +380,4 @@ func hmacSHA256(key, data []byte) []byte {
 	h.Write(data)
 	return h.Sum(nil)
 }
+

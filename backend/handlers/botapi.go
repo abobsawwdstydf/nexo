@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // ─── Bot CRUD ──────────────────────────────────────────────────────────────
@@ -310,7 +310,7 @@ func InstallBot(c *fiber.Ctx) error {
 	}
 	if err := db.GetDB().Create(&msg).Error; err != nil {
 		// Log but don't fail the install - message is non-critical
-		log.Printf("WARNING: Failed to create bot install message: %v", err)
+		logging.Log.Error("Failed to create bot install message", "err", err)
 	}
 	wsMsg, _ := json.Marshal(map[string]interface{}{
 		"type": "message:new",
@@ -482,3 +482,4 @@ func GenerateTURNHMAC(secret, username string, ttl int) (string, string) {
 	credential := hex.EncodeToString(mac.Sum(nil))
 	return strconv.FormatInt(deadline, 10), credential
 }
+

@@ -1,8 +1,7 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"nexo/helpers"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 const maxMessageContentLength = 10000
@@ -172,7 +172,7 @@ func messageToJSON(msg models.Message) string {
 
 	data, err := json.Marshal(msgJSON)
 	if err != nil {
-		log.Printf("[messageToJSON] marshal failed for message %s: %v", msg.ID, err)
+		logging.Log.Error("[messageToJSON] marshal failed for message", "message_id", msg.ID, "err", err)
 		return ""
 	}
 	return string(data)
@@ -277,16 +277,16 @@ func SendMessage(c *fiber.Ctx) error {
 	if err := db.GetDB().Model(&models.ChatMember{}).
 		Where("chat_id = ? AND user_id = ?", chatID, userID).
 		Update("last_message_at", now).Error; err != nil {
-		log.Printf("[SendMessage] failed to update last_message_at for chat %s user %s: %v", chatID, userID, err)
+		logging.Log.Error("[SendMessage] failed to update last_message_at", "chat_id", chatID, "user_id", userID, "err", err)
 	}
 
 	if err := db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now).Error; err != nil {
-		log.Printf("[SendMessage] failed to update chat %s: %v", chatID, err)
+		logging.Log.Error("[SendMessage] failed to update chat", "chat_id", chatID, "err", err)
 	}
 
 	// Fetch with preload in single query
 	if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msg.ID).Error; err != nil {
-		log.Printf("failed to preload sent message %s: %v", msg.ID, err)
+		logging.Log.Error("failed to preload sent message", "message_id", msg.ID, "err", err)
 	}
 
 	msgJSON := messageToJSON(msg)
@@ -323,7 +323,7 @@ func GetMessages(c *fiber.Ctx) error {
 	// Sequential queries: SQLite serializes writes/reads anyway, and parallel
 	// goroutines only add connection contention and lock retries.
 	if err := db.GetDB().Model(&models.Message{}).Where("chat_id = ?", chatID).Count(&total).Error; err != nil {
-		log.Printf("[messages] count failed for chat %s: %v", chatID, err)
+		logging.Log.Error("[messages] count failed for chat", "chat_id", chatID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load messages"})
 	}
 
@@ -336,7 +336,7 @@ func GetMessages(c *fiber.Ctx) error {
 		Order("created_at DESC").
 		Offset(p.Offset).Limit(p.PageSize).
 		Find(&messages).Error; err != nil {
-		log.Printf("[messages] fetch failed for chat %s: %v", chatID, err)
+		logging.Log.Error("[messages] fetch failed for chat", "chat_id", chatID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load messages"})
 	}
 
@@ -379,12 +379,12 @@ func EditMessage(c *fiber.Ctx) error {
 		"edited_at":  now,
 		"updated_at": now,
 	}).Error; err != nil {
-		log.Printf("[EditMessage] update failed for message %s: %v", msgID, err)
+		logging.Log.Error("[EditMessage] update failed for message", "message_id", msgID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to edit message"})
 	}
 
 	if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msgID).Error; err != nil {
-		log.Printf("[EditMessage] failed to reload message %s after edit: %v", msgID, err)
+		logging.Log.Error("[EditMessage] failed to reload message after edit", "message_id", msgID, "err", err)
 	}
 
 	msgJSON := messageToJSON(msg)
@@ -567,7 +567,7 @@ func ReadMessages(c *fiber.Ctx) error {
 		case errReadReceiptNotFound:
 			return c.Status(404).JSON(fiber.Map{"error": "Message not found in this chat"})
 		default:
-			log.Printf("[messages] failed to record read receipt: %v", err)
+			logging.Log.Error("[messages] failed to record read receipt", "err", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to save read receipt"})
 		}
 	}
@@ -609,7 +609,7 @@ func Typing(c *fiber.Ctx) error {
 		ExpiresAt: now.Add(5 * time.Second),
 	}
 	if err := db.GetDB().Create(&indicator).Error; err != nil {
-		log.Printf("[Messages] failed to save typing indicator: %v", err)
+		logging.Log.Error("[Messages] failed to save typing indicator", "err", err)
 	}
 
 	ws.HubInstance.SendToChat(chatID, mustWSMap("typing", map[string]string{
@@ -641,7 +641,7 @@ func SearchMessages(c *fiber.Ctx) error {
 	if err := db.GetDB().Model(&models.ChatMember{}).
 		Where("user_id = ?", userID).
 		Pluck("chat_id", &memberChatIDs).Error; err != nil {
-		log.Printf("[SearchMessages] failed to load chat memberships for user=%s: %v", userID, err)
+		logging.Log.Error("[SearchMessages] failed to load chat memberships", "user_id", userID, "err", err)
 	}
 
 	if len(memberChatIDs) == 0 {
@@ -688,13 +688,13 @@ func SearchMessages(c *fiber.Ctx) error {
 
 	var total int64
 	if err := q.Model(&models.Message{}).Count(&total).Error; err != nil {
-		log.Printf("[SearchMessages] count failed for user=%s: %v", userID, err)
+		logging.Log.Error("[SearchMessages] count failed", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "search failed"})
 	}
 
 	var messages []models.Message
 	if err := q.Offset(pag.Offset).Limit(pag.PageSize).Find(&messages).Error; err != nil {
-		log.Printf("[SearchMessages] query failed for user=%s: %v", userID, err)
+		logging.Log.Error("[SearchMessages] query failed", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "search failed"})
 	}
 	sanitizeMessages(messages)
@@ -708,7 +708,7 @@ func SearchMessages(c *fiber.Ctx) error {
 		ResultCount: int(total),
 	}
 	if err := db.GetDB().Create(&history).Error; err != nil {
-		log.Printf("[SearchMessages] failed to save history for user=%s: %v", userID, err)
+		logging.Log.Error("[SearchMessages] failed to save history", "user_id", userID, "err", err)
 	}
 
 	// Cap search history at 200 entries per user (unbounded growth otherwise)
@@ -718,7 +718,7 @@ func SearchMessages(c *fiber.Ctx) error {
 			"DELETE FROM search_histories WHERE user_id = ? AND id NOT IN (SELECT id FROM search_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT 200)",
 			userID, userID,
 		).Error; err != nil {
-			log.Printf("[SearchMessages] failed to trim history for user=%s: %v", userID, err)
+			logging.Log.Error("[SearchMessages] failed to trim history", "user_id", userID, "err", err)
 		}
 	}
 
@@ -843,3 +843,4 @@ func mustWSMsg(typeStr string, kv ...interface{}) []byte {
 	data, _ := json.Marshal(msg)
 	return data
 }
+

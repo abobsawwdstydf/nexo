@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 )
 
 var (
@@ -47,7 +47,7 @@ func ValidateAccessTokenString(tokenString string) bool {
 	var user models.User
 	if result := db.GetDB().First(&user, "id = ?", claims.UserID); result.Error != nil {
 		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			log.Printf("error: upload token ban check failed for user %s: %v", claims.UserID, result.Error)
+			logging.Log.Error("upload token ban check failed", "user_id", claims.UserID, "err", result.Error)
 		}
 		return false
 	}
@@ -72,7 +72,7 @@ func BlacklistRefreshToken(token string) {
 	if err := db.GetDB().Create(&entry).Error; err != nil {
 		// If the DB write fails the in-memory blacklist still protects us,
 		// but the old refresh token would survive a restart — log it.
-		log.Printf("error: failed to persist refresh-token blacklist entry: %v", err)
+		logging.Log.Error("failed to persist refresh-token blacklist entry", "err", err)
 	}
 
 	refreshBlacklistMu.Lock()
@@ -119,7 +119,7 @@ func IsTokenBlacklisted(token string) bool {
 func generateBlacklistID() string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		log.Printf("warn: rand.Read failed in generateBlacklistID: %v", err)
+		logging.Log.Warn("rand.Read failed in generateBlacklistID", "err", err)
 		h := sha256.Sum256([]byte(strconv.FormatInt(time.Now().UnixNano(), 10)))
 		return hex.EncodeToString(h[:16])
 	}
@@ -246,7 +246,7 @@ func AuthenticateToken(c *fiber.Ctx) error {
 		// Log real DB errors instead of silently skipping the ban check; a
 		// missing row (deleted account) is not an error worth reporting.
 		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			log.Printf("error: ban check failed for user %s: %v", claims.UserID, result.Error)
+			logging.Log.Error("ban check failed", "user_id", claims.UserID, "err", result.Error)
 		}
 	} else if user.IsBanned {
 		return c.Status(403).JSON(fiber.Map{
@@ -276,3 +276,4 @@ func BotAuthenticateToken(c *fiber.Ctx) error {
 	c.Locals("botOwnerId", bot.OwnerID)
 	return c.Next()
 }
+

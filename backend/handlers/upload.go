@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -10,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"nexo/models"
+	"nexo/logging"
 )
 
 // The server is run from backend/, while public uploads live at the project
@@ -81,7 +81,7 @@ func UploadFile(c *fiber.Ctx) error {
 
 	// Save file
 	if err := c.SaveFile(file, savePath); err != nil {
-		log.Printf("[UPLOAD] Failed to save %s: %v", savePath, err)
+		logging.Log.Error("[UPLOAD] Failed to save file", "path", savePath, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save file"})
 	}
 
@@ -264,3 +264,4 @@ func mimeToExt(mime string) string {
 	}
 	return ".bin"
 }
+

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 const (
@@ -40,7 +40,7 @@ func GetOrCreateFeedbackChat(c *fiber.Ctx) error {
 			CanMembersPost: true,
 		}
 		if err := db.GetDB().Create(&chat).Error; err != nil {
-			log.Printf("[feedback] failed to create feedback chat: %v", err)
+			logging.Log.Error("[feedback] failed to create feedback chat", "err", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to create feedback chat"})
 		}
 	}
@@ -55,7 +55,7 @@ func GetOrCreateFeedbackChat(c *fiber.Ctx) error {
 			Role:   "member",
 		}
 		if err := db.GetDB().Create(&member).Error; err != nil {
-			log.Printf("[feedback] failed to add member %s: %v", userID, err)
+			logging.Log.Error("[feedback] failed to add member", "user_id", userID, "err", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to join feedback chat"})
 		}
 	}
@@ -165,14 +165,14 @@ func AdminReplyFeedback(c *fiber.Ctx) error {
 		UpdatedAt: now,
 	}
 	if err := db.GetDB().Create(&msg).Error; err != nil {
-		log.Printf("[feedback] failed to create reply: %v", err)
+		logging.Log.Error("[feedback] failed to create reply", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send reply"})
 	}
 
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now)
 
 	if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msg.ID).Error; err != nil {
-		log.Printf("[feedback] failed to preload reply %s: %v", msg.ID, err)
+		logging.Log.Error("[feedback] failed to preload reply", "message_id", msg.ID, "err", err)
 	}
 
 	msgJSON := messageToJSON(msg)
@@ -181,3 +181,4 @@ func AdminReplyFeedback(c *fiber.Ctx) error {
 	msg.Sender = sanitizeUser(msg.Sender, "")
 	return c.Status(201).JSON(msg)
 }
+

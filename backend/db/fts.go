@@ -1,9 +1,9 @@
 package db
 
 import (
-	"log"
 
 	"gorm.io/gorm"
+	"nexo/logging"
 )
 
 // InitFTS5 creates the full-text search virtual table for messages and keeps
@@ -22,7 +22,7 @@ func InitFTS5(gormDB *gorm.DB) {
 		tokenize='unicode61 remove_diacritics 2'
 	)`)
 	if raw.Error != nil {
-		log.Printf("[FTS5] failed to create messages_fts: %v", raw.Error)
+		logging.Log.Error("[FTS5] failed to create messages_fts", "err", raw.Error)
 		return
 	}
 
@@ -44,7 +44,7 @@ func InitFTS5(gormDB *gorm.DB) {
 	}
 	for _, t := range triggers {
 		if err := gormDB.Exec(t).Error; err != nil {
-			log.Printf("[FTS5] failed to create trigger: %v", err)
+			logging.Log.Error("[FTS5] failed to create trigger", "err", err)
 		}
 	}
 
@@ -54,9 +54,9 @@ func InitFTS5(gormDB *gorm.DB) {
 	if err := gormDB.Raw("SELECT COUNT(*) FROM messages_fts").Scan(&ftsCount).Error; err == nil && ftsCount == 0 {
 		if err := gormDB.Raw("SELECT COUNT(*) FROM messages").Scan(&msgCount).Error; err == nil && msgCount > 0 {
 			if err := gormDB.Exec("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')").Error; err != nil {
-				log.Printf("[FTS5] rebuild failed: %v", err)
+				logging.Log.Error("[FTS5] rebuild failed", "err", err)
 			} else {
-				log.Printf("[FTS5] backfilled %d messages", msgCount)
+				logging.Log.Info("[FTS5] backfilled messages", "count", msgCount)
 			}
 		}
 	}

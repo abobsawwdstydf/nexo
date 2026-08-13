@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // ─── Telegram-совместимый Bot API ──────────────────────────────────────────
@@ -116,7 +116,7 @@ func botMessageID(botID, chatID, ourMsgID string) int64 {
 	}
 	seq = models.BotMessageSeq{BotID: botID, ChatID: chatID, MessageID: ourMsgID}
 	if err := db.GetDB().Create(&seq).Error; err != nil {
-		log.Printf("[bot_api] failed to create message seq: %v", err)
+		logging.Log.Error("[bot_api] failed to create message seq", "err", err)
 		return int64(len(ourMsgID)) // fallback
 	}
 	return int64(seq.ID)
@@ -232,7 +232,7 @@ func createBotUpdate(bot models.Bot, payload map[string]interface{}) {
 	data, _ := json.Marshal(payload)
 	upd := models.BotUpdate{BotID: bot.ID, Payload: string(data), CreatedAt: time.Now()}
 	if err := db.GetDB().Create(&upd).Error; err != nil {
-		log.Printf("[bot_api] failed to store update for bot %s: %v", bot.ID, err)
+		logging.Log.Error("[bot_api] failed to store update for bot", "bot_id", bot.ID, "err", err)
 		return
 	}
 	if bot.WebhookURL == "" {
@@ -254,7 +254,7 @@ func createBotUpdate(bot models.Bot, payload map[string]interface{}) {
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Printf("[bot_api] webhook delivery to %s failed: %v", bot.WebhookURL, err)
+			logging.Log.Error("[bot_api] webhook delivery failed", "url", bot.WebhookURL, "err", err)
 			return
 		}
 		resp.Body.Close()
@@ -285,7 +285,7 @@ func sendBotMessageToChat(bot models.Bot, chatID, content, msgType string, media
 		m.MessageID = msg.ID
 		m.Order = i
 		if err := db.GetDB().Create(&m).Error; err != nil {
-			log.Printf("[BotAPI] failed to save media: %v", err)
+			logging.Log.Error("[BotAPI] failed to save media", "err", err)
 		}
 	}
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now)
@@ -481,7 +481,7 @@ func parseReplyMarkup(c *fiber.Ctx, bot models.Bot, chatID string) (string, erro
 		if err := db.GetDB().Where("id = ?", stateID).First(&state).Error; err != nil {
 			state = models.BotChatState{ID: stateID, BotID: bot.ID, ChatID: chatID, ReplyMarkup: string(data)}
 			if err := db.GetDB().Create(&state).Error; err != nil {
-				log.Printf("[BotAPI] failed to save chat state: %v", err)
+				logging.Log.Error("[BotAPI] failed to save chat state", "err", err)
 			}
 		} else {
 			db.GetDB().Model(&state).Update("reply_markup", string(data))
@@ -773,7 +773,7 @@ func botLeaveChat(c *fiber.Ctx, bot models.Bot) error {
 		CreatedAt: time.Now(),
 	}
 	if err := db.GetDB().Create(&msg).Error; err != nil {
-		log.Printf("[BotAPI] failed to save leave message: %v", err)
+		logging.Log.Error("[BotAPI] failed to save leave message", "err", err)
 	}
 	msgJSON := messageToJSON(msg)
 	ws.HubInstance.SendToChat(req.ChatID, mustWSMsg("message:new", "message", json.RawMessage(msgJSON)), "")
@@ -804,7 +804,7 @@ func botSetMyCommands(c *fiber.Ctx, bot models.Bot) error {
 			IsActive:    true,
 		}
 		if err := db.GetDB().Create(&entry).Error; err != nil {
-			log.Printf("[BotAPI] failed to save command entry: %v", err)
+			logging.Log.Error("[BotAPI] failed to save command entry", "err", err)
 		}
 	}
 	return tgOK(c, true)
@@ -1023,7 +1023,7 @@ func notifyBotsOfMessage(chatID string, msg models.Message, senderUser models.Us
 				if command.Response != "" {
 					go func(b models.Bot, chatID, response string) {
 						if _, err := sendBotMessageToChat(b, chatID, response, "text", nil, ""); err != nil {
-							log.Printf("[bot_api] command response failed for %s: %v", b.ID, err)
+							logging.Log.Error("[bot_api] command response failed", "bot_id", b.ID, "err", err)
 						}
 					}(bot, chatID, command.Response)
 				}
@@ -1032,7 +1032,7 @@ func notifyBotsOfMessage(chatID string, msg models.Message, senderUser models.Us
 					// otherwise a bot owner could point the server at internal
 					// endpoints (metadata, admin panels).
 					if !isURLSafe(command.HandlerURL) {
-						log.Printf("[bot_api] blocked unsafe handler URL for command %s", cmdName)
+						logging.Log.Error("[bot_api] blocked unsafe handler URL", "command", cmdName)
 						continue
 					}
 					data, _ := json.Marshal(handlerUpdate)
@@ -1046,7 +1046,7 @@ func notifyBotsOfMessage(chatID string, msg models.Message, senderUser models.Us
 						client := &http.Client{Timeout: 10 * time.Second}
 						resp, err := client.Do(req)
 						if err != nil {
-							log.Printf("[bot_api] command handler %s failed: %v", url, err)
+							logging.Log.Error("[bot_api] command handler failed", "url", url, "err", err)
 							return
 						}
 						resp.Body.Close()
@@ -1133,3 +1133,4 @@ func fileNameFromURL(url string) string {
 	}
 	return trimmed
 }
+
