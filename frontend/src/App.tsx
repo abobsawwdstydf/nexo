@@ -56,6 +56,11 @@ export default function App() {
     return () => window.removeEventListener('hashchange', check);
   }, []);
 
+  // Open /info on hash (hook must stay above any early returns)
+  useEffect(() => {
+    if (window.location.hash === '#info') setShowInfo(true);
+  }, []);
+
   if (adminRoute) {
     return (
       <ErrorBoundary>
@@ -80,11 +85,6 @@ export default function App() {
     history.replaceState(null, '', window.location.pathname);
     setShowInfo(false);
   };
-
-  // Open /info on hash
-  useEffect(() => {
-    if (window.location.hash === '#info') setShowInfo(true);
-  }, []);
 
   // Beta ended — block everything
   if (beta?.ended) {
