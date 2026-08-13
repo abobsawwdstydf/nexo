@@ -390,8 +390,10 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
       <MessengerBackground />
       <Confetti trigger={confettiTrigger} />
 
-      {/* ─── Account strip (в самом верху, в потоке — не поверх) ───── */}
-      <AccountStrip onManage={() => setShowAccountManager(true)} onManageBots={() => setShowBots(true)} />
+      {/* ─── Account strip (только на главной — список чатов; в чатах скрыта) ── */}
+      {mobileView === 'list' && (
+        <AccountStrip onManage={() => setShowAccountManager(true)} onManageBots={() => setShowBots(true)} />
+      )}
 
       {/* Main layout */}
       <div className="relative z-10 flex-1 flex p-2 h-full overflow-hidden">
