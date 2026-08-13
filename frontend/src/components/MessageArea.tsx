@@ -65,16 +65,19 @@ import { AnimatedEmoji, ANIMATED_EMOJI_MAP } from './AnimatedEmoji';
 import { QuickReactions } from './QuickReactions';
 import { MessageContextMenu } from './MessageContextMenu';
 
-const forwardableMedia = (msg: Message): MediaItem[] => {
-  if (!msg.media?.length) return [];
-  return msg.media
-    .filter(m => !!m.url)
-    .map(m => ({
-      id: m.id, type: m.type, url: m.url, filename: m.filename,
-      thumbnail: m.thumbnail, size: m.size, duration: m.duration,
-      width: m.width, height: m.height,
-    }));
-};
+/** Русское склонение для «чат / чата / чатов». */
+function declineChats(n: number): string {
+  if (n === 1) return 'чат';
+  if (n >= 2 && n <= 4) return 'чата';
+  return 'чатов';
+}
+
+/** Русское склонение для «сообщение / сообщения / сообщений». */
+function declineMessages(n: number): string {
+  if (n === 1) return 'сообщение';
+  if (n >= 2 && n <= 4) return 'сообщения';
+  return 'сообщений';
+}
 
 const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   { name: 'Лица', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🫨', '🤗', '🫡', '🤔', '🫣', '🤫', '😶', '😏'] },
@@ -2810,11 +2813,12 @@ function ForwardModal({
   onForward,
 }: {
   onClose: () => void;
-  onForward: (chatId: string) => void;
+  onForward: (chatIds: string[]) => void;
 }) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const { chats: initChats, loaded } = useInitStore.getState();
@@ -2830,6 +2834,18 @@ function ForwardModal({
         .catch(console.error)
         .finally(() => setLoading(false));
     }
+  }, []);
+
+  const toggleChat = useCallback((id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   }, []);
 
   const filtered = search
@@ -2853,9 +2869,14 @@ function ForwardModal({
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
           <h3 className="text-sm font-semibold text-white/90">Переслать</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/[0.08] transition-colors">
-            <X size={14} className="text-white/40" />
-          </button>
+          <div className="flex items-center gap-2">
+            {selected.size > 0 && (
+              <span className="text-[10px] text-white/50">Выбрано: {selected.size}</span>
+            )}
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/[0.08] transition-colors">
+              <X size={14} className="text-white/40" />
+            </button>
+          </div>
         </div>
 
         <div className="px-3 pt-2 pb-1">
@@ -2877,21 +2898,43 @@ function ForwardModal({
           ) : filtered.length === 0 ? (
             <p className="text-xs text-white/30 text-center py-8">Нет чатов</p>
           ) : (
-            filtered.map(c => (
-              <button
-                key={c.id}
-                onClick={() => onForward(c.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors"
-              >
-                <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-medium text-white/50">
-                    {(c.name || '?').slice(0, 2).toUpperCase()}
+            filtered.map(c => {
+              const isSelected = selected.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => toggleChat(c.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-medium text-white/50">
+                      {(c.name || '?').slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-sm text-white/70 truncate">{c.name || 'Без названия'}</span>
+                  <span
+                    className={`ml-auto w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors ${
+                      isSelected
+                        ? 'bg-white/20 border-white/40'
+                        : 'border-white/15'
+                    }`}
+                  >
+                    {isSelected && <Check size={12} className="text-white/80" />}
                   </span>
-                </div>
-                <span className="text-sm text-white/70 truncate">{c.name || 'Без названия'}</span>
-              </button>
-            ))
+                </button>
+              );
+            })
           )}
+        </div>
+
+        <div className="px-3 py-2.5 border-t border-white/[0.06]">
+          <button
+            disabled={selected.size === 0}
+            onClick={() => onForward([...selected])}
+            className="w-full h-9 rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium text-white/85 transition-colors"
+          >
+            {selected.size === 0 ? 'Переслать' : `Переслать (${selected.size})`}
+          </button>
         </div>
       </motion.div>
     </motion.div>
@@ -2982,7 +3025,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
   const [searchResults, setSearchResults] = useState<Message[]>([]);
   const [searching, setSearching] = useState(false);
   const [showForward, setShowForward] = useState<Message | null>(null);
-  const [forwardingMsg, setForwardingMsg] = useState<Message | null>(null);
+
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [aiTyping, setAiTyping] = useState(false);
   const typingResetTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
@@ -3617,27 +3660,30 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
     }
   }, [editMessage, chat.id]);
 
-  const handleForward = useCallback(async (targetChatId: string) => {
-    if (!forwardingMsg) return;
+  const handleForward = useCallback(async (targetChatIds: string[]) => {
+    if (!showForward) return;
     try {
-      let content = forwardingMsg.content || '';
-      if (forwardingMsg.isEncrypted && forwardingMsg.encryptedContent && forwardingMsg.encryptedIv) {
-        const decrypted = await e2eManager.decryptChatMessage(chat.id, forwardingMsg.encryptedContent, forwardingMsg.encryptedIv);
-        if (decrypted) content = decrypted;
+      const res = await api.forwardMessages([showForward.id], targetChatIds);
+      const forwardedCount = res?.forwarded?.length ?? 0;
+      const skippedCount = res?.skipped ?? 0;
+      if (forwardedCount > 0) {
+        toast.success(`Переслано в ${forwardedCount} ${declineChats(forwardedCount)}`);
       }
-      const fwType = forwardingMsg.type === 'voice' ? 'voice' : forwardingMsg.type === 'video' ? 'video' : forwardingMsg.type === 'photo' ? 'photo' : (forwardingMsg.media?.length ? 'photo' : 'text');
-      const fwMedia = forwardableMedia(forwardingMsg);
-      await api.sendMessageWS(targetChatId, content, {
-        type: fwType,
-        ...(fwMedia.length ? { media: fwMedia } : {}),
-        forwardedFromId: forwardingMsg.sender?.id,
-      });
+      if (skippedCount > 0) {
+        toast.info(
+          'Не всё переслано',
+          `${skippedCount} ${declineMessages(skippedCount)} пропущено — зашифровано или недоступно для пересылки`
+        );
+      }
+      if (forwardedCount === 0 && skippedCount === 0) {
+        toast.error('Не удалось переслать');
+      }
     } catch (err) {
       console.error('[Forward] Failed:', err);
+      toast.error('Не удалось переслать');
     }
     setShowForward(null);
-    setForwardingMsg(null);
-  }, [forwardingMsg, chat.id]);
+  }, [showForward]);
 
   const handleReplyTo = useCallback((msg: Message) => {
     setReplyTo({
@@ -3952,7 +3998,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
       <AnimatePresence>
         {showForward && (
           <ForwardModal
-            onClose={() => { setShowForward(null); setForwardingMsg(null); }}
+            onClose={() => setShowForward(null)}
             onForward={handleForward}
           />
         )}

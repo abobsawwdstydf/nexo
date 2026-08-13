@@ -6,6 +6,12 @@ export interface ReactionResult {
   action: 'added' | 'removed';
 }
 
+export interface ForwardResult {
+  ok: boolean;
+  forwarded: { chatId: string; messageIds: string[] }[];
+  skipped: number;
+}
+
 declare module './core' {
   interface ApiClient {
     getMessages(chatId: string, cursor?: string): Promise<Message[]>;
@@ -15,6 +21,8 @@ declare module './core' {
     // Reactions
     addReaction(messageId: string, emoji: string): Promise<ReactionResult>;
     removeReaction(messageId: string, emoji: string): Promise<ReactionResult>;
+    // Multi-forward (messages -> several chats at once)
+    forwardMessages(messageIds: string[], chatIds: string[]): Promise<ForwardResult>;
   }
 }
 
@@ -80,6 +88,13 @@ export function installMessages(api: ApiClient): void {
   api.removeReaction = async (messageId: string, emoji: string) => {
     return api.request<ReactionResult>(`/reactions/${messageId}/${encodeURIComponent(emoji)}`, {
       method: 'DELETE',
+    });
+  };
+
+  api.forwardMessages = async (messageIds: string[], chatIds: string[]) => {
+    return api.request<ForwardResult>('/messages/forward', {
+      method: 'POST',
+      body: JSON.stringify({ messageIds, chatIds }),
     });
   };
 }
