@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"nexo/logging"
 )
 
 // ─── GIF proxy (Tenor HTML search, no API key required) ──────────────────
@@ -84,13 +84,13 @@ func fetchTenorGifs(query string, limit int) []gifItem {
 
 	resp, err := gifHTTP.Do(req)
 	if err != nil {
-		log.Printf("[gifs] tenor request failed q=%q: %v", query, err)
+		logging.Log.Error("[gifs] tenor request failed", "query", query, "err", err)
 		return nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("[gifs] tenor status %d for q=%q", resp.StatusCode, query)
+		logging.Log.Info("[gifs] tenor status", "status", resp.StatusCode, "query", query)
 		return nil
 	}
 
@@ -191,4 +191,5 @@ func GifsSearch(c *fiber.Ctx) error {
 	gifCachePut(cacheKey, items)
 	return c.JSON(items)
 }
+
 

@@ -1,14 +1,14 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"unicode/utf8"
 
 	"nexo/ai"
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -52,14 +52,14 @@ func StartAIBrowse(c *fiber.Ctx) error {
 		Status: "pending",
 	}
 	if err := db.GetDB().Create(&dbTask).Error; err != nil {
-		log.Printf("[AI] failed to persist browse task %s: %v", taskID, err)
+		logging.Log.Error("[AI] failed to persist browse task", "task_id", taskID, "err", err)
 	}
 
 	// Start background browsing
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("[AI] panic in browse task %s: %v", taskID, r)
+				logging.Log.Error("[AI] panic in browse task", "task_id", taskID, "panic", r)
 			}
 			<-aiBrowseSlots
 		}()
@@ -148,3 +148,5 @@ func trimSafely(s string, maxLen int) string {
 	}
 	return string([]rune(s)[:maxLen])
 }
+
+

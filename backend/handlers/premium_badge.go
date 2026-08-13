@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 )
 
 // Kept in sync with the /uploads static mount in main.go.
@@ -18,7 +18,7 @@ func badgeDir() string { return filepath.Join(UploadDir(), "badges") }
 
 func init() {
 	if err := os.MkdirAll(badgeDir(), 0755); err != nil {
-		log.Printf("[BADGE] Failed to create badge directory: %v", err)
+		logging.Log.Error("[BADGE] Failed to create badge directory", "err", err)
 	}
 }
 
@@ -56,7 +56,7 @@ func UploadPremiumBadge(c *fiber.Ctx) error {
 	if user.PremiumBadgeUrl != "" {
 		oldFile := filepath.Join(badgeDir(), filepath.Base(user.PremiumBadgeUrl))
 		if err := os.Remove(oldFile); err != nil {
-			log.Printf("[BADGE] Failed to delete old badge: %v", err)
+			logging.Log.Error("[BADGE] Failed to delete old badge", "err", err)
 		}
 	}
 
@@ -87,7 +87,7 @@ func UploadPremiumBadge(c *fiber.Ctx) error {
 
 	db.GetDB().Model(&user).Update("premium_badge_url", badgeURL)
 
-	log.Printf("[BADGE] Uploaded: userId=%s filename=%s", userID, file.Filename)
+	logging.Log.Info("[BADGE] Uploaded", "user_id", userID, "filename", file.Filename)
 
 	return c.JSON(fiber.Map{
 		"premiumBadgeUrl": badgeURL,
@@ -107,13 +107,14 @@ func DeletePremiumBadge(c *fiber.Ctx) error {
 	if user.PremiumBadgeUrl != "" {
 		oldFile := filepath.Join(badgeDir(), filepath.Base(user.PremiumBadgeUrl))
 		if err := os.Remove(oldFile); err != nil {
-			log.Printf("[BADGE] Failed to delete badge file: %v", err)
+			logging.Log.Error("[BADGE] Failed to delete badge file", "err", err)
 		}
 	}
 
 	db.GetDB().Model(&user).Update("premium_badge_url", "")
 
-	log.Printf("[BADGE] Deleted: userId=%s", userID)
+	logging.Log.Info("[BADGE] Deleted", "user_id", userID)
 
 	return c.JSON(fiber.Map{"ok": true})
 }
+

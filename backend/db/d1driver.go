@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/migrator"
 	"gorm.io/gorm/schema"
+	"nexo/logging"
 )
 
 func init() {
@@ -167,12 +167,12 @@ func (r *D1Rows) Next(dest []driver.Value) error {
 type D1Tx struct{}
 
 func (t *D1Tx) Commit() error {
-	log.Println("WARNING: D1 Commit() is a no-op — D1 HTTP API does not support transactions")
+	logging.Log.Warn("D1 Commit() is a no-op — D1 HTTP API does not support transactions")
 	return nil
 }
 
 func (t *D1Tx) Rollback() error {
-	log.Println("WARNING: D1 Rollback() is a no-op — D1 HTTP API does not support transactions")
+	logging.Log.Warn("D1 Rollback() is a no-op — D1 HTTP API does not support transactions")
 	return nil
 }
 
@@ -328,3 +328,4 @@ func (d D1Dialector) Explain(sql string, vars ...interface{}) string {
 }
 
 var _ gorm.Dialector = D1Dialector{}
+

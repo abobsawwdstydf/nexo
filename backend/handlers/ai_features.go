@@ -1,7 +1,6 @@
-﻿package handlers
+package handlers
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"nexo/ai"
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -49,7 +49,7 @@ func TranslateMessage(c *fiber.Ctx) error {
 		CreatedAt:    time.Now(),
 	}
 	if err := db.GetDB().Create(&transLog).Error; err != nil {
-		log.Printf("[AIFeatures] failed to log translation: %v", err)
+		logging.Log.Error("[AIFeatures] failed to log translation", "err", err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -286,7 +286,7 @@ func ProcessVoiceCommand(c *fiber.Ctx) error {
 		CreatedAt: time.Now(),
 	}
 	if err := db.GetDB().Create(&voiceLog).Error; err != nil {
-		log.Printf("[AIFeatures] failed to log voice command: %v", err)
+		logging.Log.Error("[AIFeatures] failed to log voice command", "err", err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -409,7 +409,7 @@ func RunPrivacyAudit(c *fiber.Ctx) error {
 	// Save audit results
 	for i := range issues {
 		if err := db.GetDB().Create(&issues[i]).Error; err != nil {
-			log.Printf("[AIFeatures] failed to save privacy audit issue: %v", err)
+			logging.Log.Error("[AIFeatures] failed to save privacy audit issue", "err", err)
 		}
 	}
 
@@ -449,3 +449,5 @@ func calculatePrivacyScore(issues []models.PrivacyAudit) int {
 	}
 	return score
 }
+
+

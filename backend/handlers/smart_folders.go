@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // sqlEscapeLike escapes SQL LIKE special characters to prevent injection
@@ -51,6 +51,10 @@ func GetSmartFolders(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": folders})
 }
 
+	// smartFolderCreateMu serializes the MAX(order)+1 read and the insert so
+	// parallel creates cannot end up with duplicate order values.
+	var smartFolderCreateMu sync.Mutex
+
 // CreateSmartFolder creates a new smart folder with filter rules
 func CreateSmartFolder(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
@@ -71,6 +75,9 @@ func CreateSmartFolder(c *fiber.Ctx) error {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid rules JSON"})
 		}
 	}
+
+	smartFolderCreateMu.Lock()
+	defer smartFolderCreateMu.Unlock()
 
 	// Get max order
 	var maxOrder int
@@ -643,6 +650,10 @@ func CreateVoiceRoom(c *fiber.Ctx) error {
 	return c.Status(201).JSON(room)
 }
 
+	// voiceRoomJoinMu serializes participant count+create per room so parallel
+	// joins cannot push a room past MaxUsers.
+	var voiceRoomJoinMu sync.Map // roomID -> *sync.Mutex
+
 // JoinVoiceRoom joins a voice room
 func JoinVoiceRoom(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
@@ -671,7 +682,11 @@ func JoinVoiceRoom(c *fiber.Ctx) error {
 		return c.Status(409).JSON(fiber.Map{"error": "Already in voice room"})
 	}
 
-	// Check max users (atomic: count + create in transaction)
+	// Check max users (count + create serialized per room so parallel joins
+	// cannot push the room past MaxUsers)
+	mu, _ := voiceRoomJoinMu.LoadOrStore(roomID, &sync.Mutex{})
+	roomMu := mu.(*sync.Mutex)
+	roomMu.Lock()
 	participant := models.VoiceRoomParticipant{
 		ID:     generateID(),
 		RoomID: roomID,
@@ -782,7 +797,7 @@ func DeleteVoiceRoom(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Where("room_id = ?", roomID).Delete(&models.VoiceRoomParticipant{}).Error; err != nil {
-		log.Printf("[SmartFolders] failed to delete room participants: %v", err)
+		logging.Log.Error("[SmartFolders] failed to delete room participants", "err", err)
 	}
 	if err := db.GetDB().Delete(&room).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete voice room"})
@@ -1020,3 +1035,4 @@ func isURLSafe(rawURL string) bool {
 func generateWebhookSecret() string {
 	return generateID() // Reuse ID generation
 }
+

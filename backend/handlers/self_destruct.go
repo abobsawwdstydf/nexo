@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"log"
 	"time"
 
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // StartSelfDestructLoop periodically expires messages that carry a
@@ -26,7 +26,7 @@ func StartSelfDestructLoop() {
 			}
 		}
 	}()
-	log.Println("Self-destruct loop: started (5s tick)")
+	logging.Log.Info("Self-destruct loop: started (5s tick)")
 }
 
 func expireDueMessages() {
@@ -36,7 +36,7 @@ func expireDueMessages() {
 	if err := db.GetDB().
 		Where("self_destruct_timer > 0 AND self_destruct_at IS NOT NULL AND self_destruct_at <= ? AND is_deleted = false", now).
 		Find(&due).Error; err != nil {
-		log.Printf("[self-destruct] query failed: %v", err)
+		logging.Log.Error("[self-destruct] query failed", "err", err)
 		return
 	}
 
@@ -47,14 +47,14 @@ func expireDueMessages() {
 			"self_destruct_timer": 0,
 			"self_destruct_at":   nil,
 		}).Error; err != nil {
-			log.Printf("[self-destruct] delete failed for message %s: %v", m.ID, err)
+			logging.Log.Error("[self-destruct] delete failed", "message_id", m.ID, "err", err)
 			continue
 		}
 		ws.HubInstance.SendToChat(m.ChatID, mustWSMsg("message:expired",
 			"messageId", m.ID,
 			"chatId", m.ChatID,
 		), "")
-		log.Printf("[self-destruct] message %s expired in chat %s", m.ID, m.ChatID)
+		logging.Log.Info("[self-destruct] message expired", "message_id", m.ID, "chat_id", m.ChatID)
 	}
 
 	// Tidy: clear stale timer columns in batch (belt & braces for any rows

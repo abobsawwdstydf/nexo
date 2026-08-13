@@ -1,9 +1,8 @@
-﻿package db
+package db
 
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"nexo/models"
+	"nexo/logging"
 )
 
 // InitLocal initializes a local SQLite database
@@ -41,43 +41,43 @@ func InitLocal(dsn string) error {
 	// Enable WAL mode for better concurrent performance
 	_, err = sqlDB.Exec("PRAGMA journal_mode=WAL")
 	if err != nil {
-		log.Printf("Warning: Could not set WAL mode: %v", err)
+		logging.Log.Warn("Could not set WAL mode", "err", err)
 	}
 
 	// Performance: NORMAL sync is faster and safe enough for most use cases
 	_, err = sqlDB.Exec("PRAGMA synchronous=NORMAL")
 	if err != nil {
-		log.Printf("Warning: Could not set synchronous=NORMAL: %v", err)
+		logging.Log.Warn("Could not set synchronous=NORMAL", "err", err)
 	}
 
 	// Busy timeout: wait up to 10s before returning "database is locked"
 	_, err = sqlDB.Exec("PRAGMA busy_timeout=10000")
 	if err != nil {
-		log.Printf("Warning: Could not set busy_timeout: %v", err)
+		logging.Log.Warn("Could not set busy_timeout", "err", err)
 	}
 
 	// Enable foreign keys
 	_, err = sqlDB.Exec("PRAGMA foreign_keys=ON")
 	if err != nil {
-		log.Printf("Warning: Could not enable foreign keys: %v", err)
+		logging.Log.Warn("Could not enable foreign keys", "err", err)
 	}
 
 	// Performance: Increase cache size to 128MB
 	_, err = sqlDB.Exec("PRAGMA cache_size=-131072")
 	if err != nil {
-		log.Printf("Warning: Could not set cache_size: %v", err)
+		logging.Log.Warn("Could not set cache_size", "err", err)
 	}
 
 	// Performance: Memory-mapped I/O for faster reads (512MB)
 	_, err = sqlDB.Exec("PRAGMA mmap_size=536870912")
 	if err != nil {
-		log.Printf("Warning: Could not set mmap_size: %v", err)
+		logging.Log.Warn("Could not set mmap_size", "err", err)
 	}
 
 	// Performance: Optimize page size
 	_, err = sqlDB.Exec("PRAGMA page_size=4096")
 	if err != nil {
-		log.Printf("Warning: Could not set page_size: %v", err)
+		logging.Log.Warn("Could not set page_size", "err", err)
 	}
 
 	// Start periodic backup goroutine (WAL checkpoint + VACUUM backup every 10 min)
@@ -237,7 +237,7 @@ func InitLocal(dsn string) error {
 	// Full-text search over messages
 	InitFTS5(DB)
 
-	log.Printf("Local SQLite database: %s", dsn)
+	logging.Log.Info("Local SQLite database", "dsn", dsn)
 	return nil
 }
 
@@ -414,15 +414,15 @@ func periodicBackup(sqlDB *sql.DB, dsn string) {
 		case <-checkpointTicker.C:
 			// Force WAL checkpoint — flushes WAL to main DB file
 			if _, err := sqlDB.Exec("PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
-				log.Printf("[BACKUP] WAL checkpoint error: %v", err)
+				logging.Log.Error("[BACKUP] WAL checkpoint error", "err", err)
 			}
 		case <-backupTicker.C:
 			// Create a safe backup copy
 			backupPath := dsn + ".backup"
 			if _, err := sqlDB.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupPath)); err != nil {
-				log.Printf("[BACKUP] VACUUM INTO error: %v", err)
+				logging.Log.Error("[BACKUP] VACUUM INTO error", "err", err)
 			} else {
-				log.Printf("[BACKUP] Database backed up to %s", backupPath)
+				logging.Log.Info("[BACKUP] Database backed up", "path", backupPath)
 			}
 		}
 	}
@@ -442,7 +442,7 @@ func InitLocalKV() error {
 		return fmt.Errorf("failed to create KV directory: %w", err)
 	}
 	KVStore = &LocalKV{dir: dir}
-	log.Println("Local KV store: initialized")
+	logging.Log.Info("Local KV store: initialized")
 	return nil
 }
 
@@ -535,3 +535,4 @@ func (kv *LocalKV) filePath(key string) string {
 	).Replace(key)
 	return kv.dir + "/" + sanitized
 }
+

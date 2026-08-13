@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
-	"log"
 	"net/smtp"
 	"os"
 	"regexp"
@@ -22,6 +21,7 @@ import (
 	"nexo/helpers"
 	"nexo/middleware"
 	"nexo/models"
+	"nexo/logging"
 )
 
 var (
@@ -324,9 +324,9 @@ func sendLoginCodeEmail(to, code string) {
 		// Dev fallback: only reveal the code when explicitly enabled. Logging
 		// OTPs by default would leak login codes to anyone with log access.
 		if os.Getenv("NEXO_DEV_LOG_CODES") == "true" {
-			log.Printf("[EMAIL] SMTP not configured, login code for %s: %s", to, code)
+			logging.Log.Warn("[EMAIL] SMTP not configured, login code for", "to", to, "code", code)
 		} else {
-			log.Printf("[EMAIL] SMTP not configured, cannot deliver login code to %s", to)
+			logging.Log.Warn("[EMAIL] SMTP not configured, cannot deliver login code to", "to", to)
 		}
 		return
 	}
@@ -360,9 +360,9 @@ func sendLoginCodeEmail(to, code string) {
 
 	err := smtp.SendMail(addr, auth, from, []string{to}, []byte(msg))
 	if err != nil {
-		log.Printf("[EMAIL] Failed to send login code to %s: %v", to, err)
+		logging.Log.Error("[EMAIL] Failed to send login code", "to", to, "err", err)
 	} else {
-		log.Printf("[EMAIL] Login code sent to %s", to)
+		logging.Log.Info("[EMAIL] Login code sent", "to", to)
 	}
 }
 
@@ -602,7 +602,7 @@ func GetUser(c *fiber.Ctx) error {
 				friendshipStatus = "pending_received"
 			}
 		} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			log.Printf("error: GetUser: friendship query (viewer=%s target=%s): %v", viewerID, targetID, result.Error)
+			logging.Log.Error("GetUser: friendship query", "viewer_id", viewerID, "target_id", targetID, "err", result.Error)
 		}
 	}
 
@@ -632,7 +632,7 @@ func GetUser(c *fiber.Ctx) error {
 			ORDER BY c.updated_at DESC
 			LIMIT 20`,
 			viewerID, targetID).Scan(&commonChats).Error; err != nil {
-			log.Printf("error: GetUser: common chats query (viewer=%s target=%s): %v", viewerID, targetID, err)
+			logging.Log.Error("GetUser: common chats query", "viewer_id", viewerID, "target_id", targetID, "err", err)
 		}
 	}
 
@@ -691,14 +691,14 @@ func UpdateProfile(c *fiber.Ctx) error {
 
 	if len(updates) > 0 {
 		if err := db.GetDB().Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
-			log.Printf("error: UpdateProfile: failed to update user %s: %v", userID, err)
+			logging.Log.Error("UpdateProfile: failed to update user", "user_id", userID, "err", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to update profile"})
 		}
 	}
 
 	var user models.User
 	if err := db.GetDB().First(&user, "id = ?", userID).Error; err != nil {
-		log.Printf("error: UpdateProfile: reload user %s: %v", userID, err)
+		logging.Log.Error("UpdateProfile: reload user", "user_id", userID, "err", err)
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 	return c.JSON(user)
@@ -778,3 +778,5 @@ func Logout(c *fiber.Ctx) error {
 }
 
 // ─── Privacy Settings (delegates to handlers/privacy.go) ───────────────────
+
+

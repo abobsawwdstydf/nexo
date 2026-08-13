@@ -2,13 +2,13 @@ package db
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
 	"nexo/models"
+	"nexo/logging"
 )
 
 var DB *gorm.DB
@@ -181,13 +181,14 @@ func Init(dsn string) error {
 
 	// Health check
 	if pingErr := sqlDB.Ping(); pingErr != nil {
-		log.Printf("WARNING: Database ping failed: %v", pingErr)
+		logging.Log.Warn("Database ping failed", "err", pingErr)
 	}
 
-	log.Println("Database connected successfully")
+	logging.Log.Info("Database connected successfully")
 	return nil
 }
 
 func GetDB() *gorm.DB {
 	return DB
 }
+

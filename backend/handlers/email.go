@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/smtp"
 	"os"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"nexo/beta"
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 )
 
 func getSMTPConfig() (host, port, username, password, from string) {
@@ -207,7 +207,7 @@ func sendVerificationEmail(to, code string) {
 	host, port, username, password, from := getSMTPConfig()
 	if username == "" || password == "" {
 		// Код НЕ пишем в логи: это одноразовый секрет, утекающий в логи = утечка.
-		log.Printf("[EMAIL] SMTP not configured, verification email to %s skipped", to)
+		logging.Log.Warn("[EMAIL] SMTP not configured, verification email skipped", "to", to)
 		return
 	}
 
@@ -240,12 +240,13 @@ func sendVerificationEmail(to, code string) {
 
 	err := smtp.SendMail(addr, auth, from, []string{to}, []byte(msg))
 	if err != nil {
-		log.Printf("[EMAIL] Failed to send to %s: %v", to, err)
+		logging.Log.Error("[EMAIL] Failed to send email", "to", to, "err", err)
 	} else {
-		log.Printf("[EMAIL] Verification sent to %s", to)
+		logging.Log.Info("[EMAIL] Verification sent", "to", to)
 	}
 }
 
 func base64Encode(s string) string {
 	return base64.StdEncoding.EncodeToString([]byte(s))
 }
+

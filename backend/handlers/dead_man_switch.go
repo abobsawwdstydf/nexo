@@ -1,8 +1,7 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -10,6 +9,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -50,7 +50,7 @@ func CreateDeadManSwitch(c *fiber.Ctx) error {
 		UpdatedAt:       time.Now(),
 	}
 	if err := db.GetDB().Create(&switch_).Error; err != nil {
-		log.Printf("[dms] failed to create switch for user %s: %v", userID, err)
+		logging.Log.Error("[dms] failed to create switch", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create dead man switch"})
 	}
 
@@ -104,7 +104,7 @@ func UpdateDeadManSwitch(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Model(&models.DeadManSwitch{}).Where("user_id = ?", userID).Updates(updates).Error; err != nil {
-		log.Printf("[dms] failed to update switch for user %s: %v", userID, err)
+		logging.Log.Error("[dms] failed to update switch", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update dead man switch"})
 	}
 
@@ -115,7 +115,7 @@ func UpdateDeadManSwitch(c *fiber.Ctx) error {
 func DeleteDeadManSwitch(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	if err := db.GetDB().Where("user_id = ?", userID).Delete(&models.DeadManSwitch{}).Error; err != nil {
-		log.Printf("[dms] failed to delete switch for user %s: %v", userID, err)
+		logging.Log.Error("[dms] failed to delete switch", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete dead man switch"})
 	}
 	return c.JSON(fiber.Map{"success": true})
@@ -126,7 +126,7 @@ func DeadManSwitchCheckIn(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
 	if err := db.GetDB().Model(&models.DeadManSwitch{}).Where("user_id = ?", userID).Update("last_check_in", time.Now()).Error; err != nil {
-		log.Printf("[dms] failed to check in for user %s: %v", userID, err)
+		logging.Log.Error("[dms] failed to check in", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to check in"})
 	}
 
@@ -144,7 +144,7 @@ func ProcessDeadManSwitches() {
 
 	var switches []models.DeadManSwitch
 	if err := database.Where("is_enabled = ? AND is_triggered = ?", true, false).Find(&switches).Error; err != nil {
-		log.Printf("[dms] query failed: %v", err)
+		logging.Log.Error("[dms] query failed", "err", err)
 		return
 	}
 
@@ -188,11 +188,11 @@ func triggerDeadManSwitch(database *gorm.DB, s *models.DeadManSwitch, now time.T
 			UpdatedAt: now,
 		}
 		if err := database.Create(&msg).Error; err != nil {
-			log.Printf("[dms] failed to create message to %s for switch %s: %v", recipientID, s.ID, err)
+			logging.Log.Error("[dms] failed to create message to recipient", "recipient_id", recipientID, "switch_id", s.ID, "err", err)
 			continue
 		}
 		if err := database.Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now).Error; err != nil {
-			log.Printf("[dms] failed to bump chat %s updated_at: %v", chatID, err)
+			logging.Log.Error("[dms] failed to bump chat updated_at", "chat_id", chatID, "err", err)
 		}
 
 		database.Preload("Sender").First(&msg, "id = ?", msg.ID)
@@ -206,7 +206,7 @@ func triggerDeadManSwitch(database *gorm.DB, s *models.DeadManSwitch, now time.T
 			UserID:   recipientID,
 			SentAt:   now,
 		}).Error; err != nil {
-			log.Printf("[dms] failed to record recipient for switch %s: %v", s.ID, err)
+			logging.Log.Error("[dms] failed to record recipient", "switch_id", s.ID, "err", err)
 		}
 	}
 
@@ -216,7 +216,7 @@ func triggerDeadManSwitch(database *gorm.DB, s *models.DeadManSwitch, now time.T
 		"triggered_at": now,
 		"is_enabled":   false,
 	}).Error; err != nil {
-		log.Printf("[dms] failed to mark switch %s as triggered: %v", s.ID, err)
+		logging.Log.Error("[dms] failed to mark switch as triggered", "switch_id", s.ID, "err", err)
 	}
 }
 
@@ -267,7 +267,7 @@ func findOrCreatePersonalChat(database *gorm.DB, userA, userB string) string {
 		return nil
 	})
 	if err != nil {
-		log.Printf("[dms] failed to create personal chat: %v", err)
+		logging.Log.Error("[dms] failed to create personal chat", "err", err)
 		return ""
 	}
 
@@ -296,3 +296,4 @@ func StartDeadManSwitchLoop() {
 		}
 	}()
 }
+

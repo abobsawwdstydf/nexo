@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"strings"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // isPlatformAdmin checks if a user is a platform admin (is_admin field).
@@ -74,7 +74,7 @@ func BanUser(c *fiber.Ctx) error {
 		Duration: req.Duration,
 	}
 	if err := db.GetDB().Create(&modLog).Error; err != nil {
-		log.Printf("[Moderation] failed to log ban: %v", err)
+		logging.Log.Error("[Moderation] failed to log ban", "err", err)
 	}
 
 	ws.HubInstance.SendToChat(chatID, mustWSMsg("moderation:ban",
@@ -128,7 +128,7 @@ func MuteUser(c *fiber.Ctx) error {
 		Duration: req.Duration,
 	}
 	if err := db.GetDB().Create(&modLog).Error; err != nil {
-		log.Printf("[MODERATION] Failed to log mute: %v", err)
+		logging.Log.Error("[MODERATION] Failed to log mute", "err", err)
 	}
 
 	// Auto-unmute after duration
@@ -183,12 +183,12 @@ func KickUser(c *fiber.Ctx) error {
 
 	// Remove from chat
 	if err := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, req.TargetID).Delete(&models.ChatMember{}).Error; err != nil {
-		log.Printf("[MODERATION] failed to remove member %s from chat %s: %v", req.TargetID, chatID, err)
+		logging.Log.Error("[MODERATION] failed to remove member", "user_id", req.TargetID, "chat_id", chatID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove member"})
 	}
 	if err := db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("subscribers_count",
 		gorm.Expr("CASE WHEN subscribers_count > 0 THEN subscribers_count - 1 ELSE 0 END")).Error; err != nil {
-		log.Printf("[MODERATION] failed to decrement subscribers for chat %s: %v", chatID, err)
+		logging.Log.Error("[MODERATION] failed to decrement subscribers", "chat_id", chatID, "err", err)
 	}
 
 	// Log
@@ -200,7 +200,7 @@ func KickUser(c *fiber.Ctx) error {
 		Action:   "kick",
 	}
 	if err := db.GetDB().Create(&modLog).Error; err != nil {
-		log.Printf("[Moderation] failed to log kick: %v", err)
+		logging.Log.Error("[Moderation] failed to log kick", "err", err)
 	}
 
 	ws.HubInstance.SendToChat(chatID, mustWSMap("moderation:kick", map[string]string{
@@ -302,7 +302,7 @@ func SetUserBadge(c *fiber.Ctx) error {
 		Action:   "grant_badge",
 		Reason:   req.BadgeType,
 	}).Error; err != nil {
-		log.Printf("[Moderation] failed to log grant_badge: %v", err)
+		logging.Log.Error("[Moderation] failed to log grant_badge", "err", err)
 	}
 
 	return c.JSON(fiber.Map{"ok": true, "action": "grant_badge"})
@@ -347,7 +347,7 @@ func ClearUserBadge(c *fiber.Ctx) error {
 		ActorID:  userID,
 		Action:   "clear_badge",
 	}).Error; err != nil {
-		log.Printf("[Moderation] failed to log clear_badge: %v", err)
+		logging.Log.Error("[Moderation] failed to log clear_badge", "err", err)
 	}
 
 	return c.JSON(fiber.Map{"ok": true, "action": "clear_badge"})
@@ -452,3 +452,4 @@ func AdminListReports(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"items": items, "total": len(items)})
 }
+

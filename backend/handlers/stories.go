@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"strings"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // Stories
@@ -364,14 +364,14 @@ func BlockUser(c *fiber.Ctx) error {
 		BlockedUserID: req.BlockedUserID,
 	}
 	if err := db.GetDB().Create(&blocked).Error; err != nil {
-		log.Printf("error: BlockUser: create block (user=%s target=%s): %v", userID, req.BlockedUserID, err)
+		logging.Log.Error("BlockUser: create block", "user_id", userID, "target_id", req.BlockedUserID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to block user"})
 	}
 
 	// Remove friendship
 	if err := db.GetDB().Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
 		userID, req.BlockedUserID, req.BlockedUserID, userID).Delete(&models.Friendship{}).Error; err != nil {
-		log.Printf("warn: BlockUser: cleanup friendship (user=%s target=%s): %v", userID, req.BlockedUserID, err)
+		logging.Log.Warn("BlockUser: cleanup friendship", "user_id", userID, "target_id", req.BlockedUserID, "err", err)
 	}
 
 	return c.JSON(fiber.Map{"ok": true})
@@ -393,8 +393,9 @@ func UnblockUser(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Where("user_id = ? AND blocked_user_id = ?", userID, req.BlockedUserID).Delete(&models.BlockedUser{}).Error; err != nil {
-		log.Printf("error: UnblockUser: delete block (user=%s target=%s): %v", userID, req.BlockedUserID, err)
+		logging.Log.Error("UnblockUser: delete block", "user_id", userID, "target_id", req.BlockedUserID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to unblock user"})
 	}
 	return c.JSON(fiber.Map{"ok": true})
 }
+

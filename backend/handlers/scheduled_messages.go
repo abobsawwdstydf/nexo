@@ -1,8 +1,7 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"nexo/db"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // POST /scheduled-messages
@@ -49,7 +49,7 @@ func CreateScheduledMessage(c *fiber.Ctx) error {
 		}
 	}
 	if err := db.GetDB().Create(&msg).Error; err != nil {
-		log.Printf("[scheduled] create failed for user %s: %v", userID, err)
+		logging.Log.Error("[scheduled] create failed", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to schedule message"})
 	}
 
@@ -100,7 +100,7 @@ func EditScheduledMessage(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Model(&models.ScheduledMessage{}).Where("id = ? AND user_id = ?", id, userID).Updates(updates).Error; err != nil {
-		log.Printf("[scheduled] edit failed for %s: %v", id, err)
+		logging.Log.Error("[scheduled] edit failed", "id", id, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update message"})
 	}
 
@@ -113,7 +113,7 @@ func CancelScheduledMessage(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
 	if err := db.GetDB().Where("id = ? AND user_id = ?", id, userID).Delete(&models.ScheduledMessage{}).Error; err != nil {
-		log.Printf("[scheduled] delete failed for %s: %v", id, err)
+		logging.Log.Error("[scheduled] delete failed", "id", id, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to cancel message"})
 	}
 
@@ -130,7 +130,7 @@ func ProcessDueScheduledMessages() {
 
 	var due []models.ScheduledMessage
 	if err := database.Where("is_sent = ? AND schedule_at <= ?", false, now).Find(&due).Error; err != nil {
-		log.Printf("[scheduled] query failed: %v", err)
+		logging.Log.Error("[scheduled] query failed", "err", err)
 		return
 	}
 
@@ -161,7 +161,7 @@ func deliverScheduledMessage(database *gorm.DB, sm *models.ScheduledMessage, now
 		msg.Type = "text"
 	}
 	if err := database.Create(&msg).Error; err != nil {
-		log.Printf("[scheduled] failed to create message for scheduled %s: %v", sm.ID, err)
+		logging.Log.Error("[scheduled] failed to create message", "scheduled_id", sm.ID, "err", err)
 		return // keep scheduled; retry next tick
 	}
 
@@ -261,3 +261,4 @@ func StartScheduledMessagesLoop() {
 		}
 	}()
 }
+

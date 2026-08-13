@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"os"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	"nexo/db"
 	"nexo/middleware"
 	"nexo/models"
+	"nexo/logging"
 )
 
 // DevLogin — локальный вход для разработчиков. Роут регистрируется ТОЛЬКО
@@ -53,10 +53,10 @@ func DevLogin(c *fiber.Ctx) error {
 			IsOnline:      true,
 		}
 		if err := db.GetDB().Create(&user).Error; err != nil {
-			log.Printf("error: dev login failed to create user: %v", err)
+			logging.Log.Error("dev login failed to create user", "err", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to create dev user"})
 		}
-		log.Printf("[DEV] Создан локальный dev-аккаунт: %s (%s)", user.Username, user.ID)
+		logging.Log.Info("[DEV] dev-аккаунт создан", "username", user.Username, "user_id", user.ID)
 	}
 
 	db.GetDB().Model(&user).Update("is_online", true)

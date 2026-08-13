@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"nexo/db"
 	"nexo/middleware"
 	"nexo/models"
+	"nexo/logging"
 )
 
 // ─── Нексо AI chat ──────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ func aiSaveMessage(userID, role, content string) {
 		Content: content,
 	}
 	if err := db.GetDB().Create(&msg).Error; err != nil {
-		log.Printf("[AI] failed to save %s message for user=%s: %v", role, userID, err)
+		logging.Log.Error("[AI] failed to save message", "role", role, "user_id", userID, "err", err)
 		return
 	}
 	// Keep only the last aiHistoryLimit messages per user.
@@ -125,7 +125,7 @@ func aiSaveMessage(userID, role, content string) {
 			Find(&oldest)
 		for _, o := range oldest {
 			if err := db.GetDB().Delete(&models.AIMessage{}, "id = ?", o.ID).Error; err != nil {
-				log.Printf("[AI] failed to trim message %s: %v", o.ID, err)
+				logging.Log.Error("[AI] failed to trim message", "message_id", o.ID, "err", err)
 			}
 		}
 	}
@@ -157,7 +157,7 @@ func HandleAIClearHistory(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"error": "unauthorized"})
 	}
 	if err := db.GetDB().Where("user_id = ?", userID).Delete(&models.AIMessage{}).Error; err != nil {
-		log.Printf("[AI] failed to clear history for user=%s: %v", userID, err)
+		logging.Log.Error("[AI] failed to clear history", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "failed to clear history"})
 	}
 	return c.JSON(fiber.Map{"ok": true})
@@ -253,7 +253,7 @@ func HandleAIChat(c *fiber.Ctx) error {
 	client := ai.NewLLMClient()
 	reply, provider, err := client.Chat(conversation)
 	if err != nil {
-		log.Printf("[AI] chat error user=%s: %v", userID, err)
+		logging.Log.Error("[AI] chat error", "user_id", userID, "err", err)
 		return c.Status(502).JSON(fiber.Map{"error": "AI service temporarily unavailable"})
 	}
 
@@ -276,3 +276,5 @@ func HandleAIChat(c *fiber.Ctx) error {
 		"premium":   isPremium,
 	})
 }
+
+

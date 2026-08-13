@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 )
 
 func getTelegramBotToken() string {
@@ -219,7 +219,7 @@ func updateBotHealth(provider string, healthy bool, errMsg string) {
 			Error:     errMsg,
 		}
 		if err := db.GetDB().Create(&check).Error; err != nil {
-			log.Printf("[Verify] failed to save provider check: %v", err)
+			logging.Log.Error("[Verify] failed to save provider check", "err", err)
 		}
 	} else if result.Error == nil {
 		db.GetDB().Model(&check).Updates(map[string]interface{}{
@@ -284,3 +284,4 @@ func checkMaxHealth() {
 
 	updateBotHealth("max", resp.StatusCode == 200, "")
 }
+

@@ -1,10 +1,9 @@
-﻿package handlers
+package handlers
 
 import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 
 	"nexo/db"
 	"nexo/models"
+	"nexo/logging"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -141,10 +141,10 @@ func VaultDelete(c *fiber.Ctx) error {
 
 	// Delete physical file
 	if err := os.Remove("." + file.EncryptedURL); err != nil {
-		log.Printf("[VAULT] Failed to delete physical file: %v", err)
+		logging.Log.Error("[VAULT] Failed to delete physical file", "err", err)
 	}
 	if err := db.GetDB().Delete(&file).Error; err != nil {
-		log.Printf("[VAULT] Failed to delete file record: %v", err)
+		logging.Log.Error("[VAULT] Failed to delete file record", "err", err)
 	}
 
 	return c.JSON(fiber.Map{"success": true})
@@ -172,3 +172,4 @@ const (
 	// maxVaultTotalSize — per-user storage quota (5 GB)
 	maxVaultTotalSize = 5 * 1024 * 1024 * 1024
 )
+

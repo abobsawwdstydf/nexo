@@ -1,9 +1,8 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"nexo/middleware"
 	"nexo/models"
 	"nexo/ws"
+	"nexo/logging"
 )
 
 // activeWSConnections tracks active WebSocket connections per user to prevent duplicate sessions.
@@ -571,7 +571,7 @@ func handleSendMessage(client *ws.Client, env *wsEnvelope) error {
 				mediaRecord.ID = generateID()
 			}
 			if err := db.GetDB().Create(&mediaRecord).Error; err != nil {
-				log.Printf("[WS] failed to save media record: %v", err)
+				logging.Log.Error("[WS] failed to save media record", "err", err)
 			}
 		}
 	}
@@ -894,10 +894,10 @@ func handlePushSubscribe(client *ws.Client, env *wsEnvelope) error {
 
 	userAgent := client.Conn.Headers("User-Agent")
 	if err := SavePushSubscription(client.UserID, sub, userAgent); err != nil {
-		log.Printf("[Push] save error user=%s: %v", client.UserID, err)
+		logging.Log.Error("[Push] save error", "user_id", client.UserID, "err", err)
 		return errWSServerError
 	}
-	log.Printf("[Push] Subscription saved user=%s endpoint=%s", client.UserID, sub.Endpoint)
+	logging.Log.Info("[Push] Subscription saved", "user_id", client.UserID, "endpoint", sub.Endpoint)
 	return nil
 }
 
@@ -915,10 +915,10 @@ func handlePushUnsubscribe(client *ws.Client, env *wsEnvelope) error {
 		return errWSMissingField("endpoint")
 	}
 	if err := DeletePushSubscription(client.UserID, payload.Endpoint); err != nil {
-		log.Printf("[Push] unsubscribe error user=%s: %v", client.UserID, err)
+		logging.Log.Error("[Push] unsubscribe error", "user_id", client.UserID, "err", err)
 		return errWSServerError
 	}
-	log.Printf("[Push] Subscription removed user=%s", client.UserID)
+	logging.Log.Info("[Push] Subscription removed", "user_id", client.UserID)
 	return nil
 }
 
@@ -972,7 +972,7 @@ func wsHandle(client *ws.Client, env *wsEnvelope, fn func(*ws.Client, *wsEnvelop
 func handleWSMessage(client *ws.Client, msg []byte) {
 	var env wsEnvelope
 	if err := json.Unmarshal(msg, &env); err != nil {
-		log.Printf("WS parse error: user=%s err=%v", client.UserID, err)
+		logging.Log.Error("WS parse error", "user_id", client.UserID, "err", err)
 		return
 	}
 
@@ -1021,7 +1021,7 @@ func handleWSMessage(client *ws.Client, msg []byte) {
 		if env.ID != "" {
 			wsResponse(client, env.ID, &wsError{Code: "unknown_type", Message: "Unknown message type: " + env.Type})
 		} else {
-			log.Printf("WS unknown type: user=%s type=%s", client.UserID, env.Type)
+			logging.Log.Warn("WS unknown type", "user_id", client.UserID, "type", env.Type)
 		}
 	}
 }
@@ -1095,7 +1095,7 @@ func HandleWebSocket(c *websocket.Conn) {
 	// Ban check: banned users must not be able to chat over WS
 	var wsUser models.User
 	if err := db.GetDB().First(&wsUser, "id = ?", userID).Error; err != nil || wsUser.IsBanned {
-		log.Printf("WS rejected: banned or missing user=%s", userID)
+		logging.Log.Warn("WS rejected: banned or missing user", "user_id", userID)
 		c.Close()
 		return
 	}
@@ -1116,7 +1116,7 @@ func HandleWebSocket(c *websocket.Conn) {
 	}()
 
 	if connCount > 3 {
-		log.Printf("WS rejected: user=%s already has %d connections", userID, connCount-1)
+		logging.Log.Warn("WS rejected: too many connections", "user_id", userID, "connections", connCount-1)
 		c.Close()
 		return
 	}
@@ -1155,12 +1155,12 @@ func HandleWebSocket(c *websocket.Conn) {
 		c.Close()
 	}()
 
-	log.Printf("WS client connected: user=%s", userID)
+	logging.Log.Info("WS client connected", "user_id", userID)
 
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("panic in WS writer goroutine (user=%s): %v", userID, r)
+				logging.Log.Error("panic in WS writer goroutine", "user_id", userID, "panic", r)
 			}
 		}()
 		for message := range client.Send {
@@ -1176,13 +1176,13 @@ func HandleWebSocket(c *websocket.Conn) {
 	for {
 		_, msg, err := c.ReadMessage()
 		if err != nil {
-			log.Printf("WS read error: user=%s err=%v", userID, err)
+			logging.Log.Error("WS read error", "user_id", userID, "err", err)
 			break
 		}
 
 		// Rate limit: reject if user exceeds max messages per second
 		if !wsCheckRateLimit(userID) {
-			log.Printf("WS rate limited: user=%s", userID)
+			logging.Log.Warn("WS rate limited", "user_id", userID)
 			var rateEnv wsEnvelope
 			if err := json.Unmarshal(msg, &rateEnv); err == nil {
 				wsResponse(client, rateEnv.ID, errWSRateLimited)
@@ -1194,3 +1194,4 @@ func HandleWebSocket(c *websocket.Conn) {
 		handleWSMessage(client, msg)
 	}
 }
+
