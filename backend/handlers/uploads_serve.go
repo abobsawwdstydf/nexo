@@ -50,6 +50,10 @@ func ServeUploadedFile(c *fiber.Ctx) error {
 	if err != nil || rel == "" || strings.Contains(rel, "..") {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
 	}
+	// In-progress chunk uploads live in UploadDir()/.chunks/ — never serve them.
+	if rel == ".chunks" || strings.HasPrefix(rel, ".chunks/") {
+		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
+	}
 
 	baseDir, err := filepath.Abs(UploadDir())
 	if err != nil {

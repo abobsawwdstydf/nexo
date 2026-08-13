@@ -1,8 +1,9 @@
-﻿import { ApiClient } from './core';
+import { ApiClient } from './core';
 import { installAuth } from './auth';
 import { installUsers } from './users';
 import { installChats } from './chats';
 import { installMessages } from './messages';
+import { installUpload } from './upload';
 import { installSocial } from './social';
 import { installAI } from './ai';
 import { installFeatures } from './features';
@@ -20,6 +21,7 @@ installAuth(api);
 installUsers(api);
 installChats(api);
 installMessages(api);
+installUpload(api);
 installSocial(api);
 installAI(api);
 installFeatures(api);

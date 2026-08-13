@@ -1,4 +1,4 @@
-﻿package models
+package models
 
 import "time"
 
@@ -192,6 +192,7 @@ type Media struct {
 
 	ConvertedURL   string `json:"convertedUrl"`
 	OriginalFormat string `json:"originalFormat"`
+	Formats        map[string]string `json:"formats,omitempty" gorm:"serializer:json"`
 
 	Message Message `json:"-" gorm:"foreignKey:MessageID"`
 }

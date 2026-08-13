@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"context"
@@ -130,15 +130,17 @@ func main() {
 	// Start self-destruct message expiry (checks every 5 seconds)
 	handlers.StartSelfDestructLoop()
 
-	ws.HubInstance = ws.NewHub()
+	handlers.StartChunkCleaner()
+
+ws.HubInstance = ws.NewHub()
 	go ws.HubInstance.Run()
 
 	app := fiber.New(fiber.Config{
 		AppName: "Nexo Messenger",
-		// Chat attachments are validated per file in handlers.UploadFile (50 MB).
-		// The transport limit must be slightly larger or voice/video uploads never
-		// reach that validation.
-		BodyLimit:    55 * 1024 * 1024,
+		// Chat attachments are validated per file in handlers.UploadFile (up to
+		// 500MB video). The transport limit must cover the largest allowed file
+		// plus multipart overhead, hence 600MB.
+		BodyLimit:    600 * 1024 * 1024,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -230,7 +232,7 @@ func main() {
 	app.Use(middleware.SQLInjectionProtection())
 	app.Use(middleware.XSSProtection())
 	app.Use(middleware.InputSanitization())
-	app.Use(middleware.RequestSizeLimit(55 * 1024 * 1024))
+	app.Use(middleware.RequestSizeLimit(600 * 1024 * 1024))
 	app.Use(middleware.VerifyRequestSignature)
 
 	// Ensure uploads directory exists
@@ -462,6 +464,12 @@ nexo_up 1
 
 	// File Upload
 	auth.Post("/upload", handlers.UploadFile)
+
+// Chunked upload (large files, progress + cancel on the client)
+auth.Post("/upload/chunk/init", handlers.ChunkInit)
+auth.Post("/upload/chunk/:uploadId", handlers.ChunkUploadPart)
+auth.Post("/upload/chunk/:uploadId/complete", handlers.ChunkComplete)
+auth.Delete("/upload/chunk/:uploadId", handlers.ChunkCancel)
 
 	// ─── Cloud Storage (Premium) ────────────────────────────────────────
 	auth.Post("/cloud/upload", handlers.CloudUpload)
