@@ -253,6 +253,12 @@ func Login2FA(c *fiber.Ctx) error {
 
 	ok := totpValidate(user.TotpSecret, req.Code) || verifyRecoveryCode(&user, req.Code)
 	if !ok {
+		// Per-user brute-force protection: 5 failed TOTP codes per 10 minutes
+		if !checkRateLimit("2fa-fail:"+claims.UserID, 5, 10*time.Minute) {
+			return c.Status(429).JSON(fiber.Map{
+				"error": "Слишком много попыток. Попробуйте позже.",
+			})
+		}
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid code"})
 	}
 

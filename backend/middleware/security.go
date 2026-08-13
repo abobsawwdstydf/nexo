@@ -425,6 +425,13 @@ func SecurityHeaders() fiber.Handler {
 		// X-Frame-Options
 		c.Set("X-Frame-Options", "DENY")
 
+		// Cross-Origin-Opener-Policy: изолирует окно приложения от кросс-доменных
+		// opener'ов (защита от Spectre-класса атак). CORP НЕ ставим: медиа
+		// отдаются бэкендом с другого origin (neexxoo.hakerone.ru ->
+		// msg.darkheavens.ru) — same-origin/same-site CORP заблокировал бы
+		// кросс-доменную загрузку картинок и вложений.
+		c.Set("Cross-Origin-Opener-Policy", "same-origin")
+
 		// X-XSS-Protection
 		c.Set("X-XSS-Protection", "1; mode=block")
 
