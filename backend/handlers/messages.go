@@ -636,6 +636,29 @@ func SearchMessages(c *fiber.Ctx) error {
 	fromDate := c.Query("from")
 	toDate := c.Query("to")
 	msgType := c.Query("type")
+	hasMedia := c.Query("hasMedia") == "true"
+	mediaType := strings.ToLower(strings.TrimSpace(c.Query("mediaType")))
+	dateFrom := c.Query("dateFrom")
+	dateTo := c.Query("dateTo")
+	chatID := strings.TrimSpace(c.Query("chatId"))
+
+	// mediaType whitelist — photo/video/audio/file are the values the uploader
+	// writes into media.type; voice/gif are accepted for forward-compat.
+	switch mediaType {
+	case "", "photo", "video", "audio", "file", "voice", "gif":
+	default:
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid mediaType"})
+	}
+	if dateFrom != "" {
+		if _, err := time.Parse("2006-01-02", dateFrom); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid dateFrom (expected YYYY-MM-DD)"})
+		}
+	}
+	if dateTo != "" {
+		if _, err := time.Parse("2006-01-02", dateTo); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid dateTo (expected YYYY-MM-DD)"})
+		}
+	}
 
 	var memberChatIDs []string
 	if err := db.GetDB().Model(&models.ChatMember{}).
@@ -682,6 +705,24 @@ func SearchMessages(c *fiber.Ctx) error {
 	if toDate != "" {
 		q = q.Where("created_at <= ?", toDate)
 	}
+	if dateFrom != "" {
+		q = q.Where("created_at >= ?", dateFrom)
+	}
+	if dateTo != "" {
+		q = q.Where("created_at <= ?", dateTo)
+	}
+	if chatID != "" {
+		q = q.Where("chat_id = ?", chatID)
+	}
+	if hasMedia || mediaType != "" {
+		// Attachment filters: EXISTS subquery on the media table, works for both
+		// the LIKE branch and the FTS branch (which joins messages_fts).
+		if mediaType != "" {
+			q = q.Where("EXISTS (SELECT 1 FROM media m WHERE m.message_id = messages.id AND m.type = ?)", mediaType)
+		} else {
+			q = q.Where("EXISTS (SELECT 1 FROM media m WHERE m.message_id = messages.id)")
+		}
+	}
 
 	// Order by date only - no raw SQL with user input
 	q = q.Order("created_at DESC")
@@ -725,6 +766,166 @@ func SearchMessages(c *fiber.Ctx) error {
 	return c.JSON(helpers.NewPaginatedResponse(messages, total, pag))
 }
 
+// maxForwardMessages and maxForwardChats bound the multi-forward batch sizes.
+const (
+	maxForwardMessages = 20
+	maxForwardChats    = 20
+)
+
+// dedupeIDs removes duplicates (and empty strings) while preserving order.
+func dedupeIDs(ids []string) []string {
+	seen := make(map[string]struct{}, len(ids))
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
+}
+
+// ForwardMessages copies messages into one or more target chats. The caller
+// must be a member of every source and target chat; personal-chat blocks apply
+// (mirroring SendMessage). Encrypted, deleted and non-forwardable messages are
+// skipped and reported via "skipped". Media records are copied (same file URLs
+// — files are not duplicated on disk), self-destruct timers are NOT copied.
+func ForwardMessages(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+
+	var req struct {
+		MessageIDs []string `json:"messageIds"`
+		ChatIDs    []string `json:"chatIds"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	req.MessageIDs = dedupeIDs(req.MessageIDs)
+	req.ChatIDs = dedupeIDs(req.ChatIDs)
+	if len(req.MessageIDs) == 0 || len(req.MessageIDs) > maxForwardMessages {
+		return c.Status(400).JSON(fiber.Map{"error": "messageIds must contain 1..20 items"})
+	}
+	if len(req.ChatIDs) == 0 || len(req.ChatIDs) > maxForwardChats {
+		return c.Status(400).JSON(fiber.Map{"error": "chatIds must contain 1..20 items"})
+	}
+
+	// Load source messages (deleted are excluded) and verify the caller is a
+	// member of every source chat — forwarding is allowed for any message the
+	// user can see, not only their own.
+	var messages []models.Message
+	if err := db.GetDB().Preload("Media").Where("id IN ? AND is_deleted = false", req.MessageIDs).Find(&messages).Error; err != nil {
+		log.Printf("[ForwardMessages] failed to load messages: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load messages"})
+	}
+	if len(messages) == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Messages not found"})
+	}
+	for _, m := range messages {
+		if !isChatMember(m.ChatID, userID) {
+			return c.Status(403).JSON(fiber.Map{"error": "Not a member of the source chat"})
+		}
+	}
+
+	// Validate every target chat up front (membership + personal blocks), so a
+	// bad chat fails the whole batch predictably instead of silently dropping it.
+	for _, chatID := range req.ChatIDs {
+		if !isChatMember(chatID, userID) {
+			return c.Status(403).JSON(fiber.Map{"error": "Not a member of the target chat"})
+		}
+		if isPersonalChatBlocked(chatID, userID) {
+			return c.Status(403).JSON(fiber.Map{"error": "You cannot message this user"})
+		}
+	}
+
+	skipped := 0
+	forwarded := make([]fiber.Map, 0, len(req.ChatIDs))
+	for _, chatID := range req.ChatIDs {
+		now := time.Now()
+		copiedIDs := make([]string, 0, len(messages))
+		for _, src := range messages {
+			// Encrypted content must not leak into other chats; copy nothing.
+			if src.IsEncrypted {
+				log.Printf("[ForwardMessages] skip encrypted message %s", src.ID)
+				skipped++
+				continue
+			}
+			if !src.CanForward {
+				log.Printf("[ForwardMessages] skip non-forwardable message %s", src.ID)
+				skipped++
+				continue
+			}
+			if src.IsDeleted {
+				skipped++
+				continue
+			}
+
+			msg := models.Message{
+				ID:              generateID(),
+				ChatID:          chatID,
+				SenderID:        userID,
+				Content:         src.Content,
+				Type:            src.Type,
+				ForwardedFromID: src.SenderID,
+				CreatedAt:       now,
+				UpdatedAt:       now,
+			}
+			if err := db.GetDB().Create(&msg).Error; err != nil {
+				log.Printf("[ForwardMessages] failed to create forwarded message: %v", err)
+				skipped++
+				continue
+			}
+			for _, md := range src.Media {
+				newMedia := models.Media{
+					ID:             generateID(),
+					MessageID:      msg.ID,
+					Type:           md.Type,
+					URL:            md.URL,
+					Filename:       md.Filename,
+					Thumbnail:      md.Thumbnail,
+					Size:           md.Size,
+					Duration:       md.Duration,
+					Width:          md.Width,
+					Height:         md.Height,
+					Order:          md.Order,
+					ConvertedURL:   md.ConvertedURL,
+					OriginalFormat: md.OriginalFormat,
+				}
+				if err := db.GetDB().Create(&newMedia).Error; err != nil {
+					log.Printf("[ForwardMessages] failed to copy media %s: %v", md.ID, err)
+				}
+			}
+			copiedIDs = append(copiedIDs, msg.ID)
+		}
+
+		if len(copiedIDs) == 0 {
+			continue
+		}
+
+		// Touch chat and member timestamps (mirrors SendMessage).
+		db.GetDB().Model(&models.ChatMember{}).
+			Where("chat_id = ? AND user_id = ?", chatID, userID).
+			Update("last_message_at", now)
+		db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).Update("updated_at", now)
+
+		// One message:new broadcast per copied message (same contract as SendMessage).
+		for _, msgID := range copiedIDs {
+			var msg models.Message
+			if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msgID).Error; err != nil {
+				log.Printf("[ForwardMessages] failed to reload copied message %s: %v", msgID, err)
+				continue
+			}
+			ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(messageToJSON(msg))), "")
+		}
+
+		forwarded = append(forwarded, fiber.Map{"chatId": chatID, "messageIds": copiedIDs})
+	}
+
+	return c.JSON(fiber.Map{"ok": true, "forwarded": forwarded, "skipped": skipped})
+}
 // buildFTSQuery turns a free-text query into an FTS5 MATCH expression with
 // per-word prefix matching ("кошка мышка" -> ""кошка"* "мышка"*", AND).
 func buildFTSQuery(query string) string {

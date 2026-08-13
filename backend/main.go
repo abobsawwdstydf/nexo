@@ -430,6 +430,7 @@ nexo_up 1
 	auth.Post("/chats/:id/read", handlers.ReadMessages)
 	auth.Post("/chats/:id/typing", handlers.Typing)
 	auth.Get("/messages/search", handlers.SearchMessages)
+	auth.Post("/messages/forward", handlers.ForwardMessages)
 
 	auth.Post("/stories", handlers.CreateStory)
 	auth.Get("/stories", handlers.GetStories)

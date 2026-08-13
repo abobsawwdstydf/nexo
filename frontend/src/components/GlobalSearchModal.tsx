@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, MessageSquare, Hash, Loader2, CornerDownLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Search, X, MessageSquare, Hash, Loader2, CornerDownLeft, Paperclip, Calendar } from 'lucide-react';
 import { api } from '../lib/api';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import type { Message } from '../lib/types';
@@ -16,12 +16,27 @@ interface SearchResultItem {
   chat?: { id: string; type: string; name: string; username: string; avatar: string | null } | null;
 }
 
+type MediaFilter = '' | 'photo' | 'video' | 'audio' | 'file';
+
+const MEDIA_CHIPS: { key: MediaFilter; label: string }[] = [
+  { key: '', label: 'Все' },
+  { key: 'photo', label: 'Фото' },
+  { key: 'video', label: 'Видео' },
+  { key: 'audio', label: 'Аудио' },
+  { key: 'file', label: 'Файлы' },
+];
+
 /** Глобальный поиск по всем чатам (FTS5-индекс на сервере). Ctrl+K / Cmd+K. */
 export function GlobalSearchModal({ open, onClose, onSelect }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState<MediaFilter>('');
+  const [hasMedia, setHasMedia] = useState(false);
+  const [showDates, setShowDates] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -29,6 +44,11 @@ export function GlobalSearchModal({ open, onClose, onSelect }: GlobalSearchProps
       setQuery('');
       setResults([]);
       setSearched(false);
+      setMediaFilter('');
+      setHasMedia(false);
+      setShowDates(false);
+      setDateFrom('');
+      setDateTo('');
       const t = setTimeout(() => inputRef.current?.focus(), 80);
       return () => clearTimeout(t);
     }
@@ -44,8 +64,17 @@ export function GlobalSearchModal({ open, onClose, onSelect }: GlobalSearchProps
     setLoading(true);
     const t = setTimeout(async () => {
       try {
+        const params = new URLSearchParams({ q: query.trim(), pageSize: '25' });
+        if (mediaFilter) {
+          params.set('mediaType', mediaFilter);
+          params.set('hasMedia', 'true');
+        } else if (hasMedia) {
+          params.set('hasMedia', 'true');
+        }
+        if (dateFrom) params.set('dateFrom', dateFrom);
+        if (dateTo) params.set('dateTo', dateTo);
         const data = await api.request<{ items?: SearchResultItem[] }>(
-          `/messages/search?q=${encodeURIComponent(query.trim())}&pageSize=25`
+          `/messages/search?${params.toString()}`
         );
         if (cancelled) return;
         setResults(Array.isArray(data?.items) ? data.items : []);
@@ -59,7 +88,7 @@ export function GlobalSearchModal({ open, onClose, onSelect }: GlobalSearchProps
       }
     }, 300);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [query, open]);
+  }, [query, open, mediaFilter, hasMedia, dateFrom, dateTo]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
@@ -102,6 +131,67 @@ export function GlobalSearchModal({ open, onClose, onSelect }: GlobalSearchProps
             </button>
           )}
         </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.06] flex-wrap">
+          {MEDIA_CHIPS.map(chip => (
+            <button
+              key={chip.key}
+              onClick={() => setMediaFilter(chip.key)}
+              className={`px-2.5 h-6 rounded-full text-[10px] font-medium transition-colors ${
+                mediaFilter === chip.key
+                  ? 'bg-white/15 text-white border border-white/20'
+                  : 'text-white/35 hover:text-white/60 hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setHasMedia(v => !v)}
+            disabled={!!mediaFilter}
+            className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[10px] font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none ${
+              hasMedia && !mediaFilter
+                ? 'bg-white/15 text-white border border-white/20'
+                : 'text-white/35 hover:text-white/60 hover:bg-white/[0.06] border border-transparent'
+            }`}
+          >
+            <Paperclip size={10} />
+            С вложениями
+          </button>
+          <button
+            onClick={() => setShowDates(v => !v)}
+            className={`flex items-center gap-1 px-2.5 h-6 rounded-full text-[10px] font-medium transition-colors ${
+              showDates || dateFrom || dateTo
+                ? 'bg-white/15 text-white border border-white/20'
+                : 'text-white/35 hover:text-white/60 hover:bg-white/[0.06] border border-transparent'
+            }`}
+          >
+            <Calendar size={10} />
+            Дата
+          </button>
+        </div>
+
+        {/* Date range (collapsible) */}
+        {showDates && (
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.06]">
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={e => setDateFrom(e.target.value)}
+              className="flex-1 min-w-0 h-7 px-2 text-[10px] bg-white/[0.04] border border-white/[0.06] rounded-lg text-white/70 outline-none [color-scheme:dark]"
+            />
+            <span className="text-[10px] text-white/25 flex-shrink-0">—</span>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={e => setDateTo(e.target.value)}
+              className="flex-1 min-w-0 h-7 px-2 text-[10px] bg-white/[0.04] border border-white/[0.06] rounded-lg text-white/70 outline-none [color-scheme:dark]"
+            />
+          </div>
+        )}
 
         {/* Results */}
         <div className="max-h-[46vh] overflow-y-auto">
