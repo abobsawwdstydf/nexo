@@ -394,6 +394,8 @@ nexo_up 1
 
 	// Account
 	auth.Get("/account/export", handlers.ExportAccount)
+	auth.Post("/account/export2", handlers.ExportAccountZip)
+	auth.Post("/account/import", handlers.ImportAccountZip)
 	auth.Delete("/account/delete", handlers.DeleteAccount)
 
 	// Verification

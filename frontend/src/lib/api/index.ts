@@ -14,6 +14,7 @@ import { installStories } from './stories';
 import { installAdmin } from './admin';
 import { installInviteLinks } from './inviteLinks';
 import { installDnd } from './dnd';
+import { installBackup } from './backup';
 
 const api = new ApiClient();
 
@@ -33,6 +34,7 @@ installStories(api);
 installAdmin(api);
 installInviteLinks(api);
 installDnd(api);
+installBackup(api);
 
 export { api };
 export default api;
