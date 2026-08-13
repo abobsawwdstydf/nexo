@@ -177,32 +177,25 @@ function sanitizeMessages(messages) {
 }
 
 // ── Providers ───────────────────────────────────────────────────────────────
-// Keys are env bindings (set via `wrangler secret put <NAME>_<N>`)
+// Keys are env bindings ONLY (set via `npx wrangler secret put <NAME>_<N>`).
+// Local dev: ai-proxy/.dev.vars (gitignored). Empty key => provider skipped (failover).
 const KEYS = {
   cerebras: [
-    () => 'REDACTED_CEREBRAS_KEY_1',
-    () => 'REDACTED_CEREBRAS_KEY_2',
-    () => 'REDACTED_CEREBRAS_KEY_3',
-    () => 'REDACTED_CEREBRAS_KEY_4',
+    () => ENV.CEREBRAS_KEY_1 || '', () => ENV.CEREBRAS_KEY_2 || '',
+    () => ENV.CEREBRAS_KEY_3 || '', () => ENV.CEREBRAS_KEY_4 || '',
   ],
   groq: [
-    () => 'REDACTED_GROQ_KEY_1',
-    () => 'REDACTED_GROQ_KEY_2',
-    () => 'REDACTED_GROQ_KEY_3',
-    () => 'REDACTED_GROQ_KEY_4',
+    () => ENV.GROQ_KEY_1 || '', () => ENV.GROQ_KEY_2 || '',
+    () => ENV.GROQ_KEY_3 || '', () => ENV.GROQ_KEY_4 || '',
   ],
   sambanova: [
-    () => 'REDACTED_SAMBANOVA_KEY_1',
-    () => 'REDACTED_SAMBANOVA_KEY_2',
-    () => 'REDACTED_SAMBANOVA_KEY_3',
-    () => 'REDACTED_SAMBANOVA_KEY_4',
+    () => ENV.SAMBANOVA_KEY_1 || '', () => ENV.SAMBANOVA_KEY_2 || '',
+    () => ENV.SAMBANOVA_KEY_3 || '', () => ENV.SAMBANOVA_KEY_4 || '',
   ],
   mistral: [() => ENV.MISTRAL_KEY_1 || ''],
   openrouter: [
-    () => 'REDACTED_OPENROUTER_KEY_1',
-    () => 'REDACTED_OPENROUTER_KEY_2',
-    () => 'REDACTED_OPENROUTER_KEY_3',
-    () => 'REDACTED_OPENROUTER_KEY_4',
+    () => ENV.OPENROUTER_KEY_1 || '', () => ENV.OPENROUTER_KEY_2 || '',
+    () => ENV.OPENROUTER_KEY_3 || '', () => ENV.OPENROUTER_KEY_4 || '',
   ],
   fal: [
     () => ENV.FAL_KEY_1 || '', () => ENV.FAL_KEY_2 || '',
