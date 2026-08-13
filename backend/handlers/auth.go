@@ -138,8 +138,7 @@ func generateID() string {
 
 func Register(c *fiber.Ctx) error {
 	// Per-IP registration rate limit: max 5 registrations per 15 minutes
-	ip := c.IP()
-	if !checkRateLimit("register:"+ip, 5, 15*time.Minute) {
+	if !checkRateLimit("register-ip:"+clientIP(c), 5, 15*time.Minute) {
 		return c.Status(429).JSON(fiber.Map{"error": "Too many registration attempts. Try again later."})
 	}
 
@@ -242,8 +241,12 @@ func LoginConfirm(c *fiber.Ctx) error {
 	}
 
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	if req.Email == "" || req.Code == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "Email and code required"})
+
+	// Per-IP brute-force protection for the login confirmation endpoint (20/IP/10min)
+	if !checkRateLimit("login-ip:"+clientIP(c), 20, 10*time.Minute) {
+		return c.Status(429).JSON(fiber.Map{
+			"error": "Слишком много попыток. Попробуйте позже.",
+		})
 	}
 
 	// До старта беты вход закрыт, кроме аккаунта раннего доступа
@@ -261,6 +264,11 @@ func LoginConfirm(c *fiber.Ctx) error {
 	var verification models.EmailVerification
 	if result := db.GetDB().Where("email = ? AND status = ?", req.Email, "pending").
 		Order("created_at DESC").First(&verification); result.Error != nil {
+		if !checkRateLimit("login-fail:"+req.Email, 5, 10*time.Minute) {
+			return c.Status(429).JSON(fiber.Map{
+				"error": "Слишком много попыток. Попробуйте позже.",
+			})
+		}
 		return c.Status(404).JSON(fiber.Map{"error": "No pending verification"})
 	}
 
@@ -271,6 +279,11 @@ func LoginConfirm(c *fiber.Ctx) error {
 
 	// SECURITY FIX: Constant-time comparison to prevent timing attacks on verification codes
 	if len(verification.Code) != len(req.Code) || subtle.ConstantTimeCompare([]byte(verification.Code), []byte(req.Code)) != 1 {
+		if !checkRateLimit("login-fail:"+req.Email, 5, 10*time.Minute) {
+			return c.Status(429).JSON(fiber.Map{
+				"error": "Слишком много попыток. Попробуйте позже.",
+			})
+		}
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid code"})
 	}
 

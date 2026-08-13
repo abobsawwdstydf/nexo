@@ -328,6 +328,7 @@ func addIndexes(db *gorm.DB) {
 
 		// Users - commonly filtered columns
 		"CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+		"CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
 		"CREATE INDEX IF NOT EXISTS idx_users_username_email ON users(username, email)",
 
@@ -342,6 +343,7 @@ func addIndexes(db *gorm.DB) {
 		// Moderation logs
 		"CREATE INDEX IF NOT EXISTS idx_moderation_logs_chat ON moderation_logs(chat_id)",
 		"CREATE INDEX IF NOT EXISTS idx_moderation_logs_target ON moderation_logs(target_id)",
+		"CREATE INDEX IF NOT EXISTS idx_moderation_logs_created_at ON moderation_logs(created_at)",
 
 		// Payments
 		"CREATE INDEX IF NOT EXISTS idx_payments_user_status ON payments(user_id, status)",

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"os"
 	"crypto/rand"
 	"crypto/subtle"
 	"fmt"
@@ -197,12 +198,25 @@ func VerifyCaptcha(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"valid": true})
 }
 
+
+// clientIP возвращает IP клиента с учётом CLIENT_IP_HEADER: за Cloudflare
+// реальный адрес лежит в прокси-заголовке (cf-connecting-ip и т.п.), иначе
+// все пользователи попадают в один bucket общего edge-IP. Тот же механизм,
+// что у глобального лимитера в main.go.
+func clientIP(c *fiber.Ctx) string {
+	if h := os.Getenv("CLIENT_IP_HEADER"); h != "" {
+		if v := c.Get(h); v != "" {
+			return v
+		}
+	}
+	return c.IP()
+}
+
 // ─── Auth Rate Limiter Middleware ───────────────────────────────────────────
 
 func AuthRateLimit(maxRequests int, window time.Duration) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ip := c.IP()
-		key := "auth:" + ip
+		key := "auth:" + clientIP(c)
 		if !checkRateLimit(key, maxRequests, window) {
 			return c.Status(429).JSON(fiber.Map{
 				"error": "Слишком много попыток. Попробуйте позже.",

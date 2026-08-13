@@ -1,5 +1,37 @@
 import { ApiClient } from './core';
 
+
+export interface AdminAnalyticsTotals {
+  totalUsers: number;
+  totalChats: number;
+  totalMessages: number;
+  totalMedia: number;
+  mediaSizeBytes: number;
+  totalStories: number;
+  totalPayments: number;
+  totalReports: number;
+  premiumUsers: number;
+}
+
+export interface AdminAnalyticsDaily {
+  date: string;
+  activeUsers: number;
+  newUsers: number;
+  messages: number;
+}
+
+export interface AdminAnalyticsTopChat {
+  chatId: string;
+  name: string;
+  messageCount: number;
+}
+
+export interface AdminAnalyticsResponse {
+  totals: AdminAnalyticsTotals;
+  daily: AdminAnalyticsDaily[];
+  topChats: AdminAnalyticsTopChat[];
+  generatedAt: string;
+}
 export interface AdminReport {
   id: string;
   chatId: string;
@@ -63,6 +95,7 @@ declare module './core' {
     adminCreatePromoCode(input: PromoCodeInput): Promise<AdminPromoCode>;
     adminUpdatePromoCode(id: string, input: Partial<PromoCodeInput>): Promise<AdminPromoCode>;
     adminDeletePromoCode(id: string): Promise<{ ok: boolean }>;
+    getAdminAnalytics(): Promise<AdminAnalyticsResponse>;
   }
 }
 
@@ -111,4 +144,9 @@ export function installAdmin(api: ApiClient): void {
   api.adminDeletePromoCode = async (id: string) => {
     return api.request<{ ok: boolean }>(`/admin/promocodes/${id}`, { method: 'DELETE' });
   };
+
+  api.getAdminAnalytics = async () => {
+    return api.get<AdminAnalyticsResponse>('/admin/analytics');
+  };
+
 }

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert, TicketPercent, Plus, Pause, Play, Trash2, Copy } from 'lucide-react';
+import { X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert, TicketPercent, Plus, Pause, Play, Trash2, Copy, BarChart3 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { AdminReport, AdminFeedbackTicket, AdminPromoCode } from '../lib/api/admin';
+import type { AdminReport, AdminFeedbackTicket, AdminPromoCode, AdminAnalyticsResponse } from '../lib/api/admin';
 import { toast } from '../lib/toast';
 
-type Tab = 'reports' | 'feedback' | 'badges' | 'promos';
+type Tab = 'reports' | 'feedback' | 'badges' | 'promos' | 'analytics';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -62,6 +62,8 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
   // Promo codes
   const [promos, setPromos] = useState<AdminPromoCode[]>([]);
   const [promosLoading, setPromosLoading] = useState(false);
+  const [analytics, setAnalytics] = useState<AdminAnalyticsResponse | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [promoForm, setPromoForm] = useState({ code: '', discountPercent: 20, maxUses: 100, active: true, expiresAt: '' });
   const [promoSaving, setPromoSaving] = useState(false);
 
@@ -103,10 +105,23 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
     }
   }, []);
 
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      setAnalytics(await api.getAdminAnalytics());
+    } catch (err) {
+      console.error('Failed to load analytics:', err);
+      toast.error('Не удалось загрузить аналитику');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (tab === 'reports') loadReports();
     if (tab === 'feedback') loadFeedback();
     if (tab === 'promos') loadPromos();
+    if (tab === 'analytics') loadAnalytics();
   }, [tab, loadReports, loadFeedback, loadPromos]);
 
   const handleReply = async (chatId: string) => {
@@ -212,6 +227,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
     { id: 'feedback', label: 'Обратная связь', icon: MessageSquare },
     { id: 'badges', label: 'Бейджи', icon: BadgeCheck },
     { id: 'promos', label: 'Промокоды', icon: TicketPercent },
+    { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
   ];
 
   return (
@@ -387,6 +403,25 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
               </div>
             </div>
           )}
+        {tab === 'analytics' && (
+          <div>
+            <SectionHeader title="Аналитика" icon={BarChart3} onRefresh={loadAnalytics} loading={analyticsLoading} />
+            {!analytics ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="h-20 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
+                  ))}
+                </div>
+                <div className="h-44 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
+                <div className="h-32 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
+              </div>
+            ) : (
+              <AnalyticsView analytics={analytics} />
+            )}
+          </div>
+        )}
+
         {tab === 'promos' && (
             <div>
               <SectionHeader title="Промокоды на НуЧе" icon={TicketPercent} onRefresh={loadPromos} loading={promosLoading} />
@@ -511,6 +546,97 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes) return '0 Б';
+  const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const v = bytes / Math.pow(1024, i);
+  return `${v >= 100 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
+}
+
+function AnalyticsView({ analytics }: { analytics: AdminAnalyticsResponse }) {
+  const { totals, daily, topChats } = analytics;
+  const maxMessages = Math.max(...daily.map(d => d.messages), 1);
+
+  const counters: [string, number, string?][] = [
+    ['Пользователи', totals.totalUsers],
+    ['Чаты', totals.totalChats],
+    ['Сообщения', totals.totalMessages],
+    ['Медиа', totals.totalMedia, formatBytes(totals.mediaSizeBytes)],
+    ['Истории', totals.totalStories],
+    ['Платежи', totals.totalPayments],
+    ['Premium', totals.premiumUsers],
+    ['Жалобы', totals.totalReports],
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Counters */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {counters.map(([label, value, hint]) => (
+          <div key={label} className="rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+            <div className="text-[11px] text-white/40">{label}</div>
+            <div className="text-xl font-bold text-white mt-0.5 tabular-nums">
+              {value.toLocaleString('ru-RU')}
+            </div>
+            {hint && <div className="text-[10px] text-white/35">{hint}</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* 30-day histogram */}
+      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h4 className="text-xs font-semibold text-white">Активность за 30 дней</h4>
+          <span className="text-[10px] text-white/35">высота — сообщения · число под столбцом — активные пользователи</span>
+        </div>
+        <div className="flex items-end gap-[2px] h-24">
+          {daily.map(d => (
+            <div
+              key={d.date}
+              title={`${d.date} · активные: ${d.activeUsers} · новые: ${d.newUsers} · сообщения: ${d.messages}`}
+              className="flex-1 min-w-0 bg-gradient-to-t from-accent/40 to-accent/90 rounded-t-[3px] cursor-default"
+              style={{ height: `${Math.max((d.messages / maxMessages) * 100, 2)}%` }}
+            />
+          ))}
+        </div>
+        <div className="flex gap-[2px] mt-1.5">
+          {daily.map(d => (
+            <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/45 tabular-nums">
+              {d.activeUsers > 0 ? d.activeUsers : ''}
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-[2px] mt-1.5">
+          {daily.map((d, i) => (
+            <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/25 tabular-nums">
+              {i % 5 === 4 || i === daily.length - 1 ? `${d.date.slice(8)}.${d.date.slice(5, 7)}` : ''}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Top chats */}
+      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+        <h4 className="text-xs font-semibold text-white mb-3">Топ-10 чатов по сообщениям</h4>
+        {topChats.length === 0 ? (
+          <p className="text-xs text-white/30 text-center py-6">Сообщений пока нет</p>
+        ) : (
+          <div className="space-y-1.5">
+            {topChats.map((ch, i) => (
+              <div key={ch.chatId} className="flex items-center gap-3 rounded-xl px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
+                <span className="w-5 text-center text-[11px] font-semibold text-white/30 tabular-nums">{i + 1}</span>
+                <span className="flex-1 min-w-0 truncate text-xs text-white/80">{ch.name}</span>
+                <span className="text-[11px] text-white/50 tabular-nums">{ch.messageCount.toLocaleString('ru-RU')}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

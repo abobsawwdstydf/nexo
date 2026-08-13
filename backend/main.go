@@ -504,6 +504,9 @@ nexo_up 1
 	auth.Put("/admin/promocodes/:id", handlers.UpdatePromoCode)
 	auth.Delete("/admin/promocodes/:id", handlers.DeletePromoCode)
 
+	// ─── Admin Analytics ────────────────────────────────────────────────────
+	auth.Get("/admin/analytics", handlers.GetAdminAnalytics)
+
 	// Bot API (user-managed)
 	auth.Post("/bots", handlers.CreateBot)
 	auth.Get("/bots", handlers.GetBots)
