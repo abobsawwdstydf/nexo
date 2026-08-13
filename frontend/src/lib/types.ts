@@ -307,6 +307,11 @@ export interface Story {
   expiresAt: string;
   viewCount: number;
   viewed: boolean;
+  // E2E secret stories
+  isEncrypted?: boolean;
+  encryptedContent?: string;
+  encryptedIv?: string;
+  myWrappedKey?: string;
 }
 
 export interface StoryViewer {

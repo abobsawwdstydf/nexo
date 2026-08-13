@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"sort"
@@ -58,7 +58,7 @@ func GetInit(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	// 2. Chats — fetch chat IDs, then load chats with only last message
+	// 2. Chats вЂ” fetch chat IDs, then load chats with only last message
 	var memberChatIDs []string
 	db.GetDB().Model(&models.ChatMember{}).
 		Where("user_id = ?", userID).
@@ -87,7 +87,7 @@ func GetInit(c *fiber.Ctx) error {
 		Order("created_at DESC").
 		Find(&stories)
 
-	storyGroups := buildStoryGroups(stories)
+	storyGroups := buildStoryGroups(stories, userID)
 
 	user.IsAdmin = isPlatformAdmin(userID)
 
@@ -105,7 +105,7 @@ func GetInit(c *fiber.Ctx) error {
 // (ordered by last update) together with ONLY their most recent message.
 // GORM's Preload("Messages", Limit(1)) is a single batch query whose LIMIT
 // applies across ALL chats at once, so every chat but one would end up with
-// an empty preview — we load the last message per chat with a window-function
+// an empty preview вЂ” we load the last message per chat with a window-function
 // subquery instead.
 func loadChatsWithLastMessage(memberChatIDs []string) []models.Chat {
 	chats := make([]models.Chat, 0)
@@ -150,7 +150,19 @@ func loadChatsWithLastMessage(memberChatIDs []string) []models.Chat {
 }
 
 // buildStoryGroups groups raw stories by author, ordered by story count.
-func buildStoryGroups(stories []models.Story) []StoryGroupJSON {
+func buildStoryGroups(stories []models.Story, viewerID string) []StoryGroupJSON {
+	storyIDs := make([]string, 0, len(stories))
+	for _, s := range stories {
+		storyIDs = append(storyIDs, s.ID)
+	}
+	var wraps []models.StoryKeyWrap
+	if len(storyIDs) > 0 {
+		db.GetDB().Where("user_id = ? AND story_id IN ?", viewerID, storyIDs).Find(&wraps)
+	}
+	wrapByStory := make(map[string]string, len(wraps))
+	for _, w := range wraps {
+		wrapByStory[w.StoryID] = w.WrappedKey
+	}
 	storyMap := make(map[string]*StoryGroupJSON)
 	for _, s := range stories {
 		group, exists := storyMap[s.UserID]

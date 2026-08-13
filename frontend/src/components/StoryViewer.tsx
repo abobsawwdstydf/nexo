@@ -4,6 +4,15 @@ import { X, Trash2, Heart } from 'lucide-react';
 import type { Story, StoryGroup } from '../lib/types';
 import { api } from '../lib/api';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
+import {
+  getStoryKey,
+  importGroupKey,
+  decryptMessage,
+  computeSharedSecret,
+  unwrapGroupKeyFor,
+  loadIdentityKeyPair,
+} from '../lib/e2e';
+import { e2eManager } from '../lib/e2eSession';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
 
@@ -31,6 +40,12 @@ export function StoriesViewer({ groups, initialGroupIndex, onClose }: StoriesVie
   const group = groups[groupIdx];
   const stories = group?.stories ?? [];
   const story = stories.length > 0 ? stories[Math.min(storyIdx, stories.length - 1)] : undefined;
+  const [decrypted, setDecrypted] = useState<Record<string, string | null>>({});
+  const displayContent = story?.isEncrypted
+    ? story.id in decrypted
+      ? (decrypted[story.id] ?? 'Секретная история недоступна')
+      : 'Расшифровываю...'
+    : story?.content;
 
   useEffect(() => {
     setGroupIdx(initialGroupIndex);
@@ -73,6 +88,37 @@ export function StoriesViewer({ groups, initialGroupIndex, onClose }: StoriesVie
     setProgress(0);
     if (story) markViewed(story.id);
   }, [groupIdx, storyIdx, story?.id, markViewed]);
+
+  useEffect(() => {
+    if (!story || !story.isEncrypted || !story.encryptedContent || !story.encryptedIv || !user) return;
+    if (story.id in decrypted) return;
+    const storyId = story.id;
+    const encContent = story.encryptedContent;
+    const encIv = story.encryptedIv;
+    const wrappedKey = story.myWrappedKey ?? null;
+    let cancelled = false;
+    (async () => {
+      try {
+        await e2eManager.initialize(user.id);
+        let keyB64 = getStoryKey(storyId);
+        if (!keyB64 && wrappedKey) {
+          const keyPair = loadIdentityKeyPair(user.id);
+          if (!keyPair) throw new Error('no identity keypair');
+          const secret = await computeSharedSecret(keyPair.privateKey, keyPair.publicKey);
+          keyB64 = await unwrapGroupKeyFor(secret, wrappedKey);
+        }
+        if (!keyB64) throw new Error('no story key');
+        const key = await importGroupKey(keyB64);
+        const text = await decryptMessage(key, { ciphertext: encContent, iv: encIv });
+        if (!cancelled) setDecrypted(m => ({ ...m, [storyId]: text }));
+      } catch (err) {
+        console.error('Failed to decrypt secret story:', err);
+        if (!cancelled) setDecrypted(m => ({ ...m, [storyId]: null }));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id, story?.isEncrypted, story?.encryptedContent, story?.encryptedIv, story?.myWrappedKey, user]);
 
   const goNext = useCallback(() => {
     if (storyIdx < stories.length - 1) {
@@ -242,9 +288,9 @@ export function StoriesViewer({ groups, initialGroupIndex, onClose }: StoriesVie
                   animate={{ opacity: 1 }}
                   draggable={false}
                 />
-                {story.content && (
+                {displayContent && (
                   <p className="absolute bottom-12 left-0 right-0 text-white text-center px-8 text-lg font-medium drop-shadow-lg">
-                    {story.content}
+                    {displayContent}
                   </p>
                 )}
               </div>
@@ -254,7 +300,7 @@ export function StoriesViewer({ groups, initialGroupIndex, onClose }: StoriesVie
                 style={{ backgroundColor: story.bgColor || '#1e1b4b' }}
               >
                 <p className="text-2xl md:text-4xl font-semibold text-white text-center leading-relaxed whitespace-pre-wrap max-w-2xl">
-                  {story.content}
+                  {displayContent}
                 </p>
               </div>
             )}

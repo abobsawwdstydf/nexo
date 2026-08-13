@@ -748,7 +748,7 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 		Limit(100).
 		Find(&stories)
 
-	storyGroups := buildStoryGroups(stories)
+	storyGroups := buildStoryGroups(stories, userID)
 
 	return &wsDataResponse{Data: map[string]interface{}{
 		"user":         user,

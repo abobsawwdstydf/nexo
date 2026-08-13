@@ -25,7 +25,7 @@ export interface SignedPreKey {
   sig: string;
 }
 
-function base64ToBytes(base64: string): Uint8Array {
+function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -279,4 +279,145 @@ export function getActiveSessionKey(chatId: string): CryptoKey | undefined {
 
 export function hasActiveSession(chatId: string): boolean {
   return activeSessions.has(chatId);
+}
+
+// ─── E2E Group Sessions ─────────────────────────────────────────────────
+// Групповой E2E: один общий ключ K (32 байта) на чат. Каждый участник
+// получает wrapped-версию K, зашифрованную AES-GCM на ECDH-секрете со своей
+// identity-пары. Сервер хранит только обёртки и не знает приватных ключей.
+
+const E2E_GROUP_INFO_PREFIX = 'nexo_e2e_group_info_';
+const E2E_STORY_KEY_PREFIX = 'nexo_e2e_story_key_';
+
+// Общие ключи групп в памяти: chatId → AES-GCM CryptoKey
+export const groupKeys: Record<string, CryptoKey> = {};
+
+export function setActiveGroupKey(chatId: string, key: CryptoKey): void {
+  groupKeys[chatId] = key;
+}
+
+export function getActiveGroupKey(chatId: string): CryptoKey | undefined {
+  return groupKeys[chatId];
+}
+
+export function hasActiveGroup(chatId: string): boolean {
+  return Object.prototype.hasOwnProperty.call(groupKeys, chatId);
+}
+
+export function clearActiveGroupKey(chatId: string): void {
+  delete groupKeys[chatId];
+  try {
+    localStorage.removeItem(E2E_GROUP_INFO_PREFIX + chatId);
+  } catch {}
+}
+
+export function saveGroupSessionInfo(chatId: string, keyFingerprint: string): void {
+  try {
+    localStorage.setItem(
+      E2E_GROUP_INFO_PREFIX + chatId,
+      JSON.stringify({ createdAt: Date.now(), keyFingerprint })
+    );
+  } catch {}
+}
+
+export function getGroupSessionInfo(chatId: string): { createdAt: number; keyFingerprint: string } | null {
+  try {
+    const raw = localStorage.getItem(E2E_GROUP_INFO_PREFIX + chatId);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return { createdAt: data.createdAt, keyFingerprint: data.keyFingerprint };
+  } catch { return null; }
+}
+
+// Генерирует общий групповой ключ K (32 байта, base64)
+export function generateGroupSymmetricKey(): string {
+  return bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
+}
+
+// HKDF для обёрток группового ключа (отдельный info-домен от личных сессий)
+export async function deriveGroupWrapKey(
+  sharedSecret: ArrayBuffer,
+  salt?: Uint8Array
+): Promise<{ key: CryptoKey; salt: string }> {
+  const s = new Uint8Array(salt || crypto.getRandomValues(new Uint8Array(16)));
+  const info = new TextEncoder().encode('nexo-e2e-group-v1');
+  const baseKey = await crypto.subtle.importKey('raw', sharedSecret, 'HKDF', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: s, info },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+  return { key, salt: bytesToBase64(s) };
+}
+
+export async function importGroupKey(rawB64: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'raw',
+    base64ToArrayBuffer(rawB64),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+// Обёртка ключа K для конкретного участника: "cipher.iv.salt"
+export async function wrapGroupKeyFor(sharedSecret: ArrayBuffer, groupKeyB64: string): Promise<string> {
+  const { key, salt } = await deriveGroupWrapKey(sharedSecret);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    base64ToArrayBuffer(groupKeyB64)
+  );
+  return `${arrayBufferToBase64(encrypted)}.${bytesToBase64(iv)}.${salt}`;
+}
+
+// Разворачивание wrapped-ключа группы
+export async function unwrapGroupKeyFor(sharedSecret: ArrayBuffer, wrappedKey: string): Promise<string> {
+  const parts = wrappedKey.split('.');
+  if (parts.length !== 3) throw new Error('Invalid wrapped key format');
+  const cipher = parts[0];
+  const ivB64 = parts[1];
+  const saltB64 = parts[2];
+  const { key } = await deriveGroupWrapKey(sharedSecret, base64ToBytes(saltB64));
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: base64ToBytes(ivB64) },
+    key,
+    base64ToArrayBuffer(cipher)
+  );
+  return arrayBufferToBase64(decrypted);
+}
+
+export async function groupKeyFingerprint(key: CryptoKey): Promise<string> {
+  const raw = await crypto.subtle.exportKey('raw', key);
+  const hash = await crypto.subtle.digest('SHA-256', raw);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
+}
+
+// ─── Secret stories: локальное хранение ключа K ─────────────────────────
+// Ключ секретной истории (K) хранится локально, чтобы владелец мог
+// пересмотреть свою историю; зрители разворачивают myWrappedKey через ECDH.
+
+const storyKeysCache: Record<string, string> = {};
+
+export function saveStoryKey(storyId: string, keyB64: string): void {
+  storyKeysCache[storyId] = keyB64;
+  try {
+    localStorage.setItem(E2E_STORY_KEY_PREFIX + storyId, keyB64);
+  } catch {}
+}
+
+export function getStoryKey(storyId: string): string | null {
+  if (storyKeysCache[storyId]) return storyKeysCache[storyId];
+  try {
+    const raw = localStorage.getItem(E2E_STORY_KEY_PREFIX + storyId);
+    if (!raw) return null;
+    storyKeysCache[storyId] = raw;
+    return raw;
+  } catch { return null; }
 }

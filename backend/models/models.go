@@ -114,14 +114,14 @@ type ChatMember struct {
 
 func (ChatMember) TableName() string { return "chat_members" }
 
-// InviteLink — ссылка-приглашение в чат (канал/группу)
+// InviteLink вЂ” СЃСЃС‹Р»РєР°-РїСЂРёРіР»Р°С€РµРЅРёРµ РІ С‡Р°С‚ (РєР°РЅР°Р»/РіСЂСѓРїРїСѓ)
 type InviteLink struct {
 	ID        string     `json:"id" gorm:"primaryKey"`
 	ChatID    string     `json:"chatId" gorm:"index"`
 	Code      string     `json:"code" gorm:"uniqueIndex"`
 	CreatedBy string     `json:"createdBy"`
 	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
-	MaxUses   int        `json:"maxUses" gorm:"default:0"` // 0 = без лимита
+	MaxUses   int        `json:"maxUses" gorm:"default:0"` // 0 = Р±РµР· Р»РёРјРёС‚Р°
 	Uses      int        `json:"uses" gorm:"default:0"`
 	Active    bool       `json:"active" gorm:"default:true"`
 	CreatedAt time.Time  `json:"createdAt" gorm:"autoCreateTime"`
@@ -155,7 +155,7 @@ type Message struct {
 	SelfDestructAt    *time.Time `json:"selfDestructAt"`
 	CanForward        bool       `json:"canForward" gorm:"default:true"`
 	CanScreenshot     bool       `json:"canScreenshot" gorm:"default:true"`
-	ReplyMarkup       string     `json:"-" gorm:"type:text"` // inline-клавиатура (JSON, Bot API)
+	ReplyMarkup       string     `json:"-" gorm:"type:text"` // inline-РєР»Р°РІРёР°С‚СѓСЂР° (JSON, Bot API)
 
 	Sender        User          `json:"sender" gorm:"foreignKey:SenderID"`
 	Chat          Chat          `json:"-" gorm:"foreignKey:ChatID"`
@@ -166,7 +166,7 @@ type Message struct {
 	ReadBy        []ReadReceipt `json:"readBy" gorm:"foreignKey:MessageID"`
 }
 
-// AIMessage stores Нексо AI chat history per user (server-side persistence).
+// AIMessage stores РќРµРєСЃРѕ AI chat history per user (server-side persistence).
 type AIMessage struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
 	UserID    string    `json:"userId" gorm:"index:idx_ai_messages_user_created"`
@@ -224,6 +224,10 @@ type Story struct {
 	MediaURL       string    `json:"mediaUrl"`
 	Content        string    `json:"content"`
 	BgColor        string    `json:"bgColor"`
+	IsEncrypted      bool      `json:"isEncrypted,omitempty" gorm:"default:false"`
+	EncryptedContent string    `json:"encryptedContent,omitempty"`
+	EncryptedIV      string    `json:"encryptedIv,omitempty"`
+	MyWrappedKey     string    `json:"myWrappedKey,omitempty" gorm:"-"`
 	IsHighlight    bool      `json:"isHighlight" gorm:"default:false"`
 	HighlightTitle string    `json:"highlightTitle"`
 	HighlightCover string    `json:"highlightCover"`
@@ -235,6 +239,18 @@ type Story struct {
 	Reactions []StoryReaction `json:"reactions" gorm:"foreignKey:StoryID"`
 }
 
+// StoryKeyWrap вЂ” РѕР±С‘СЂРЅСѓС‚С‹Р№ РєР»СЋС‡ СЃРµРєСЂРµС‚РЅРѕР№ РёСЃС‚РѕСЂРёРё (РєР»РёРµРЅС‚ РѕР±РѕСЂР°С‡РёРІР°РµС‚ РєР»СЋС‡
+// K РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·СЂРёС‚РµР»СЏ ECDH-СЃРµРєСЂРµС‚РѕРј; СЃРµСЂРІРµСЂ С…СЂР°РЅРёС‚ С‚РѕР»СЊРєРѕ wrapped-РІРµСЂСЃРёРё)
+type StoryKeyWrap struct {
+	ID         string    `json:"id" gorm:"primaryKey"`
+	StoryID    string    `json:"storyId" gorm:"index;uniqueIndex:idx_story_key_wrap_story_user"`
+	UserID     string    `json:"userId" gorm:"index;uniqueIndex:idx_story_key_wrap_story_user"`
+	WrappedKey string    `json:"wrappedKey" gorm:"type:text"`
+	CreatedAt  time.Time `json:"createdAt" gorm:"autoCreateTime"`
+
+	Story Story `json:"-" gorm:"foreignKey:StoryID"`
+	User  User  `json:"-" gorm:"foreignKey:UserID"`
+}
 type StoryView struct {
 	ID       string    `json:"id" gorm:"primaryKey"`
 	StoryID  string    `json:"storyId" gorm:"index"`
@@ -387,7 +403,7 @@ type Payment struct {
 	GiftToUser *User `json:"giftToUser,omitempty" gorm:"foreignKey:GiftToUserID"`
 }
 
-// PromoCode — купон на знижку для преміуму
+// PromoCode вЂ” РєСѓРїРѕРЅ РЅР° Р·РЅРёР¶РєСѓ РґР»СЏ РїСЂРµРјС–СѓРјСѓ
 type PromoCode struct {
 	ID              string     `json:"id" gorm:"primaryKey"`
 	Code            string     `json:"code" gorm:"uniqueIndex;size:64"`
@@ -588,7 +604,7 @@ type ConfirmEmailCodeRequest struct {
 	Code  string `json:"code"`
 }
 
-// ─── Bot API Models ────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Bot API Models в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type Bot struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -630,33 +646,33 @@ type BotInstallation struct {
 	Bot Bot `json:"-" gorm:"foreignKey:BotID"`
 }
 
-// BotUpdate — очередь апдейтов для бота (Telegram Bot API: getUpdates / webhook)
+// BotUpdate вЂ” РѕС‡РµСЂРµРґСЊ Р°РїРґРµР№С‚РѕРІ РґР»СЏ Р±РѕС‚Р° (Telegram Bot API: getUpdates / webhook)
 type BotUpdate struct {
 	ID        uint      `json:"-" gorm:"primaryKey;autoIncrement"` // = update_id
 	BotID     string    `json:"-" gorm:"index;size:64"`
-	Payload   string    `json:"-" gorm:"type:text"` // JSON апдейта в формате Telegram
+	Payload   string    `json:"-" gorm:"type:text"` // JSON Р°РїРґРµР№С‚Р° РІ С„РѕСЂРјР°С‚Рµ Telegram
 	CreatedAt time.Time `json:"-" gorm:"autoCreateTime"`
 }
 
-// BotMessageSeq — маппинг нашего строкового message ID на числовой message_id (Telegram)
+// BotMessageSeq вЂ” РјР°РїРїРёРЅРі РЅР°С€РµРіРѕ СЃС‚СЂРѕРєРѕРІРѕРіРѕ message ID РЅР° С‡РёСЃР»РѕРІРѕР№ message_id (Telegram)
 type BotMessageSeq struct {
-	ID        uint      `json:"-" gorm:"primaryKey;autoIncrement"` // = message_id в Bot API
+	ID        uint      `json:"-" gorm:"primaryKey;autoIncrement"` // = message_id РІ Bot API
 	BotID     string    `json:"-" gorm:"index;size:64"`
 	ChatID    string    `json:"-" gorm:"index;size:64"`
-	MessageID string    `json:"-" gorm:"index;size:64"` // наш строковый ID
+	MessageID string    `json:"-" gorm:"index;size:64"` // РЅР°С€ СЃС‚СЂРѕРєРѕРІС‹Р№ ID
 	CreatedAt time.Time `json:"-" gorm:"autoCreateTime"`
 }
 
-// BotChatState — состояние чата бота (reply-клавиатура и т.п.)
+// BotChatState вЂ” СЃРѕСЃС‚РѕСЏРЅРёРµ С‡Р°С‚Р° Р±РѕС‚Р° (reply-РєР»Р°РІРёР°С‚СѓСЂР° Рё С‚.Рї.)
 type BotChatState struct {
 	ID          string    `json:"-" gorm:"primaryKey"`
 	BotID       string    `json:"-" gorm:"index;size:64"`
 	ChatID      string    `json:"-" gorm:"index;size:64"`
-	ReplyMarkup string    `json:"-" gorm:"type:text"` // reply-клавиатура JSON или ""
+	ReplyMarkup string    `json:"-" gorm:"type:text"` // reply-РєР»Р°РІРёР°С‚СѓСЂР° JSON РёР»Рё ""
 	UpdatedAt   time.Time `json:"-" gorm:"autoUpdateTime"`
 }
 
-// UsernameAlias — дополнительный юзернейм для premium (user/chat/bot)
+// UsernameAlias вЂ” РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Р№ СЋР·РµСЂРЅРµР№Рј РґР»СЏ premium (user/chat/bot)
 type UsernameAlias struct {
 	ID         string    `json:"-" gorm:"primaryKey"`
 	SubjectType string   `json:"subjectType" gorm:"size:16"` // "user", "chat", "bot"
@@ -666,7 +682,7 @@ type UsernameAlias struct {
 	CreatedAt  time.Time `json:"-" gorm:"autoCreateTime"`
 }
 
-// ─── Search History ────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Search History в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type SearchHistory struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -677,7 +693,7 @@ type SearchHistory struct {
 	CreatedAt   time.Time `json:"createdAt" gorm:"autoCreateTime"`
 }
 
-// ─── Moderation ────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Moderation в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ModerationLog struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -690,7 +706,7 @@ type ModerationLog struct {
 	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
 }
 
-// ─── API Request Types for Bots ────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ API Request Types for Bots в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type CreateBotRequest struct {
 	Name        string `json:"name"`
@@ -751,7 +767,7 @@ type SlowModeRequest struct {
 	Interval int `json:"interval"` // seconds, 0 = off
 }
 
-// ─── Feature 1: Smart Folders ────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 1: Smart Folders в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type SmartFolder struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -768,7 +784,7 @@ type SmartFolder struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Feature 2: Shared Notes (Chat Notes) ───────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 2: Shared Notes (Chat Notes) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ChatNote struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -784,7 +800,7 @@ type ChatNote struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Feature 3: Link Collector ──────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 3: Link Collector в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type CollectedLink struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -805,7 +821,7 @@ type CollectedLink struct {
 	User    User    `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Feature 4: Voice Rooms ─────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 4: Voice Rooms в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type VoiceRoom struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -836,13 +852,13 @@ type VoiceRoomParticipant struct {
 	User User      `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Feature 5: Anonymous Chats ─────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 5: Anonymous Chats в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type AnonymousChat struct {
 	ID           string     `json:"id" gorm:"primaryKey"`
 	User1ID      string     `json:"user1Id" gorm:"index"`
 	User2ID      string     `json:"user2Id" gorm:"index"`
-	User1Alias   string     `json:"user1Alias" gorm:"size:64"` // случайный никнейм
+	User1Alias   string     `json:"user1Alias" gorm:"size:64"` // СЃР»СѓС‡Р°Р№РЅС‹Р№ РЅРёРєРЅРµР№Рј
 	User2Alias   string     `json:"user2Alias" gorm:"size:64"`
 	IsConnected  bool       `json:"isConnected" gorm:"default:false"`
 	Topic        string     `json:"topic" gorm:"size:128"`
@@ -855,14 +871,14 @@ type AnonymousChat struct {
 	User2 User `json:"-" gorm:"foreignKey:User2ID"`
 }
 
-// ─── Feature 6: Gamification ────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 6: Gamification в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type UserXP struct {
 	ID         string    `json:"id" gorm:"primaryKey"`
 	UserID     string    `json:"userId" gorm:"uniqueIndex"`
 	TotalXP    int       `json:"totalXP" gorm:"default:0"`
 	Level      int       `json:"level" gorm:"default:1"`
-	Streak     int       `json:"streak" gorm:"default:0"` // дни подряд
+	Streak     int       `json:"streak" gorm:"default:0"` // РґРЅРё РїРѕРґСЂСЏРґ
 	LastActive time.Time `json:"lastActive" gorm:"autoCreateTime"`
 	CreatedAt  time.Time `json:"createdAt" gorm:"autoCreateTime"`
 	UpdatedAt  time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
@@ -904,7 +920,7 @@ type XPLog struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Feature 7: E2E Encryption Key Exchange ────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 7: E2E Encryption Key Exchange в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type E2EKeyBundle struct {
 	ID             string    `json:"id" gorm:"primaryKey"`
@@ -934,14 +950,29 @@ type E2ESession struct {
 	User2 User `json:"-" gorm:"foreignKey:User2ID"`
 }
 
-// ─── Feature 8: AI Commands ─────────────────────────────────────────────
+// E2EGroupKey вЂ” РѕР±С‘СЂРЅСѓС‚С‹Р№ РіСЂСѓРїРїРѕРІРѕР№ РєР»СЋС‡ E2E. РЎРµСЂРІРµСЂ РЅРµ Р·РЅР°РµС‚ РїСЂРёРІР°С‚РЅС‹С…
+// РєР»СЋС‡РµР№: РєР»РёРµРЅС‚ СЃР°Рј РіРµРЅРµСЂРёСЂСѓРµС‚ РіСЂСѓРїРїРѕРІРѕР№ РєР»СЋС‡, РѕР±РѕСЂР°С‡РёРІР°РµС‚ РµРіРѕ РґР»СЏ РєР°Р¶РґРѕРіРѕ
+// СѓС‡Р°СЃС‚РЅРёРєР° (ECDH shared secret + AES-GCM) Рё РїСЂРёСЃС‹Р»Р°РµС‚ СЃРµСЂРІРµСЂСѓ РЅР° С…СЂР°РЅРµРЅРёРµ.
+type E2EGroupKey struct {
+	ID         string    `json:"id" gorm:"primaryKey"`
+	ChatID     string    `json:"chatId" gorm:"index;uniqueIndex:idx_e2e_group_key_chat_user"`
+	UserID     string    `json:"userId" gorm:"index;uniqueIndex:idx_e2e_group_key_chat_user"`
+	WrappedKey string    `json:"wrappedKey" gorm:"type:text"`
+	CreatedBy  string    `json:"createdBy" gorm:"index"` // РёРЅРёС†РёР°С‚РѕСЂ СЃРѕР·РґР°РЅРёСЏ/СЂРѕС‚Р°С†РёРё РіСЂСѓРїРїРѕРІРѕР№ СЃРµСЃСЃРёРё
+	CreatedAt  time.Time `json:"createdAt" gorm:"autoCreateTime"`
+	UpdatedAt  time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
+
+	Chat Chat `json:"-" gorm:"foreignKey:ChatID"`
+	User User `json:"-" gorm:"foreignKey:UserID"`
+}
+// в”Ђв”Ђв”Ђ Feature 8: AI Commands в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type AICommandLog struct {
 	ID         string    `json:"id" gorm:"primaryKey"`
 	UserID     string    `json:"userId" gorm:"index"`
 	ChatID     string    `json:"chatId" gorm:"index"`
 	MessageID  string    `json:"messageId"`
-	Command    string    `json:"command" gorm:"size:64"` // нексо-ии
+	Command    string    `json:"command" gorm:"size:64"` // РЅРµРєСЃРѕ-РёРё
 	Prompt     string    `json:"prompt" gorm:"type:text"`
 	Response   string    `json:"response" gorm:"type:text"`
 	Model      string    `json:"model" gorm:"size:64"`
@@ -954,7 +985,7 @@ type AICommandLog struct {
 	Message Message `json:"-" gorm:"foreignKey:MessageID"`
 }
 
-// ─── Feature 10: Backend Hooks ──────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 10: Backend Hooks в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type WebhookConfig struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -982,7 +1013,7 @@ type WebhookDelivery struct {
 	Webhook WebhookConfig `json:"-" gorm:"foreignKey:WebhookID"`
 }
 
-// ─── Feature 9: AuthPage Types ──────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 9: AuthPage Types в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type AuthPageConfig struct {
 	BackgroundURL  string `json:"backgroundUrl"`
@@ -990,7 +1021,7 @@ type AuthPageConfig struct {
 	ShowAnimations bool   `json:"showAnimations"`
 }
 
-// ─── API Request Types for new features ─────────────────────────────────
+// в”Ђв”Ђв”Ђ API Request Types for new features в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type CreateSmartFolderRequest struct {
 	Name  string `json:"name"`
@@ -1015,7 +1046,7 @@ type RateAnonymousChatRequest struct {
 type SendAICommandRequest struct {
 	ChatID  string `json:"chatId"`
 	Prompt  string `json:"prompt"`
-	Command string `json:"command"` // default: "нексо-ии"
+	Command string `json:"command"` // default: "РЅРµРєСЃРѕ-РёРё"
 }
 
 type CreateWebhookRequest struct {
@@ -1027,7 +1058,7 @@ type VoiceRoomActionRequest struct {
 	RoomID string `json:"roomId"`
 }
 
-// ─── Feature: Self-Destruct on Read ─────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature: Self-Destruct on Read в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type SelfDestructRead struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1039,7 +1070,7 @@ type SelfDestructRead struct {
 	User    User    `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Feature: Chat Snooze (Quiet Hours) ─────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature: Chat Snooze (Quiet Hours) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ChatSnooze struct {
 	ID        string     `json:"id" gorm:"primaryKey"`
@@ -1052,7 +1083,7 @@ type ChatSnooze struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Feature: Chat Reminders ────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature: Chat Reminders в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ChatReminder struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1068,7 +1099,7 @@ type ChatReminder struct {
 	Message Message `json:"-" gorm:"foreignKey:MessageID"`
 }
 
-// ─── Feature: Contact Color Tags ────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature: Contact Color Tags в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ContactTag struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1082,7 +1113,7 @@ type ContactTag struct {
 	Target User `json:"target" gorm:"foreignKey:TargetID"`
 }
 
-// ─── Feature: Public Interest Rooms ─────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature: Public Interest Rooms в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type PublicRoom struct {
 	ID           string    `json:"id" gorm:"primaryKey"`
@@ -1099,7 +1130,7 @@ type PublicRoom struct {
 	Chat Chat `json:"chat" gorm:"foreignKey:ChatID"`
 }
 
-// ─── Feature: Screenshot Detection ──────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature: Screenshot Detection в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ScreenshotLog struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1113,7 +1144,7 @@ type ScreenshotLog struct {
 	Message Message `json:"-" gorm:"foreignKey:MessageID"`
 }
 
-// ─── API Request Types for new features ─────────────────────────────────
+// в”Ђв”Ђв”Ђ API Request Types for new features в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type SetMoodRequest struct {
 	MoodStatus string `json:"moodStatus"` // emoji or text
@@ -1147,7 +1178,7 @@ type ScreenshotNotifyRequest struct {
 	MessageID string `json:"messageId"`
 }
 
-// ─── Cloud Storage ─────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Cloud Storage в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type CloudFile struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1162,7 +1193,7 @@ type CloudFile struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── AI Browsing ───────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ AI Browsing в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type AIBrowseTask struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -1187,7 +1218,7 @@ type AIBrowseRequest struct {
 	Context string `json:"context"`
 }
 
-// ─── AI Translation ────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ AI Translation в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type TranslationLog struct {
 	ID           string    `json:"id" gorm:"primaryKey"`
@@ -1209,7 +1240,7 @@ type TranslateRequest struct {
 	TargetLang string `json:"targetLang"`
 }
 
-// ─── AI Moderation ─────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ AI Moderation в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ModerationAction struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1254,7 +1285,7 @@ type AutoReplyConfig struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Voice Assistant ───────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Voice Assistant в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type VoiceCommand struct {
 	ID         string    `json:"id" gorm:"primaryKey"`
@@ -1268,7 +1299,7 @@ type VoiceCommand struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Voice Room Activities ─────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Voice Room Activities в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type VoiceRoomActivity struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1283,7 +1314,7 @@ type VoiceRoomActivity struct {
 	Room VoiceRoom `json:"-" gorm:"foreignKey:RoomID"`
 }
 
-// ─── Collaborative Whiteboard ──────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Collaborative Whiteboard в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type Whiteboard struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1312,7 +1343,7 @@ type WhiteboardEdit struct {
 	User       User       `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Scheduled Messages (extended) ─────────────────────────────────────
+// в”Ђв”Ђв”Ђ Scheduled Messages (extended) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ScheduledMessage struct {
 	ID         string     `json:"id" gorm:"primaryKey"`
@@ -1341,7 +1372,7 @@ type CreateScheduledMessageRequest struct {
 	RepeatEnd  string `json:"repeatEnd"`
 }
 
-// ─── Chat Themes ──────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Chat Themes в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ChatTheme struct {
 	ID              string    `json:"id" gorm:"primaryKey"`
@@ -1366,7 +1397,7 @@ type SetChatThemeRequest struct {
 	AccentColor     string `json:"accentColor"`
 }
 
-// ─── Kanban Board ──────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Kanban Board в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type KanbanBoard struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1421,7 +1452,7 @@ type CreateKanbanTaskRequest struct {
 	Deadline    string `json:"deadline"`
 }
 
-// ─── Message Bookmarks ────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Message Bookmarks в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type MessageBookmark struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1443,14 +1474,14 @@ type CreateBookmarkRequest struct {
 	Tags      string `json:"tags"`
 }
 
-// ─── Message Templates ────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Message Templates в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type MessageTemplate struct {
 	ID         string    `json:"id" gorm:"primaryKey"`
 	UserID     string    `json:"userId" gorm:"index"`
 	Name       string    `json:"name" gorm:"size:64"`
 	Content    string    `json:"content" gorm:"type:text"`
-	Shortcut   string    `json:"shortcut" gorm:"size:32"` // e.g., "/ty" -> "Спасибо!"
+	Shortcut   string    `json:"shortcut" gorm:"size:32"` // e.g., "/ty" -> "РЎРїР°СЃРёР±Рѕ!"
 	Category   string    `json:"category" gorm:"size:32"` // greeting, response, signature
 	UsageCount int       `json:"usageCount" gorm:"default:0"`
 	CreatedAt  time.Time `json:"createdAt" gorm:"autoCreateTime"`
@@ -1466,7 +1497,7 @@ type CreateTemplateRequest struct {
 	Category string `json:"category"`
 }
 
-// ─── AI Smart Reminders ───────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ AI Smart Reminders в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type SmartReminder struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -1484,7 +1515,7 @@ type SmartReminder struct {
 	Message Message `json:"-" gorm:"foreignKey:MessageID"`
 }
 
-// ─── Calendar Events ──────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Calendar Events в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type CalendarEvent struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -1527,7 +1558,7 @@ type CreateEventRequest struct {
 	InviteIDs   []string `json:"inviteIds"`
 }
 
-// ─── Photo Albums ──────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Photo Albums в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type PhotoAlbum struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
@@ -1554,7 +1585,7 @@ type PhotoAlbumItem struct {
 	Album PhotoAlbum `json:"-" gorm:"foreignKey:AlbumID"`
 }
 
-// ─── Screen Recording ─────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Screen Recording в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type ScreenRecording struct {
 	ID        string    `json:"id" gorm:"primaryKey"`
@@ -1570,7 +1601,7 @@ type ScreenRecording struct {
 	Chat Chat `json:"-" gorm:"foreignKey:ChatID"`
 }
 
-// ─── Encrypted File Vault ─────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Encrypted File Vault в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type VaultFile struct {
 	ID            string    `json:"id" gorm:"primaryKey"`
@@ -1586,7 +1617,7 @@ type VaultFile struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Anonymous Incognito Chats ────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Anonymous Incognito Chats в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type IncognitoChat struct {
 	ID           string     `json:"id" gorm:"primaryKey"`
@@ -1613,7 +1644,7 @@ type IncognitoMember struct {
 	User User          `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Device Management ────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Device Management в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type UserSession struct {
 	ID         string    `json:"id" gorm:"primaryKey"`
@@ -1632,7 +1663,7 @@ type UserSession struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Privacy Audit ────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Privacy Audit в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type PrivacyAudit struct {
 	ID         string    `json:"id" gorm:"primaryKey"`
@@ -1647,7 +1678,7 @@ type PrivacyAudit struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// ─── Dead Man's Switch ────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Dead Man's Switch в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type DeadManSwitch struct {
 	ID              string     `json:"id" gorm:"primaryKey"`

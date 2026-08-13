@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ var (
 	errE2ENoKeys    = errors.New("no one-time pre keys available")
 )
 
-// ─── Feature 7: E2E Key Exchange ─────────────────────────────────────
+// в”Ђв”Ђв”Ђ Feature 7: E2E Key Exchange в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 type E2EUploadKeyBundleRequest struct {
 	IdentityKey   string   `json:"identityKey"`
@@ -44,7 +44,7 @@ type E2EInitSessionRequest struct {
 	EncryptedKey string `json:"encryptedKey"`
 }
 
-// UploadKeyBundle — пользователь загружает свой публичный ключевой набор
+// UploadKeyBundle вЂ” РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ Р·Р°РіСЂСѓР¶Р°РµС‚ СЃРІРѕР№ РїСѓР±Р»РёС‡РЅС‹Р№ РєР»СЋС‡РµРІРѕР№ РЅР°Р±РѕСЂ
 func UploadKeyBundle(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
@@ -66,7 +66,7 @@ func UploadKeyBundle(c *fiber.Ctx) error {
 	var existing models.E2EKeyBundle
 	result := database.Where("user_id = ? AND device_id = ?", userID, req.DeviceID).First(&existing)
 	if result.Error == nil {
-		// Обновляем существующий
+		// РћР±РЅРѕРІР»СЏРµРј СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№
 		existing.IdentityKey = req.IdentityKey
 		existing.SignedPreKey = req.SignedPreKey
 		existing.SignedKeySig = req.SignedKeySig
@@ -74,7 +74,7 @@ func UploadKeyBundle(c *fiber.Ctx) error {
 		existing.UploadedAt = time.Now()
 		database.Save(&existing)
 	} else {
-		// Создаём новый
+		// РЎРѕР·РґР°С‘Рј РЅРѕРІС‹Р№
 		bundle := models.E2EKeyBundle{
 			ID:            generateID(),
 			UserID:        userID,
@@ -91,7 +91,7 @@ func UploadKeyBundle(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// FetchKeyBundle — получить публичный ключевой набор другого пользователя
+// FetchKeyBundle вЂ” РїРѕР»СѓС‡РёС‚СЊ РїСѓР±Р»РёС‡РЅС‹Р№ РєР»СЋС‡РµРІРѕР№ РЅР°Р±РѕСЂ РґСЂСѓРіРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 func FetchKeyBundle(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	database := db.GetDB()
@@ -135,11 +135,11 @@ func FetchKeyBundle(c *fiber.Ctx) error {
 }
 
 // preKeyMu serializes one-time pre-key consumption. The read-modify-write
-// (unmarshal → drop first key → save) is not atomic in SQLite without a
+// (unmarshal в†’ drop first key в†’ save) is not atomic in SQLite without a
 // write lock, so two parallel requests could consume the same key twice.
 var preKeyMu sync.Mutex
 
-// ConsumeOneTimePreKey — забрать one-time преключатель (одноразовый)
+// ConsumeOneTimePreKey вЂ” Р·Р°Р±СЂР°С‚СЊ one-time РїСЂРµРєР»СЋС‡Р°С‚РµР»СЊ (РѕРґРЅРѕСЂР°Р·РѕРІС‹Р№)
 func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	database := db.GetDB()
@@ -192,7 +192,7 @@ func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 		}
 	}
 
-	// WS уведомление — ключ извлечён
+	// WS СѓРІРµРґРѕРјР»РµРЅРёРµ вЂ” РєР»СЋС‡ РёР·РІР»РµС‡С‘РЅ
 	e2eKeyMsg, _ := json.Marshal(fiber.Map{
 		"type":     "e2e_key_consumed",
 		"byUser":   userID,
@@ -203,7 +203,7 @@ func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"oneTimePreKey": usedKey})
 }
 
-// InitSession — инициализация E2E сессии
+// InitSession вЂ” РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ E2E СЃРµСЃСЃРёРё
 func InitSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
@@ -218,13 +218,13 @@ func InitSession(c *fiber.Ctx) error {
 
 	database := db.GetDB()
 
-	// Проверяем что вызывающий пользователь — участник чата
+	// РџСЂРѕРІРµСЂСЏРµРј С‡С‚Рѕ РІС‹Р·С‹РІР°СЋС‰РёР№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ вЂ” СѓС‡Р°СЃС‚РЅРёРє С‡Р°С‚Р°
 	var membership models.ChatMember
 	if err := database.Where("chat_id = ? AND user_id = ?", req.ChatID, userID).First(&membership).Error; err != nil {
 		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
 	}
 
-	// Проверяем что оба участника в чате
+	// РџСЂРѕРІРµСЂСЏРµРј С‡С‚Рѕ РѕР±Р° СѓС‡Р°СЃС‚РЅРёРєР° РІ С‡Р°С‚Рµ
 	var members []models.ChatMember
 	database.Where("chat_id = ?", req.ChatID).Find(&members)
 	if len(members) < 2 {
@@ -239,7 +239,7 @@ func InitSession(c *fiber.Ctx) error {
 		}
 	}
 
-	// Проверяем нет ли уже активной сессии
+	// РџСЂРѕРІРµСЂСЏРµРј РЅРµС‚ Р»Рё СѓР¶Рµ Р°РєС‚РёРІРЅРѕР№ СЃРµСЃСЃРёРё
 	var existing models.E2ESession
 	if err := database.Where("chat_id = ? AND is_active = ?", req.ChatID, true).First(&existing).Error; err == nil {
 		// Verify current user is a participant of the existing session
@@ -260,7 +260,7 @@ func InitSession(c *fiber.Ctx) error {
 	}
 	database.Create(&session)
 
-	// WS уведомление — сессия создана
+	// WS СѓРІРµРґРѕРјР»РµРЅРёРµ вЂ” СЃРµСЃСЃРёСЏ СЃРѕР·РґР°РЅР°
 	e2eSessionMsg, _ := json.Marshal(fiber.Map{
 		"type":        "e2e_session_started",
 		"sessionId":   session.ID,
@@ -271,7 +271,8 @@ func InitSession(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true, "sessionId": session.ID, "existed": false})
 }
 
-// GetSession — получить E2E сессию чата
+
+// GetSession вЂ” РїРѕР»СѓС‡РёС‚СЊ E2E СЃРµСЃСЃРёСЋ С‡Р°С‚Р° (Р»РёС‡РЅС‹Р№ С‡Р°С‚)
 func GetSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	chatID := c.Params("chatId")
@@ -284,14 +285,14 @@ func GetSession(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"sessionId":   session.ID,
-		"chatId":      session.ChatID,
-		"isActive":    session.IsActive,
-		"createdAt":   session.CreatedAt,
+		"sessionId": session.ID,
+		"chatId":    session.ChatID,
+		"isActive":  session.IsActive,
+		"createdAt": session.CreatedAt,
 	})
 }
 
-// DeleteSession — удалить E2E сессию (сброс шифрования)
+// DeleteSession вЂ” СѓРґР°Р»РёС‚СЊ E2E СЃРµСЃСЃРёСЋ (Р»РёС‡РЅС‹Р№ С‡Р°С‚, СЃР±СЂРѕСЃ С€РёС„СЂРѕРІР°РЅРёСЏ)
 func DeleteSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	chatID := c.Params("chatId")
@@ -303,17 +304,183 @@ func DeleteSession(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "no active session"})
 	}
 
-	// WS уведомление
+	// WS СѓРІРµРґРѕРјР»РµРЅРёРµ
 	e2eDeleteMsg, _ := json.Marshal(fiber.Map{
 		"type":      "e2e_session_deleted",
 		"deletedBy": userID,
 	})
 	ws.HubInstance.SendToChat(chatID, e2eDeleteMsg, "")
 
-	// Отключаем E2E флаг у чата
+	// РћС‚РєР»СЋС‡Р°РµРј E2E С„Р»Р°Рі Сѓ С‡Р°С‚Р°
 	database.Model(&models.Chat{}).Where("id = ?", chatID).Update("is_e2e", false)
 
 	return c.JSON(fiber.Map{"ok": true})
 }
 
+// в”Ђв”Ђв”Ђ E2E Group Sessions в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+// E2EGroupKeyWrap вЂ” РѕР±С‘СЂРЅСѓС‚С‹Р№ РіСЂСѓРїРїРѕРІРѕР№ РєР»СЋС‡ РґР»СЏ РѕРґРЅРѕРіРѕ СѓС‡Р°СЃС‚РЅРёРєР°
+type E2EGroupKeyWrap struct {
+	UserID     string `json:"userId"`
+	WrappedKey string `json:"wrappedKey"`
+}
+
+type E2EGroupSessionRequest struct {
+	ChatID      string            `json:"chatId"`
+	WrappedKeys []E2EGroupKeyWrap `json:"wrappedKeys"`
+}
+
+func isChatMemberOf(userID, chatID string) bool {
+	var count int64
+	db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", chatID, userID).
+		Count(&count)
+	return count > 0
+}
+
+// sendGroupSessionUpdate вЂ” WS СЃРѕР±С‹С‚РёРµ e2e_group_session_updated РІ С‡Р°С‚
+func sendGroupSessionUpdate(chatID, action, byUser string) {
+	msg, _ := json.Marshal(fiber.Map{
+		"type":   "e2e_group_session_updated",
+		"chatId": chatID,
+		"action": action,
+		"byUser": byUser,
+	})
+	ws.HubInstance.SendToChat(chatID, msg, "")
+}
+
+func upsertGroupWrappedKeys(tx *gorm.DB, chatID, byUser string, wraps []E2EGroupKeyWrap) error {
+	for _, w := range wraps {
+		if w.UserID == "" || w.WrappedKey == "" {
+			continue
+		}
+		var existing models.E2EGroupKey
+		err := tx.Where("chat_id = ? AND user_id = ?", chatID, w.UserID).First(&existing).Error
+		if err == nil {
+			existing.WrappedKey = w.WrappedKey
+			existing.CreatedBy = byUser
+			if err := tx.Save(&existing).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+		key := models.E2EGroupKey{
+			ID:         generateID(),
+			ChatID:     chatID,
+			UserID:     w.UserID,
+			WrappedKey: w.WrappedKey,
+			CreatedBy:  byUser,
+		}
+		if err := tx.Create(&key).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InitGroupSession вЂ” СЃРѕР·РґР°С‚СЊ РіСЂСѓРїРїРѕРІСѓСЋ E2E-СЃРµСЃСЃРёСЋ: РєР»РёРµРЅС‚ СЃР°Рј РіРµРЅРµСЂРёСЂСѓРµС‚
+// РіСЂСѓРїРїРѕРІРѕР№ РєР»СЋС‡, РѕР±РѕСЂР°С‡РёРІР°РµС‚ РµРіРѕ РґР»СЏ РєР°Р¶РґРѕРіРѕ СѓС‡Р°СЃС‚РЅРёРєР° Рё РїСЂРёСЃС‹Р»Р°РµС‚ РѕР±С‘СЂС‚РєРё.
+func InitGroupSession(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+
+	var req E2EGroupSessionRequest
+	if err := c.BodyParser(&req); err != nil || req.ChatID == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "chatId and wrappedKeys required"})
+	}
+
+	if !isChatMemberOf(userID, req.ChatID) {
+		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
+	}
+
+	database := db.GetDB()
+	err := database.Transaction(func(tx *gorm.DB) error {
+		return upsertGroupWrappedKeys(tx, req.ChatID, userID, req.WrappedKeys)
+	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save group session"})
+	}
+
+	sendGroupSessionUpdate(req.ChatID, "created", userID)
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+// GetGroupSession вЂ” РїРѕР»СѓС‡РёС‚СЊ РѕР±С‘СЂС‚РєРё РіСЂСѓРїРїРѕРІРѕРіРѕ РєР»СЋС‡Р° РґР»СЏ С‡Р°С‚Р°.
+// РљР»РёРµРЅС‚ РІС‹Р±РёСЂР°РµС‚ СЃРІРѕСЋ РѕР±С‘СЂС‚РєСѓ (userId = me) Рё СЂР°Р·РІРѕСЂР°С‡РёРІР°РµС‚ РµС‘.
+func GetGroupSession(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+	chatID := c.Params("chatId")
+
+	if !isChatMemberOf(userID, chatID) {
+		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
+	}
+
+	var rows []models.E2EGroupKey
+	if err := db.GetDB().Where("chat_id = ?", chatID).Find(&rows).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if len(rows) == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "no group E2E session"})
+	}
+
+	wrappedKeys := make([]E2EGroupKeyWrap, 0, len(rows))
+	for _, r := range rows {
+		wrappedKeys = append(wrappedKeys, E2EGroupKeyWrap{
+			UserID:     r.UserID,
+			WrappedKey: r.WrappedKey,
+		})
+	}
+	return c.JSON(fiber.Map{"chatId": chatID, "wrappedKeys": wrappedKeys})
+}
+
+// RotateGroupSession вЂ” СЂРѕС‚Р°С†РёСЏ РіСЂСѓРїРїРѕРІРѕРіРѕ РєР»СЋС‡Р°: РєР»РёРµРЅС‚ С€Р»С‘С‚ РЅРѕРІС‹Рµ РѕР±С‘СЂС‚РєРё,
+// СЃС‚Р°СЂС‹Рµ Р·Р°РјРµРЅСЏСЋС‚СЃСЏ.
+func RotateGroupSession(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+	chatID := c.Params("chatId")
+
+	var req E2EGroupSessionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "bad request"})
+	}
+
+	if !isChatMemberOf(userID, chatID) {
+		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
+	}
+
+	database := db.GetDB()
+	err := database.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("chat_id = ?", chatID).Delete(&models.E2EGroupKey{}).Error; err != nil {
+			return err
+		}
+		return upsertGroupWrappedKeys(tx, chatID, userID, req.WrappedKeys)
+	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to rotate group session"})
+	}
+
+	sendGroupSessionUpdate(chatID, "rotated", userID)
+	return c.JSON(fiber.Map{"ok": true})
+}
+
+// DeleteGroupSession вЂ” СѓРґР°Р»РёС‚СЊ РіСЂСѓРїРїРѕРІСѓСЋ E2E-СЃРµСЃСЃРёСЋ (СЃР±СЂРѕСЃ С€РёС„СЂРѕРІР°РЅРёСЏ)
+func DeleteGroupSession(c *fiber.Ctx) error {
+	userID := c.Locals("userId").(string)
+	chatID := c.Params("chatId")
+
+	if !isChatMemberOf(userID, chatID) {
+		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
+	}
+
+	result := db.GetDB().Where("chat_id = ?", chatID).Delete(&models.E2EGroupKey{})
+	if result.Error != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete group session"})
+	}
+
+	sendGroupSessionUpdate(chatID, "deleted", userID)
+	return c.JSON(fiber.Map{"ok": true})
+}
 

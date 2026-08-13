@@ -1,4 +1,4 @@
-import type { Story } from '../types';
+﻿import type { Story } from '../types';
 import { ApiClient } from './core';
 
 export interface CreateStoryInput {
@@ -7,6 +7,11 @@ export interface CreateStoryInput {
   content?: string;
   bgColor?: string;
   expiresIn?: number;
+  isEncrypted?: boolean;
+  encryptedContent?: string;
+  encryptedIv?: string;
+  myWrappedKey?: string;
+  wrappedKeys?: Array<{ userId: string; wrappedKey: string }>;
 }
 
 declare module './core' {

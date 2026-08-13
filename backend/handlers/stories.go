@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"log"
@@ -17,11 +17,19 @@ func CreateStory(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
 	var req struct {
-		Type      string `json:"type"`
-		MediaURL  string `json:"mediaUrl"`
-		Content   string `json:"content"`
-		BgColor   string `json:"bgColor"`
-		ExpiresIn int    `json:"expiresIn"` // hours, default 24
+		Type             string `json:"type"`
+		MediaURL         string `json:"mediaUrl"`
+		Content          string `json:"content"`
+		BgColor          string `json:"bgColor"`
+		ExpiresIn        int    `json:"expiresIn"` // hours, default 24
+		IsEncrypted      bool   `json:"isEncrypted"`
+		EncryptedContent string `json:"encryptedContent"`
+		EncryptedIV      string `json:"encryptedIv"`
+		MyWrappedKey     string `json:"myWrappedKey"`
+		WrappedKeys      []struct {
+			UserID     string `json:"userId"`
+			WrappedKey string `json:"wrappedKey"`
+		} `json:"wrappedKeys"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
@@ -46,12 +54,36 @@ func CreateStory(c *fiber.Ctx) error {
 		MediaURL:  req.MediaURL,
 		Content:   req.Content,
 		BgColor:   req.BgColor,
+		IsEncrypted:      req.IsEncrypted,
+		EncryptedContent: req.EncryptedContent,
+		EncryptedIV:      req.EncryptedIV,
 		ExpiresAt: time.Now().Add(time.Duration(expiresIn) * time.Hour),
 	}
-
 	if err := db.GetDB().Create(&story).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create story"})
 	}
+	if req.IsEncrypted {
+		validRecipients := map[string]bool{userID: true}
+		for _, id := range getFriendIDs(userID) {
+			validRecipients[id] = true
+		}
+		var wraps []models.StoryKeyWrap
+		if req.MyWrappedKey != "" {
+			wraps = append(wraps, models.StoryKeyWrap{ID: generateID(), StoryID: story.ID, UserID: userID, WrappedKey: req.MyWrappedKey})
+		}
+		for _, w := range req.WrappedKeys {
+			if w.UserID == "" || w.WrappedKey == "" || !validRecipients[w.UserID] {
+				continue
+			}
+			wraps = append(wraps, models.StoryKeyWrap{ID: generateID(), StoryID: story.ID, UserID: w.UserID, WrappedKey: w.WrappedKey})
+		}
+		if len(wraps) > 0 {
+			if err := db.GetDB().Create(&wraps).Error; err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to save story key wraps"})
+			}
+		}
+	}
+
 
 	if result := db.GetDB().Preload("User").First(&story, "id = ?", story.ID); result.Error != nil {
 		return c.Status(201).JSON(story) // story created, but relations couldn't be loaded
@@ -92,6 +124,22 @@ func GetStories(c *fiber.Ctx) error {
 
 	for i := range stories {
 		stories[i].User = sanitizeUser(stories[i].User, "")
+
+	storyIDs := make([]string, 0, len(stories))
+	for _, s := range stories {
+		storyIDs = append(storyIDs, s.ID)
+	}
+	var wraps []models.StoryKeyWrap
+	if len(storyIDs) > 0 {
+		db.GetDB().Where("user_id = ? AND story_id IN ?", userID, storyIDs).Find(&wraps)
+	}
+	wrapByStory := make(map[string]string, len(wraps))
+	for _, w := range wraps {
+		wrapByStory[w.StoryID] = w.WrappedKey
+	}
+	for i := range stories {
+		stories[i].MyWrappedKey = wrapByStory[stories[i].ID]
+	}
 	}
 
 	return c.JSON(stories)
@@ -182,6 +230,9 @@ func DeleteStory(c *fiber.Ctx) error {
 	}
 
 	if err := db.GetDB().Delete(&story).Error; err != nil {
+	if err := db.GetDB().Where("story_id = ?", storyID).Delete(&models.StoryKeyWrap{}).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete story key wraps"})
+	}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete story"})
 	}
 	return c.JSON(fiber.Map{"ok": true})
@@ -350,7 +401,7 @@ func BlockUser(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	// Already blocked — treat as success (idempotent)
+	// Already blocked вЂ” treat as success (idempotent)
 	var existing models.BlockedUser
 	if err := db.GetDB().
 		Where("user_id = ? AND blocked_user_id = ?", userID, req.BlockedUserID).

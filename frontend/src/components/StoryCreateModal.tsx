@@ -1,6 +1,16 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ImagePlus, Type, Send } from 'lucide-react';
+import { X, ImagePlus, Type, Send, Lock } from 'lucide-react';
+import {
+  generateGroupSymmetricKey,
+  importGroupKey,
+  encryptMessage,
+  saveStoryKey,
+  wrapGroupKeyFor,
+  computeSharedSecret,
+  loadIdentityKeyPair,
+} from '../lib/e2e';
+import { e2eManager } from '../lib/e2eSession';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
@@ -29,6 +39,7 @@ export function StoryCreateModal({ onClose, onCreated }: StoryCreateModalProps) 
   const [photoCaption, setPhotoCaption] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [secret, setSecret] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoPick = async (file: File | null) => {
@@ -45,6 +56,7 @@ export function StoryCreateModal({ onClose, onCreated }: StoryCreateModalProps) 
 
   const handleCreate = async () => {
     if (sending) return;
+    if (!user) return;
     if (tab === 'text' && !content.trim()) {
       setError('Введи текст истории');
       return;
@@ -56,16 +68,74 @@ export function StoryCreateModal({ onClose, onCreated }: StoryCreateModalProps) 
 
     setSending(true);
     setError(null);
+    let contentPayload: string | undefined =
+      tab === 'photo' ? (photoCaption.trim() || undefined) : content.trim();
+    let isEncrypted = false;
+    let encryptedContent: string | undefined;
+    let encryptedIv: string | undefined;
+    let myWrappedKey: string | undefined;
+    let wrappedKeys: Array<{ userId: string; wrappedKey: string }> | undefined;
+    let rawKey: string | null = null;
+
+    if (secret && contentPayload) {
+      try {
+        await e2eManager.initialize(user.id);
+        const keyPair = loadIdentityKeyPair(user.id);
+        if (!keyPair) throw new Error('no keypair');
+
+        rawKey = generateGroupSymmetricKey();
+        const storyKey = await importGroupKey(rawKey);
+        const enc = await encryptMessage(storyKey, contentPayload);
+        encryptedContent = enc.ciphertext;
+        encryptedIv = enc.iv;
+
+        const selfSecret = await computeSharedSecret(keyPair.privateKey, keyPair.publicKey);
+        myWrappedKey = await wrapGroupKeyFor(selfSecret, rawKey);
+
+        try {
+          const friends = await api.getFriends();
+          wrappedKeys = [];
+          for (const f of friends) {
+            try {
+              const resp = await api.fetchKeyBundle(f.id);
+              const identity = resp.bundles?.[0]?.identityKey;
+              if (!identity) continue;
+              const secret = await computeSharedSecret(keyPair.privateKey, identity);
+              wrappedKeys.push({ userId: f.id, wrappedKey: await wrapGroupKeyFor(secret, rawKey) });
+            } catch {
+              // друг без key-бандла — пропускаем
+            }
+          }
+        } catch (err) {
+          console.error('Failed to wrap story key for friends:', err);
+          wrappedKeys = undefined;
+        }
+
+        isEncrypted = true;
+        contentPayload = undefined;
+      } catch (err) {
+        console.error('Failed to encrypt secret story:', err);
+        setError('Не удалось зашифровать историю');
+        setSending(false);
+        return;
+      }
+    }
+
     try {
       const story = await api.createStory({
         type: tab === 'photo' ? 'photo' : 'text',
         mediaUrl: tab === 'photo' ? photoUrl ?? undefined : undefined,
-        content: tab === 'photo' ? (photoCaption.trim() || undefined) : content.trim(),
+        content: contentPayload,
         bgColor: tab === 'text' ? bgColor : undefined,
         expiresIn: 24,
+        isEncrypted,
+        encryptedContent,
+        encryptedIv,
+        myWrappedKey,
+        wrappedKeys,
       });
 
-      if (!user) throw new Error('no user');
+      if (rawKey) saveStoryKey(story.id, rawKey);
 
       const meGroup: StoryGroup = {
         user: { id: user.id, username: user.username, displayName: user.displayName, avatar: user.avatar ?? null },
@@ -200,6 +270,28 @@ export function StoryCreateModal({ onClose, onCreated }: StoryCreateModalProps) 
 
         {error && (
           <p className="text-xs text-red-400 mt-3">{error}</p>
+        )}
+
+        <button
+          onClick={() => setSecret(v => !v)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl border text-xs font-medium transition-colors mb-3 ${
+            secret
+              ? 'bg-accent/15 border-accent/40 text-accent'
+              : 'bg-white/[0.04] border-white/[0.08] text-white/60 hover:text-white/80'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Lock size={14} />
+            Секретная история
+          </span>
+          <span className={`relative w-8 h-4.5 rounded-full transition-colors ${secret ? 'bg-accent' : 'bg-white/15'}`}>
+            <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all ${secret ? 'translate-x-3.5' : ''}`} />
+          </span>
+        </button>
+        {secret && (
+          <p className="text-[11px] text-white/40 -mt-1 mb-2">
+            Текст будет зашифрован (AES-256-GCM). Ключ получат только твои друзья.
+          </p>
         )}
 
         <button
