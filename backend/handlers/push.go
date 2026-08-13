@@ -173,7 +173,7 @@ func NotifyUser(userID string, title string, body string, data map[string]interf
 	// Scheduled DND: suppress push while the user's local time is inside the
 	// configured daily window (DndEnabled + [DndStart, DndEnd)).
 	if isDndActive(&user, time.Now()) {
-		log.Printf("[Push] suppressed by scheduled DND user=%s", userID)
+		logging.Log.Info("[Push] suppressed by scheduled DND", "user_id", userID)
 		return 0
 	}
 

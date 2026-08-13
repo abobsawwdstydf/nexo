@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"nexo/logging"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -260,7 +260,7 @@ func ExportAccountZip(c *fiber.Ctx) error {
 		Limit(exportZipMaxMessages + 1).
 		Find(&messages).Error
 	if err != nil {
-		log.Printf("[EXPORT] messages query failed for %s: %v", userID, err)
+		logging.Log.Error("[EXPORT] messages query failed", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Не удалось собрать сообщения"})
 	}
 
@@ -421,11 +421,11 @@ func ExportAccountZip(c *fiber.Ctx) error {
 	}
 
 	if err := addEntry("meta.json", metaJSON); err != nil {
-		log.Printf("[EXPORT] meta entry: %v", err)
+		logging.Log.Warn("[EXPORT] meta entry error", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Ошибка создания архива"})
 	}
 	if err := addEntry("messages.json", messagesJSON); err != nil {
-		log.Printf("[EXPORT] messages entry: %v", err)
+		logging.Log.Warn("[EXPORT] messages entry error", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Ошибка создания архива"})
 	}
 	for _, mf := range mediaFiles {
@@ -434,7 +434,7 @@ func ExportAccountZip(c *fiber.Ctx) error {
 			continue
 		}
 		if err := addEntry("media/"+mf.name, data); err != nil {
-			log.Printf("[EXPORT] media entry %s: %v", mf.name, err)
+			logging.Log.Warn("[EXPORT] media entry error", "name", mf.name, "err", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Ошибка создания архива"})
 		}
 	}
@@ -611,7 +611,7 @@ func ImportAccountZip(c *fiber.Ctx) error {
 		}
 		data, err := decryptEntry(e.Name)
 		if err != nil {
-			log.Printf("[IMPORT] %s: skip media %s: %v", userID, e.Name, err)
+			logging.Log.Warn("[IMPORT] skip media", "user_id", userID, "entry", e.Name, "err", err)
 			continue
 		}
 		mediaInArchive[base] = data
@@ -643,7 +643,7 @@ func ImportAccountZip(c *fiber.Ctx) error {
 	for _, ch := range archive.Chats {
 		if !memberSet[ch.ChatID] {
 			counters.skippedMessages += len(ch.Messages)
-			log.Printf("[IMPORT] %s: chat %s — не участник, пропущено %d сообщений", userID, ch.ChatID, len(ch.Messages))
+			logging.Log.Warn("[IMPORT] chat skipped, not a member", "user_id", userID, "chat_id", ch.ChatID, "messages", len(ch.Messages))
 			continue
 		}
 		for _, mj := range ch.Messages {
@@ -701,7 +701,7 @@ func ImportAccountZip(c *fiber.Ctx) error {
                         newName := helpers.GenerateID() + ext
                         dest := filepath.Join(UploadDir(), newName)
                         if err := os.WriteFile(dest, data, 0644); err != nil {
-                            log.Printf("[IMPORT] %s: failed to write media %s: %v", userID, newName, err)
+                            logging.Log.Error("[IMPORT] failed to write media", "user_id", userID, "name", newName, "err", err)
                             counters.mediaUnavailable++
                             continue
                         }
@@ -717,7 +717,7 @@ func ImportAccountZip(c *fiber.Ctx) error {
             }
 
 			if err := tx.Create(&msg).Error; err != nil {
-				log.Printf("[IMPORT] %s: create message failed: %v", userID, err)
+				logging.Log.Error("[IMPORT] create message failed", "user_id", userID, "err", err)
 				return c.Status(500).JSON(fiber.Map{"error": "Ошибка записи сообщения"})
 			}
 			counters.importedMessages++

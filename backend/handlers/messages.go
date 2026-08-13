@@ -818,7 +818,7 @@ func ForwardMessages(c *fiber.Ctx) error {
 	// user can see, not only their own.
 	var messages []models.Message
 	if err := db.GetDB().Preload("Media").Where("id IN ? AND is_deleted = false", req.MessageIDs).Find(&messages).Error; err != nil {
-		log.Printf("[ForwardMessages] failed to load messages: %v", err)
+		logging.Log.Error("[ForwardMessages] failed to load messages", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load messages"})
 	}
 	if len(messages) == 0 {
@@ -849,12 +849,12 @@ func ForwardMessages(c *fiber.Ctx) error {
 		for _, src := range messages {
 			// Encrypted content must not leak into other chats; copy nothing.
 			if src.IsEncrypted {
-				log.Printf("[ForwardMessages] skip encrypted message %s", src.ID)
+				logging.Log.Warn("[ForwardMessages] skip encrypted message", "message_id", src.ID)
 				skipped++
 				continue
 			}
 			if !src.CanForward {
-				log.Printf("[ForwardMessages] skip non-forwardable message %s", src.ID)
+				logging.Log.Warn("[ForwardMessages] skip non-forwardable message", "message_id", src.ID)
 				skipped++
 				continue
 			}
@@ -874,7 +874,7 @@ func ForwardMessages(c *fiber.Ctx) error {
 				UpdatedAt:       now,
 			}
 			if err := db.GetDB().Create(&msg).Error; err != nil {
-				log.Printf("[ForwardMessages] failed to create forwarded message: %v", err)
+				logging.Log.Error("[ForwardMessages] failed to create forwarded message", "err", err)
 				skipped++
 				continue
 			}
@@ -895,7 +895,7 @@ func ForwardMessages(c *fiber.Ctx) error {
 					OriginalFormat: md.OriginalFormat,
 				}
 				if err := db.GetDB().Create(&newMedia).Error; err != nil {
-					log.Printf("[ForwardMessages] failed to copy media %s: %v", md.ID, err)
+					logging.Log.Error("[ForwardMessages] failed to copy media", "media_id", md.ID, "err", err)
 				}
 			}
 			copiedIDs = append(copiedIDs, msg.ID)
@@ -915,7 +915,7 @@ func ForwardMessages(c *fiber.Ctx) error {
 		for _, msgID := range copiedIDs {
 			var msg models.Message
 			if err := db.GetDB().Preload("Sender").Preload("Media").First(&msg, "id = ?", msgID).Error; err != nil {
-				log.Printf("[ForwardMessages] failed to reload copied message %s: %v", msgID, err)
+				logging.Log.Error("[ForwardMessages] failed to reload copied message", "message_id", msgID, "err", err)
 				continue
 			}
 			ws.HubInstance.SendToChat(chatID, mustWSMsg("message:new", "message", json.RawMessage(messageToJSON(msg))), "")

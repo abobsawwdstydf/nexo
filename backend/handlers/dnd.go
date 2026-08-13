@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"log"
+	"nexo/logging"
 	"regexp"
 	"strconv"
 	"time"
@@ -104,7 +104,7 @@ func UpdateDNDSettings(c *fiber.Ctx) error {
 		"dnd_timezone_offset_min": user.DndTimezoneOffsetMin,
 	}
 	if err := db.GetDB().Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
-		log.Printf("[DND] save error user=%s: %v", userID, err)
+		logging.Log.Error("[DND] save error", "user_id", userID, "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save settings"})
 	}
 

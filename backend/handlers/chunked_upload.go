@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"io"
-	"log"
+	"nexo/logging"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -63,7 +63,7 @@ func StartChunkCleaner() {
 					if s.CreatedAt.Before(cutoff) {
 						chunkSessions.Delete(key)
 						os.Remove(s.Path)
-						log.Printf("[CHUNK] session %s expired", s.ID)
+						logging.Log.Info("[CHUNK] session expired", "session_id", s.ID)
 					}
 					return true
 				})
@@ -277,7 +277,7 @@ func ChunkComplete(c *fiber.Ctx) error {
 
 	// ffmpeg post-processing (non-fatal).
 	if err := ProcessMedia(finalPath, media.ID, &media); err != nil {
-		log.Printf("[CHUNK] ProcessMedia %s: %v", media.ID, err)
+		logging.Log.Error("[CHUNK] ProcessMedia failed", "media_id", media.ID, "err", err)
 	}
 
 	chunkSessions.Delete(uploadID)

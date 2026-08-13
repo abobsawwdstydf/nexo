@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"nexo/logging"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -114,7 +114,7 @@ func cleanupArtifacts(id string, paths ...string) {
 			continue
 		}
 		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
-			log.Printf("[MEDIA] cleanup %s: %v", p, err)
+			logging.Log.Warn("[MEDIA] cleanup failed for path", "path", p, "err", err)
 		}
 	}
 }
@@ -139,7 +139,7 @@ func processImage(ctx context.Context, filePath, id string, media *models.Media)
 		thumbPath,
 	}
 	if err := runFFmpeg(ctx, thumbArgs...); err != nil {
-		log.Printf("[MEDIA] thumbnail for %s failed: %v", id, err)
+		logging.Log.Warn("[MEDIA] thumbnail generation failed", "media_id", id, "err", err)
 		return err
 	}
 	media.Thumbnail = thumbURL
@@ -159,7 +159,7 @@ func processImage(ctx context.Context, filePath, id string, media *models.Media)
 		webpPath,
 	}
 	if err := runFFmpeg(ctx, webpArgs...); err != nil {
-		log.Printf("[MEDIA] webp for %s failed: %v", id, err)
+		logging.Log.Warn("[MEDIA] webp conversion failed", "media_id", id, "err", err)
 	} else {
 		formats["webp"] = webpURL
 	}
@@ -176,7 +176,7 @@ func processImage(ctx context.Context, filePath, id string, media *models.Media)
 		avifPath,
 	}
 	if err := runFFmpeg(ctx, avifArgs...); err != nil {
-		log.Printf("[MEDIA] avif for %s failed: %v", id, err)
+		logging.Log.Warn("[MEDIA] avif conversion failed", "media_id", id, "err", err)
 	} else {
 		formats["avif"] = avifURL
 	}
@@ -199,7 +199,7 @@ func processVideo(ctx context.Context, filePath, id string, media *models.Media)
 		thumbPath,
 	}
 	if err := runFFmpeg(ctx, thumbArgs...); err != nil {
-		log.Printf("[MEDIA] video thumbnail for %s failed: %v", id, err)
+		logging.Log.Warn("[MEDIA] video thumbnail failed", "media_id", id, "err", err)
 	} else {
 		media.Thumbnail = "/uploads/" + id + "_thumb.jpg"
 	}
@@ -209,7 +209,7 @@ func processVideo(ctx context.Context, filePath, id string, media *models.Media)
 		if d, err := probeDuration(ctx, p, filePath); err == nil && d > 0 {
 			media.Duration = d
 		} else if err != nil {
-			log.Printf("[MEDIA] ffprobe duration for %s failed: %v", id, err)
+			logging.Log.Warn("[MEDIA] ffprobe duration failed", "media_id", id, "err", err)
 		}
 	}
 
@@ -235,14 +235,14 @@ func processVideo(ctx context.Context, filePath, id string, media *models.Media)
 		transcodedPath,
 	}
 	if err := runFFmpeg(ctx, transArgs...); err != nil {
-		log.Printf("[MEDIA] transcode for %s failed: %v", id, err)
+		logging.Log.Warn("[MEDIA] transcode failed", "media_id", id, "err", err)
 		cleanupArtifacts(id, thumbPath)
 		return err
 	}
 
 	info, err := os.Stat(transcodedPath)
 	if err != nil || info.Size() == 0 {
-		log.Printf("[MEDIA] transcode for %s produced no output: %v", id, err)
+		logging.Log.Warn("[MEDIA] transcode produced no output", "media_id", id, "err", err)
 		cleanupArtifacts(id, thumbPath, transcodedPath)
 		return fmt.Errorf("transcode produced no output")
 	}
