@@ -191,6 +191,14 @@ function formatDuration(totalSec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/** Человекочитаемый размер файла: <1KB в байтах, дальше КБ/МБ. */
+function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} МБ`;
+}
+
 /** Достаёт координаты из сообщения вида «📍 Местоположение: https://maps.google.com/maps?q=lat,lng». */
 function parseLocationContent(content: string): { lat: string; lng: string; url: string } | null {
   const m = content.match(/maps\.google\.com\/maps\?q=(-?[\d.]+),(-?[\d.]+)/);
@@ -310,64 +318,43 @@ function VoiceMessagePlayer({ url, isOwn, decryptedUrl }: { url: string; isOwn: 
     setPlaying(!playing);
   };
 
-  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audioRef.current.currentTime = ratio * duration;
-    setCurrentTime(ratio * duration);
-  };
-
   const progress = duration ? currentTime / duration : 0;
 
+  const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    if (duration > 0 && Math.abs(ratio - progress) > 0.03) {
+      // Клик по волне = перемотка, не воспроизведение.
+      if (audioRef.current) audioRef.current.currentTime = ratio * duration;
+      setCurrentTime(ratio * duration);
+      return;
+    }
+    togglePlay();
+  };
+
   return (
-    <div className="flex items-center gap-2.5 w-full min-w-[200px] max-w-[240px]">
-      <button
-        onClick={togglePlay}
-        className={`relative w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-          isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/15'
-        }`}
-      >
-        {playing ? <Pause size={14} className="text-white" /> : <Play size={14} className="text-white ml-0.5" />}
-        {duration > 0 && (
-          <svg viewBox="0 0 36 36" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
-            <circle cx="18" cy="18" r="16.5" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5" />
-            <circle
-              cx="18" cy="18" r="16.5" fill="none"
-              stroke="rgba(255,255,255,0.85)" strokeWidth="2.5" strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 16.5}`}
-              strokeDashoffset={`${2 * Math.PI * 16.5 * (1 - progress)}`}
-              style={{ transition: 'stroke-dashoffset 0.1s linear' }}
-            />
-          </svg>
-        )}
-      </button>
-      <div className="flex-1 min-w-0">
-        <div
-          className="flex items-end gap-[2px] h-7 cursor-pointer select-none touch-none"
-          onClick={seek}
-          title="Перемотать"
-        >
-          {bars.map((v, i) => {
-            const active = i / bars.length <= progress;
-            return (
-              <div
-                key={i}
-                style={{ height: `${Math.round(8 + v * 18)}px` }}
-                className={`w-[3px] rounded-full transition-colors duration-150 ${
-                  active
-                    ? isOwn ? 'bg-white/85' : 'bg-accent/90'
-                    : 'bg-white/20'
-                }`}
-              />
-            );
-          })}
-        </div>
-        <div className="flex justify-between mt-1">
-          <span className="text-[9px] tabular-nums text-white/45">{formatDuration(currentTime)}</span>
-          <span className="text-[9px] tabular-nums text-white/45">{formatDuration(duration)}</span>
-        </div>
-      </div>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePlay(); } }}
+      title={playing ? 'Пауза' : 'Воспроизвести'}
+      className="flex items-center gap-[3px] h-8 cursor-pointer select-none touch-none w-full min-w-[180px] max-w-[220px]"
+    >
+      {bars.map((v, i) => {
+        const active = i / bars.length <= progress;
+        return (
+          <div
+            key={i}
+            style={{ height: `${Math.round(8 + v * 18)}px` }}
+            className={`w-[3px] rounded-full transition-colors duration-150 ${
+              active
+                ? isOwn ? 'bg-white/85' : 'bg-accent/90'
+                : 'bg-white/20'
+            }`}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -460,31 +447,59 @@ function VideoNotePlayer({ thumbnail, decryptedUrl }: { thumbnail?: string | nul
   );
 }
 
-function ImageGallery({ media }: { media: Array<{ url: string; thumbnail?: string | null }> }) {
+function ImageGallery({ media }: { media: MediaItem[] }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const images = media.filter(m => m.type !== 'file');
+  const files = media.filter(m => m.type === 'file');
 
   return (
     <>
-      <div className={`flex gap-1 ${media.length === 1 ? '' : 'grid grid-cols-2 gap-1'}`}>
-        {media.slice(0, 4).map((item, i) => (
-          <button
-            key={item.url}
-            onClick={() => setSelectedImage(item.url)}
-            className="relative overflow-hidden rounded-xl group/img"
-          >
-            <img
-              src={normalizeMediaUrl(item.thumbnail || item.url)}
-              alt=""
-              className="w-full h-auto max-h-[200px] object-cover"
-            />
-            {i === 3 && media.length > 4 && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <span className="text-white text-lg font-semibold">+{media.length - 4}</span>
-              </div>
-            )}
-          </button>
-        ))}
-      </div>
+      {images.length > 0 && (
+        <div className={`flex gap-1 ${images.length === 1 ? '' : 'grid grid-cols-2 gap-1'}`}>
+          {images.slice(0, 4).map((item, i) => (
+            <button
+              key={item.url}
+              onClick={() => setSelectedImage(item.url)}
+              className="relative overflow-hidden rounded-xl group/img"
+            >
+              <img
+                src={normalizeMediaUrl(item.thumbnail || item.url)}
+                alt=""
+                className="w-full h-auto max-h-[200px] object-cover"
+              />
+              {i === 3 && images.length > 4 && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <span className="text-white text-lg font-semibold">+{images.length - 4}</span>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {files.map((item) => (
+        <a
+          key={item.url}
+          href={normalizeMediaUrl(item.url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] px-3 py-2.5 transition-colors min-w-[220px] max-w-[280px]"
+        >
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${item.type === 'application/pdf' || /\.pdf$/i.test(item.url) ? 'bg-red-500/15' : 'bg-accent/15'}`}>
+            <FileText size={20} className={item.type === 'application/pdf' || /\.pdf$/i.test(item.url) ? 'text-red-400' : 'text-accent'} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-white/90 truncate">
+              {decodeURIComponent(item.filename || 'Файл')}
+            </p>
+            <p className="text-[10px] text-white/40 mt-0.5 flex items-center gap-1">
+              {formatFileSize(item.size)}
+              <ExternalLink size={9} />
+            </p>
+          </div>
+        </a>
+      ))}
 
       <AnimatePresence>
         {selectedImage && (
@@ -666,8 +681,8 @@ const MessageBubble = memo(function MessageBubble({
           className={`
             ${hasVideoNote ? 'px-2 py-2' : 'px-4 py-2.5'}
             ${isOwn
-              ? 'rounded-[20px] rounded-br-[8px] liquid-glass bubble-sent-glow'
-              : 'rounded-[20px] rounded-bl-[8px] liquid-glass bubble-received-glow'
+              ? 'rounded-[20px] rounded-br-[8px] liquid-glass bubble-sent-glow bubble-frame'
+              : 'rounded-[20px] rounded-bl-[8px] liquid-glass bubble-received-glow bubble-frame'
             }
           `}
         >
@@ -1501,7 +1516,7 @@ function MessageInput({
     for (const file of files.slice(0, 5)) {
       try {
         const media = await api.uploadFile(file);
-        onSend(file.name, { media: [media] });
+        onSend('', { media: [media] });
       } catch (err) {
         console.error('[File] Failed to upload:', err);
         toast.error('Ошибка загрузки файла');
