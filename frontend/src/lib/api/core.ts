@@ -7,7 +7,7 @@ export const getApiBase = (): string => {
 
 export class ApiClient {
   /** @internal */ csrfToken: string | null = null;
-  /** @internal */ refreshPromise: Promise<boolean> | null = null;
+  /** @internal */ refreshPromise: Promise<'ok' | 'invalid' | 'network'> | null = null;
   /** @internal */ onAuthFailed?: () => void;
   private pendingRequests = new Map<string, Promise<any>>();
 
@@ -48,8 +48,10 @@ export class ApiClient {
     } catch { /* localStorage not available */ }
   }
 
-  /** @internal */
-  async doRefresh(): Promise<boolean> {
+  /** @internal Refresh outcome: 'ok' — new tokens stored; 'invalid' — the
+   *  refresh token itself was rejected by the server; 'network' — the request
+   *  never reached the server (offline/abort), so the session is NOT dead. */
+  async doRefresh(): Promise<'ok' | 'invalid' | 'network'> {
     try {
       const refreshToken = this.getStoredRefreshToken();
 
@@ -70,7 +72,7 @@ export class ApiClient {
       });
       clearTimeout(refreshTimer);
 
-      if (!refreshResponse.ok) return false;
+      if (!refreshResponse.ok) return 'invalid';
 
       const data = await refreshResponse.json();
 
@@ -86,9 +88,9 @@ export class ApiClient {
         this.csrfToken = data.csrfToken;
       }
 
-      return true;
+      return 'ok';
     } catch {
-      return false;
+      return 'network';
     }
   }
 
@@ -191,13 +193,22 @@ export class ApiClient {
             });
           }
 
+          // Remember which refresh token this round tried to rotate, so a
+          // parallel tab that already refreshed (rotation invalidates the old
+          // token server-side) doesn't get logged out here.
+          const attemptedToken = this.getStoredRefreshToken();
           const refreshOk = await this.refreshPromise;
 
-          if (refreshOk) {
+          if (refreshOk === 'ok') {
             return this._doRequest<T>(endpoint, options, true);
           }
 
-          this.onAuthFailed?.();
+          // Only treat a server-side rejection of the SAME token as a dead
+          // session. Network failures and tokens already replaced by another
+          // tab must not log the user out.
+          if (refreshOk === 'invalid' && this.getStoredRefreshToken() === attemptedToken) {
+            this.onAuthFailed?.();
+          }
         }
       }
       

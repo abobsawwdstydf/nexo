@@ -170,7 +170,7 @@ export class AdminApiClient extends ApiClient {
       else localStorage.removeItem(ADMIN_REFRESH_KEY);
     } catch { /* localStorage not available */ }
   }
-  async doRefresh(): Promise<boolean> {
+  async doRefresh(): Promise<'ok' | 'invalid' | 'network'> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 10_000);
@@ -185,16 +185,16 @@ export class AdminApiClient extends ApiClient {
         signal: controller.signal,
       });
       clearTimeout(timer);
-      if (!res.ok) return false;
+      if (!res.ok) return 'invalid';
       const data = await res.json();
       if (data.accessToken) {
         try { localStorage.setItem(ADMIN_TOKEN_KEY, data.accessToken); } catch { /* noop */ }
       }
       if (data.refreshToken) this.setStoredRefreshToken(data.refreshToken);
       if (data.csrfToken) this.csrfToken = data.csrfToken;
-      return true;
+      return 'ok';
     } catch {
-      return false;
+      return 'network';
     }
   }
   private getApiBaseForRefresh(): string {

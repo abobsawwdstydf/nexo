@@ -183,12 +183,45 @@ export const useAuthStore = create<AuthState>((set, get) => {
         console.warn('[Auth] HTTP init failed, attempting refresh:', err);
         try {
           const refreshed = await api.doRefresh();
-          if (refreshed) {
+          if (refreshed === 'ok') {
             const newToken = localStorage.getItem('nexo_access_token');
             const initData = await api.getInit();
             finishInit(initData, newToken);
             return;
           }
+          // A network failure (offline, flaky ISP, proxy) does NOT mean the
+          // session is dead — keep the user logged in with the cached profile
+          // and let the next request retry the refresh.
+          if (refreshed === 'network') {
+            console.warn('[Auth] Refresh blocked by network, keeping session');
+            set({ isLoading: false });
+            return;
+          }
+          // 'invalid' — the refresh token was rejected server-side. Before
+          // wiping, check whether a parallel tab already rotated it; if so,
+          // retry once with the fresh token instead of logging the user out.
+          const attemptedToken = localStorage.getItem('nexo_refresh_token');
+          const refreshAgain = await api.doRefresh();
+          if (refreshAgain !== 'ok') {
+            if (refreshAgain === 'invalid') {
+              const notRotated = localStorage.getItem('nexo_refresh_token') === attemptedToken;
+              if (notRotated) {
+                throw new Error('Session expired');
+              }
+              // Token was rotated by another tab: retry init with the new one.
+              const newToken = localStorage.getItem('nexo_access_token');
+              if (newToken) {
+                const initData = await api.getInit();
+                finishInit(initData, newToken);
+                return;
+              }
+            }
+            throw new Error('Refresh failed');
+          }
+          const newToken = localStorage.getItem('nexo_access_token');
+          const initData = await api.getInit();
+          finishInit(initData, newToken);
+          return;
         } catch (refreshErr) {
           console.warn('[Auth] Refresh also failed:', refreshErr);
         }
