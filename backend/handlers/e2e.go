@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ var (
 	errE2ENoKeys    = errors.New("no one-time pre keys available")
 )
 
-// в”Ђв”Ђв”Ђ Feature 7: E2E Key Exchange в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// ─── Feature 7: E2E Key Exchange ─────────────────────────────────────
 
 type E2EUploadKeyBundleRequest struct {
 	IdentityKey   string   `json:"identityKey"`
@@ -44,7 +44,7 @@ type E2EInitSessionRequest struct {
 	EncryptedKey string `json:"encryptedKey"`
 }
 
-// UploadKeyBundle вЂ” РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ Р·Р°РіСЂСѓР¶Р°РµС‚ СЃРІРѕР№ РїСѓР±Р»РёС‡РЅС‹Р№ РєР»СЋС‡РµРІРѕР№ РЅР°Р±РѕСЂ
+// UploadKeyBundle — пользователь загружает свой публичный ключевой набор
 func UploadKeyBundle(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
@@ -66,7 +66,7 @@ func UploadKeyBundle(c *fiber.Ctx) error {
 	var existing models.E2EKeyBundle
 	result := database.Where("user_id = ? AND device_id = ?", userID, req.DeviceID).First(&existing)
 	if result.Error == nil {
-		// РћР±РЅРѕРІР»СЏРµРј СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№
+		// Обновляем существующий
 		existing.IdentityKey = req.IdentityKey
 		existing.SignedPreKey = req.SignedPreKey
 		existing.SignedKeySig = req.SignedKeySig
@@ -74,7 +74,7 @@ func UploadKeyBundle(c *fiber.Ctx) error {
 		existing.UploadedAt = time.Now()
 		database.Save(&existing)
 	} else {
-		// РЎРѕР·РґР°С‘Рј РЅРѕРІС‹Р№
+		// Создаём новый
 		bundle := models.E2EKeyBundle{
 			ID:            generateID(),
 			UserID:        userID,
@@ -91,7 +91,7 @@ func UploadKeyBundle(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// FetchKeyBundle вЂ” РїРѕР»СѓС‡РёС‚СЊ РїСѓР±Р»РёС‡РЅС‹Р№ РєР»СЋС‡РµРІРѕР№ РЅР°Р±РѕСЂ РґСЂСѓРіРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+// FetchKeyBundle — получить публичный ключевой набор другого пользователя
 func FetchKeyBundle(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	database := db.GetDB()
@@ -139,7 +139,7 @@ func FetchKeyBundle(c *fiber.Ctx) error {
 // write lock, so two parallel requests could consume the same key twice.
 var preKeyMu sync.Mutex
 
-// ConsumeOneTimePreKey вЂ” Р·Р°Р±СЂР°С‚СЊ one-time РїСЂРµРєР»СЋС‡Р°С‚РµР»СЊ (РѕРґРЅРѕСЂР°Р·РѕРІС‹Р№)
+// ConsumeOneTimePreKey — забрать one-time преключатель (одноразовый)
 func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	database := db.GetDB()
@@ -192,7 +192,7 @@ func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 		}
 	}
 
-	// WS СѓРІРµРґРѕРјР»РµРЅРёРµ вЂ” РєР»СЋС‡ РёР·РІР»РµС‡С‘РЅ
+	// WS уведомление — ключ извлечён
 	e2eKeyMsg, _ := json.Marshal(fiber.Map{
 		"type":     "e2e_key_consumed",
 		"byUser":   userID,
@@ -203,7 +203,7 @@ func ConsumeOneTimePreKey(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"oneTimePreKey": usedKey})
 }
 
-// InitSession вЂ” РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ E2E СЃРµСЃСЃРёРё
+// InitSession — инициализация E2E сессии
 func InitSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
@@ -218,13 +218,13 @@ func InitSession(c *fiber.Ctx) error {
 
 	database := db.GetDB()
 
-	// РџСЂРѕРІРµСЂСЏРµРј С‡С‚Рѕ РІС‹Р·С‹РІР°СЋС‰РёР№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ вЂ” СѓС‡Р°СЃС‚РЅРёРє С‡Р°С‚Р°
+	// Проверяем что вызывающий пользователь — участник чата
 	var membership models.ChatMember
 	if err := database.Where("chat_id = ? AND user_id = ?", req.ChatID, userID).First(&membership).Error; err != nil {
 		return c.Status(403).JSON(fiber.Map{"error": "You are not a member of this chat"})
 	}
 
-	// РџСЂРѕРІРµСЂСЏРµРј С‡С‚Рѕ РѕР±Р° СѓС‡Р°СЃС‚РЅРёРєР° РІ С‡Р°С‚Рµ
+	// Проверяем что оба участника в чате
 	var members []models.ChatMember
 	database.Where("chat_id = ?", req.ChatID).Find(&members)
 	if len(members) < 2 {
@@ -239,7 +239,7 @@ func InitSession(c *fiber.Ctx) error {
 		}
 	}
 
-	// РџСЂРѕРІРµСЂСЏРµРј РЅРµС‚ Р»Рё СѓР¶Рµ Р°РєС‚РёРІРЅРѕР№ СЃРµСЃСЃРёРё
+	// Проверяем нет ли уже активной сессии
 	var existing models.E2ESession
 	if err := database.Where("chat_id = ? AND is_active = ?", req.ChatID, true).First(&existing).Error; err == nil {
 		// Verify current user is a participant of the existing session
@@ -260,7 +260,7 @@ func InitSession(c *fiber.Ctx) error {
 	}
 	database.Create(&session)
 
-	// WS СѓРІРµРґРѕРјР»РµРЅРёРµ вЂ” СЃРµСЃСЃРёСЏ СЃРѕР·РґР°РЅР°
+	// WS уведомление — сессия создана
 	e2eSessionMsg, _ := json.Marshal(fiber.Map{
 		"type":        "e2e_session_started",
 		"sessionId":   session.ID,
@@ -272,7 +272,7 @@ func InitSession(c *fiber.Ctx) error {
 }
 
 
-// GetSession вЂ” РїРѕР»СѓС‡РёС‚СЊ E2E СЃРµСЃСЃРёСЋ С‡Р°С‚Р° (Р»РёС‡РЅС‹Р№ С‡Р°С‚)
+// GetSession — получить E2E сессию чата (личный чат)
 func GetSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	chatID := c.Params("chatId")
@@ -292,7 +292,7 @@ func GetSession(c *fiber.Ctx) error {
 	})
 }
 
-// DeleteSession вЂ” СѓРґР°Р»РёС‚СЊ E2E СЃРµСЃСЃРёСЋ (Р»РёС‡РЅС‹Р№ С‡Р°С‚, СЃР±СЂРѕСЃ С€РёС„СЂРѕРІР°РЅРёСЏ)
+// DeleteSession — удалить E2E сессию (личный чат, сброс шифрования)
 func DeleteSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	chatID := c.Params("chatId")
@@ -304,22 +304,22 @@ func DeleteSession(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "no active session"})
 	}
 
-	// WS СѓРІРµРґРѕРјР»РµРЅРёРµ
+	// WS уведомление
 	e2eDeleteMsg, _ := json.Marshal(fiber.Map{
 		"type":      "e2e_session_deleted",
 		"deletedBy": userID,
 	})
 	ws.HubInstance.SendToChat(chatID, e2eDeleteMsg, "")
 
-	// РћС‚РєР»СЋС‡Р°РµРј E2E С„Р»Р°Рі Сѓ С‡Р°С‚Р°
+	// Отключаем E2E флаг у чата
 	database.Model(&models.Chat{}).Where("id = ?", chatID).Update("is_e2e", false)
 
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// в”Ђв”Ђв”Ђ E2E Group Sessions в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// ─── E2E Group Sessions ────────────────────────────────────────────────
 
-// E2EGroupKeyWrap вЂ” РѕР±С‘СЂРЅСѓС‚С‹Р№ РіСЂСѓРїРїРѕРІРѕР№ РєР»СЋС‡ РґР»СЏ РѕРґРЅРѕРіРѕ СѓС‡Р°СЃС‚РЅРёРєР°
+// E2EGroupKeyWrap — обёрнутый групповой ключ для одного участника
 type E2EGroupKeyWrap struct {
 	UserID     string `json:"userId"`
 	WrappedKey string `json:"wrappedKey"`
@@ -338,7 +338,7 @@ func isChatMemberOf(userID, chatID string) bool {
 	return count > 0
 }
 
-// sendGroupSessionUpdate вЂ” WS СЃРѕР±С‹С‚РёРµ e2e_group_session_updated РІ С‡Р°С‚
+// sendGroupSessionUpdate — WS событие e2e_group_session_updated в чат
 func sendGroupSessionUpdate(chatID, action, byUser string) {
 	msg, _ := json.Marshal(fiber.Map{
 		"type":   "e2e_group_session_updated",
@@ -381,8 +381,8 @@ func upsertGroupWrappedKeys(tx *gorm.DB, chatID, byUser string, wraps []E2EGroup
 	return nil
 }
 
-// InitGroupSession вЂ” СЃРѕР·РґР°С‚СЊ РіСЂСѓРїРїРѕРІСѓСЋ E2E-СЃРµСЃСЃРёСЋ: РєР»РёРµРЅС‚ СЃР°Рј РіРµРЅРµСЂРёСЂСѓРµС‚
-// РіСЂСѓРїРїРѕРІРѕР№ РєР»СЋС‡, РѕР±РѕСЂР°С‡РёРІР°РµС‚ РµРіРѕ РґР»СЏ РєР°Р¶РґРѕРіРѕ СѓС‡Р°СЃС‚РЅРёРєР° Рё РїСЂРёСЃС‹Р»Р°РµС‚ РѕР±С‘СЂС‚РєРё.
+// InitGroupSession — создать групповую E2E-сессию: клиент сам генерирует
+// групповой ключ, оборачивает его для каждого участника и присылает обёртки.
 func InitGroupSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 
@@ -407,8 +407,8 @@ func InitGroupSession(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// GetGroupSession вЂ” РїРѕР»СѓС‡РёС‚СЊ РѕР±С‘СЂС‚РєРё РіСЂСѓРїРїРѕРІРѕРіРѕ РєР»СЋС‡Р° РґР»СЏ С‡Р°С‚Р°.
-// РљР»РёРµРЅС‚ РІС‹Р±РёСЂР°РµС‚ СЃРІРѕСЋ РѕР±С‘СЂС‚РєСѓ (userId = me) Рё СЂР°Р·РІРѕСЂР°С‡РёРІР°РµС‚ РµС‘.
+// GetGroupSession — получить обёртки группового ключа для чата.
+// Клиент выбирает свою обёртку (userId = me) и разворачивает её.
 func GetGroupSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	chatID := c.Params("chatId")
@@ -436,8 +436,8 @@ func GetGroupSession(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"chatId": chatID, "wrappedKeys": wrappedKeys})
 }
 
-// RotateGroupSession вЂ” СЂРѕС‚Р°С†РёСЏ РіСЂСѓРїРїРѕРІРѕРіРѕ РєР»СЋС‡Р°: РєР»РёРµРЅС‚ С€Р»С‘С‚ РЅРѕРІС‹Рµ РѕР±С‘СЂС‚РєРё,
-// СЃС‚Р°СЂС‹Рµ Р·Р°РјРµРЅСЏСЋС‚СЃСЏ.
+// RotateGroupSession — ротация группового ключа: клиент шлёт новые обёртки,
+// старые заменяются.
 func RotateGroupSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	chatID := c.Params("chatId")
@@ -466,7 +466,7 @@ func RotateGroupSession(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"ok": true})
 }
 
-// DeleteGroupSession вЂ” СѓРґР°Р»РёС‚СЊ РіСЂСѓРїРїРѕРІСѓСЋ E2E-СЃРµСЃСЃРёСЋ (СЃР±СЂРѕСЃ С€РёС„СЂРѕРІР°РЅРёСЏ)
+// DeleteGroupSession — удалить групповую E2E-сессию (сброс шифрования)
 func DeleteGroupSession(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
 	chatID := c.Params("chatId")

@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"strings"
@@ -401,7 +401,7 @@ func BlockUser(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	// Already blocked вЂ” treat as success (idempotent)
+	// Already blocked — treat as success (idempotent)
 	var existing models.BlockedUser
 	if err := db.GetDB().
 		Where("user_id = ? AND blocked_user_id = ?", userID, req.BlockedUserID).
