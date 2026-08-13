@@ -5,8 +5,19 @@ import { getApiUrl } from '../config';
  * Если URL относительный (начинается с /) — добавляет API_URL.
  * Если уже полный (http/https) или data URI — возвращает как есть.
  */
+const STICKER_CDN = 'https://stickers.darkheavens.ru/';
+
 export function normalizeMediaUrl(url: string | null | undefined): string {
   if (!url) return '';
+  // Стикеры с внешнего CDN недоступны части пользователей (домен блокируется
+  // сетями). Проксируем их через бэкенд /stickers/proxy/:name, который кэширует
+  // файлы и отдаёт с рабочего API-домена.
+  if (url.startsWith(STICKER_CDN)) {
+    const name = url.slice(STICKER_CDN.length);
+    const apiUrl = getApiUrl();
+    const base = apiUrl ? apiUrl.replace(/\/$/, '') : '';
+    return `${base}/stickers/proxy/${encodeURIComponent(name)}`;
+  }
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
     return url;
   }

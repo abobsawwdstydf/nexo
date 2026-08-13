@@ -355,6 +355,10 @@ nexo_up 1
 	api.Post("/auth/email/send-code", handlers.AuthRateLimit(3, 15*time.Minute), handlers.SendEmailCode)
 	api.Post("/auth/email/confirm", handlers.AuthRateLimit(5, time.Minute), handlers.ConfirmEmailCode)
 
+	// Отдельный вход в админ-панель (email + код из письма), public
+	api.Post("/auth/admin/request-code", handlers.AuthRateLimit(3, 15*time.Minute), handlers.AdminRequestCode)
+	api.Post("/auth/admin/verify", handlers.AuthRateLimit(10, time.Minute), handlers.AdminVerifyCode)
+
 	// Dev-only login — роут существует ТОЛЬКО при DEV_LOGIN_KEY в окружении
 	// (в проде переменная не задана, поэтому /api/dev/login туда не попадает)
 	if os.Getenv("DEV_LOGIN_KEY") != "" {

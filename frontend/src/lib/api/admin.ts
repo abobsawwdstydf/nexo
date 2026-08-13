@@ -1,4 +1,4 @@
-import { ApiClient } from './core';
+import { ApiClient, getApiBase } from './core';
 
 
 export interface AdminAnalyticsTotals {
@@ -149,4 +149,104 @@ export function installAdmin(api: ApiClient): void {
     return api.get<AdminAnalyticsResponse>('/admin/analytics');
   };
 
+}
+
+// ═══ Отдельный клиент для админ-панели ────────────────────────────────────
+// Хранит токены под собственными ключами localStorage (nexo_admin_*),
+// чтобы вход в /admin не пересекался с сессией мессенджера.
+export const ADMIN_TOKEN_KEY = 'nexo_admin_token';
+export const ADMIN_REFRESH_KEY = 'nexo_admin_refresh_token';
+
+export class AdminApiClient extends ApiClient {
+  getStoredAccessToken(): string | null {
+    try { return localStorage.getItem(ADMIN_TOKEN_KEY); } catch { return null; }
+  }
+  getStoredRefreshToken(): string | null {
+    try { return localStorage.getItem(ADMIN_REFRESH_KEY); } catch { return null; }
+  }
+  setStoredRefreshToken(token: string | null): void {
+    try {
+      if (token) localStorage.setItem(ADMIN_REFRESH_KEY, token);
+      else localStorage.removeItem(ADMIN_REFRESH_KEY);
+    } catch { /* localStorage not available */ }
+  }
+  async doRefresh(): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10_000);
+      const body: Record<string, string> = {};
+      const refreshToken = this.getStoredRefreshToken();
+      if (refreshToken) body.refreshToken = refreshToken;
+      const res = await fetch(`${this.getApiBaseForRefresh()}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.accessToken) {
+        try { localStorage.setItem(ADMIN_TOKEN_KEY, data.accessToken); } catch { /* noop */ }
+      }
+      if (data.refreshToken) this.setStoredRefreshToken(data.refreshToken);
+      if (data.csrfToken) this.csrfToken = data.csrfToken;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  private getApiBaseForRefresh(): string {
+    return getApiBase();
+  }
+}
+
+export const adminApi = new AdminApiClient();
+installAdmin(adminApi);
+adminApi.setOnAuthFailed(() => {
+  try {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_REFRESH_KEY);
+  } catch { /* noop */ }
+  window.location.hash = '#admin';
+});
+
+export interface AdminLoginResult {
+  accessToken: string;
+  refreshToken?: string;
+  requiresTwoFactor?: boolean;
+  tentativeToken?: string;
+}
+
+// Этап 1: запросить код на почту администратора
+export async function adminRequestCode(email: string): Promise<{ requiresCode: boolean; expiresAt?: string }> {
+  return adminApi.post('/auth/admin/request-code', { email });
+}
+
+// Этап 2: обменять код на токены (или получить tentativeToken для 2FA)
+export async function adminVerifyCode(email: string, code: string): Promise<AdminLoginResult> {
+  return adminApi.post('/auth/admin/verify', { email, code });
+}
+
+// Этап 2.5: завершить 2FA, если она включена на аккаунте
+export async function adminComplete2FA(tentativeToken: string, code: string): Promise<AdminLoginResult> {
+  return adminApi.post('/auth/login/totp', { tentativeToken, code });
+}
+
+export function adminLogout(): void {
+  try {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_REFRESH_KEY);
+  } catch { /* noop */ }
+}
+
+// Получает CSRF-токен для мутаций админ-панели (POST/PUT/DELETE).
+export async function adminEnsureCsrf(): Promise<void> {
+  try {
+    const res = await fetch(`${getApiBase()}/csrf-token`, { credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.token) adminApi.setCsrfToken(data.token);
+  } catch { /* fall back to auto-retry in ApiClient */ }
 }

@@ -11,12 +11,14 @@ import { BetaBanner } from './components/BetaBanner';
 import { BetaEnded } from './components/BetaEnded';
 import { BetaNotStarted } from './components/BetaNotStarted';
 import { DevFab } from './components/DevFab';
+import { usePerformanceMode } from './hooks/usePerformanceMode';
 
 // Lazy load heavy pages for better initial load
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const MessengerPage = lazy(() => import('./pages/MessengerPage'));
 const LegalPages = lazy(() => import('./pages/LegalPages'));
 const InfoPage = lazy(() => import('./pages/InfoPage'));
+const AdminLoginPage = lazy(() => import('./components/AdminLoginPage'));
 
 // Module-level fallback keeps a stable component identity across re-renders
 const LoadingFallback = () => (
@@ -32,12 +34,39 @@ export default function App() {
   const [legalTab, setLegalTab] = useState<'privacy' | 'terms' | 'cookies'>('privacy');
   const [teamLogin, setTeamLogin] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [adminRoute, setAdminRoute] = useState(false);
+
+  // Perf-mode глобально (слабые устройства / reduced motion)
+  usePerformanceMode();
 
   // Auth + beta check on mount
   useEffect(() => {
     checkAuth();
     fetchBeta();
   }, [checkAuth, fetchBeta]);
+
+  // Отдельная админ-панель: путь /admin или хэш #admin — вне бета-гейтов
+  useEffect(() => {
+    const check = () => {
+      const h = window.location.hash;
+      setAdminRoute(h === '#admin' || h.startsWith('#admin') || window.location.pathname.startsWith('/admin'));
+    };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+  }, []);
+
+  if (adminRoute) {
+    return (
+      <ErrorBoundary>
+        <AudioClickWrapper>
+          <Suspense fallback={<LoadingFallback />}>
+            <AdminLoginPage />
+          </Suspense>
+        </AudioClickWrapper>
+      </ErrorBoundary>
+    );
+  }
 
   const openLegal = (tab: 'privacy' | 'terms' | 'cookies') => {
     setLegalTab(tab);

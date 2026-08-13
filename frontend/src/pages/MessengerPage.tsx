@@ -29,7 +29,6 @@ import { getAIMessages, AI_CHAT_ID, AI_CHANGED_EVENT } from '../lib/api/aiChat';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { playNotification } from '../lib/sounds';
 import { OnboardingModal } from '../components/OnboardingModal';
-import { usePerformanceMode } from '../hooks/usePerformanceMode';
 import { StoriesViewer } from '../components/StoryViewer';
 import { StoryCreateModal } from '../components/StoryCreateModal';
 import AdminPanel from '../components/AdminPanel';
@@ -75,7 +74,6 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const { chats: initChats, loaded: initLoaded } = useInitStore();
   const storyGroups = useInitStore(s => s.stories);
   const callContext = useCallContext();
-  usePerformanceMode();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
