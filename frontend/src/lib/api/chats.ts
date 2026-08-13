@@ -13,6 +13,7 @@ declare module './core' {
     leaveChat(chatId: string): Promise<{ ok: boolean }>;
     kickMember(chatId: string, userId: string): Promise<{ ok: boolean }>;
     getChat(chatId: string): Promise<Chat>;
+    muteChat(chatId: string, muted: boolean): Promise<{ ok: boolean; muted: boolean }>;
     getOrCreateFeedbackChat(): Promise<Chat>;
     openComments(chatId: string, messageId: string): Promise<{ chatId: string; chat: Chat }>;
     adminListFeedback(): Promise<{ items: Array<{ chatId: string; name: string; avatar: string; members: number; messageCount: number; lastMessage: { content: string } | null; lastAt: string }>; total: number }>;
@@ -72,6 +73,13 @@ export function installChats(api: ApiClient): void {
 
   api.getChat = async (chatId: string) => {
     return api.request<Chat>(`/chats/${chatId}`);
+  };
+
+  api.muteChat = async (chatId: string, muted: boolean) => {
+    return api.request<{ ok: boolean; muted: boolean }>(`/chats/${chatId}/mute`, {
+      method: 'PUT',
+      body: JSON.stringify({ muted }),
+    });
   };
 
   // ─── System Feedback Chat ─────────────────────────────────────────

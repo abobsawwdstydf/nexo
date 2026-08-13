@@ -1,4 +1,4 @@
-import { ApiClient } from './core';
+﻿import { ApiClient } from './core';
 import { installAuth } from './auth';
 import { installUsers } from './users';
 import { installChats } from './chats';
@@ -13,6 +13,7 @@ import { installUserStickers } from './userStickers';
 import { installStories } from './stories';
 import { installAdmin } from './admin';
 import { installInviteLinks } from './inviteLinks';
+import { installDnd } from './dnd';
 
 const api = new ApiClient();
 
@@ -31,7 +32,7 @@ installUserStickers(api);
 installStories(api);
 installAdmin(api);
 installInviteLinks(api);
+installDnd(api);
 
 export { api };
 export default api;
-

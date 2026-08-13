@@ -733,6 +733,8 @@ func handleFetchInit(client *ws.Client, _ *wsEnvelope) error {
 		NotifyCalls:      user.NotifyCalls,
 		NotifyFriends:    user.NotifyFriends,
 		TwoFactorEnabled: user.TwoFactorEnabled,
+		DND:           dndSettingsFromUser(&user),
+		MutedChatIDs:  getMutedChatIDs(userID),
 	}
 
 	// 4. Smart folders

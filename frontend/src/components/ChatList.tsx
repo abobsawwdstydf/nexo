@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -18,6 +18,9 @@ import { AI_CHAT_ID } from '../lib/api/aiChat';
 import { VerifiedBadge } from './VerifiedBadge';
 import { StoriesBar } from './StoriesBar';
 import { useInitStore } from '../stores/initStore';
+import { api } from '../lib/api';
+import { getSocket } from '../lib/socket';
+import { toast } from '../lib/toast';
 
 interface ChatListProps {
   chats: Chat[];
@@ -200,9 +203,19 @@ export function ChatList({
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('nexo_pinned_chats') || '[]'); } catch { return []; }
   });
+  // Server-side mute is the source of truth (initStore ← /api/init, chat:updated
+  // WS events). localStorage remains as an offline cache only.
+  const serverMutedIds = useInitStore(s => s.settings.mutedChatIds);
   const [mutedIds, setMutedIds] = useState<string[]>(() => {
+    const fromStore = useInitStore.getState().settings.mutedChatIds;
+    if (fromStore && fromStore.length > 0) return fromStore;
     try { return JSON.parse(localStorage.getItem('nexo_muted_chats') || '[]'); } catch { return []; }
   });
+
+  // Keep local state in sync when the server list changes (init or chat:updated).
+  useEffect(() => {
+    setMutedIds(serverMutedIds ?? []);
+  }, [serverMutedIds]);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
   const storyGroups = useInitStore(s => s.stories);
 
@@ -215,14 +228,45 @@ export function ChatList({
     setContextMenu(null);
   };
 
-  const toggleMute = (chatId: string) => {
-    setMutedIds(prev => {
-      const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
-      localStorage.setItem('nexo_muted_chats', JSON.stringify(next));
-      return next;
-    });
+  const toggleMute = async (chatId: string) => {
+    const wasMuted = mutedIds.includes(chatId);
+    const next = wasMuted ? mutedIds.filter(id => id !== chatId) : [...mutedIds, chatId];
+    // Optimistic update + localStorage cache
+    setMutedIds(next);
+    useInitStore.getState().setChatMuted(chatId, !wasMuted);
+    localStorage.setItem('nexo_muted_chats', JSON.stringify(next));
     setContextMenu(null);
+    try {
+      const res = await api.muteChat(chatId, !wasMuted);
+      useInitStore.getState().setChatMuted(chatId, res.muted);
+      localStorage.setItem('nexo_muted_chats', JSON.stringify(
+        res.muted ? [...mutedIds, chatId] : mutedIds.filter(id => id !== chatId)
+      ));
+    } catch {
+      // Rollback on failure
+      setMutedIds(mutedIds);
+      useInitStore.getState().setChatMuted(chatId, wasMuted);
+      toast.error('Не удалось изменить статус звука');
+    }
   };
+
+  // chat:updated — server confirms/reflects mute changes (also arrives on
+  // other devices of the same user).
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const onChatUpdated = (data: { chatId?: string; muted?: string | boolean }) => {
+      if (!data?.chatId || data.muted === undefined) return;
+      const muted = data.muted === true || data.muted === 'true';
+      useInitStore.getState().setChatMuted(data.chatId, muted);
+      const mutedIds_ = useInitStore.getState().settings.mutedChatIds ?? [];
+      localStorage.setItem('nexo_muted_chats', JSON.stringify(
+        muted ? [...mutedIds_, data.chatId] : mutedIds_.filter(id => id !== data.chatId)
+      ));
+    };
+    socket.on('chat:updated', onChatUpdated);
+    return () => { socket.off('chat:updated', onChatUpdated); };
+  }, []);
 
   // Filter chats by search and category folder
   const filteredChats = useMemo(() => {

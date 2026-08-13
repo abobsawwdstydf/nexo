@@ -427,6 +427,7 @@ nexo_up 1
 	auth.Post("/chats/:id/pin", handlers.PinChat)
 	auth.Post("/chats/:id/archive", handlers.ArchiveChat)
 	auth.Post("/chats/:id/mute", handlers.MuteChat)
+	auth.Put("/chats/:id/mute", handlers.SetChatMute) // server-side mute (source of truth)
 
 	auth.Post("/chats/:id/messages", handlers.SendMessage)
 	auth.Get("/chats/:id/messages", handlers.GetMessages)
@@ -611,6 +612,8 @@ auth.Delete("/upload/chunk/:uploadId", handlers.ChunkCancel)
 
 	// ─── Feature: Do Not Disturb ────────────────────────────────────────
 	auth.Post("/dnd", handlers.SetDND)
+	auth.Get("/settings/dnd", handlers.GetDNDSettings)
+	auth.Put("/settings/dnd", handlers.UpdateDNDSettings)
 
 	// ─── Feature: Chat Snooze ───────────────────────────────────────────
 	auth.Post("/chats/:id/snooze", handlers.SetChatSnooze)

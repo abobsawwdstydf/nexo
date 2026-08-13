@@ -29,6 +29,8 @@ declare module './core' {
         notifyCalls: boolean;
         notifyFriends: boolean;
         twoFactorEnabled: boolean;
+        dnd?: { enabled: boolean; start: string; end: string; timezoneOffsetMin?: number };
+        mutedChatIds?: string[];
       };
       smartFolders: SmartFolder[];
       stories: StoryGroup[];
@@ -102,15 +104,17 @@ export function installAuth(api: ApiClient): void {
     return api.request<{
       user: User;
       chats: Chat[];
+      stories: StoryGroup[];
+      smartFolders: SmartFolder[];
       settings: {
         notifyAll: boolean;
         notifyMessages: boolean;
         notifyCalls: boolean;
         notifyFriends: boolean;
         twoFactorEnabled: boolean;
+        dnd?: { enabled: boolean; start: string; end: string; timezoneOffsetMin?: number };
+        mutedChatIds?: string[];
       };
-      smartFolders: SmartFolder[];
-      stories: StoryGroup[];
     }>('/init');
   };
 

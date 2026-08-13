@@ -170,6 +170,12 @@ func NotifyUser(userID string, title string, body string, data map[string]interf
 	if user.DNDUntil != nil && user.DNDUntil.After(time.Now()) {
 		return 0
 	}
+	// Scheduled DND: suppress push while the user's local time is inside the
+	// configured daily window (DndEnabled + [DndStart, DndEnd)).
+	if isDndActive(&user, time.Now()) {
+		log.Printf("[Push] suppressed by scheduled DND user=%s", userID)
+		return 0
+	}
 
 	// Chat snooze: suppress notifications for the snoozed chat.
 	if chatID, ok := data["chatId"].(string); ok && chatID != "" {
@@ -323,6 +329,10 @@ func NotifyChatMembersPush(chatID string, senderID string, senderName string, ch
 	seen := map[string]bool{}
 	for _, m := range members {
 		if m.UserID == senderID || seen[m.UserID] {
+			continue
+		}
+		// Server-side muted chat: skip push (WS delivery still happens).
+		if m.IsMuted {
 			continue
 		}
 		seen[m.UserID] = true
