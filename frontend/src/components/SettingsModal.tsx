@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -44,6 +44,8 @@ import { toast } from '../lib/toast';
 import { disconnectSocket } from '../lib/socket';
 import { BUILD_COMMIT, BUILD_TIME, getBackendVersion, type BackendVersion } from '../lib/version';
 import { useSoundsEnabled } from '../lib/soundSettings';
+import { useInitStore } from '../stores/initStore';
+import { isDndActiveNow, formatDndWindow } from '../lib/dnd';
 
 type SettingsTab = 'general' | 'notifications' | 'appearance' | 'privacy' | 'profile' | 'premium';
 
@@ -180,7 +182,7 @@ function NotificationSettings() {
       <SettingRow icon={MessageCircle} label="Каналы" value="Вкл" toggle />
       <SettingRow icon={Phone} label="Звонки" value="Вкл" toggle />
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
-      <SettingRow icon={BellOff} label="Не беспокоить" value="Выкл" toggle />
+      <DndSetting />
 
       <div className="h-px bg-white/[0.04] my-3 mx-1" />
 
@@ -219,6 +221,92 @@ function NotificationSettings() {
         >
           Отправить тестовое уведомление
         </motion.button>
+      )}
+    </div>
+  );
+}
+
+function DndSetting() {
+  const dnd = useInitStore(s => s.settings.dnd) ?? { enabled: false, start: '22:00', end: '08:00', timezoneOffsetMin: 0 };
+  const updateSettings = useInitStore(s => s.updateSettings);
+  const [saving, setSaving] = useState(false);
+  const [localStart, setLocalStart] = useState(dnd.start);
+  const [localEnd, setLocalEnd] = useState(dnd.end);
+
+  const save = async (patch: { enabled: boolean; start?: string; end?: string }) => {
+    setSaving(true);
+    try {
+      const res = await api.updateDndSettings(patch);
+      updateSettings({ dnd: res.dnd });
+    } catch {
+      toast.error('Не удалось сохранить настройки');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = () => {
+    save({ enabled: !dnd.enabled });
+  };
+
+  const handleTimeChange = (field: 'start' | 'end', value: string) => {
+    if (field === 'start') setLocalStart(value); else setLocalEnd(value);
+    save({ enabled: dnd.enabled, start: field === 'start' ? value : dnd.start, end: field === 'end' ? value : dnd.end });
+  };
+
+  const active = isDndActiveNow({ dnd });
+
+  return (
+    <div>
+      <div
+        onClick={handleToggle}
+        className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.03] hover:border-white/[0.06] border border-transparent transition-all duration-200 cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <BellOff size={15} className="text-white/25" />
+          <div>
+            <span className="text-xs text-white/60">Не беспокоить</span>
+            {dnd.enabled && (
+              <div className="text-[10px] text-white/30 mt-0.5">{formatDndWindow(dnd)}</div>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {saving && <Loader size={12} className="text-white/30 animate-spin" />}
+          <div
+            className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${dnd.enabled ? 'bg-white/30' : 'bg-white/[0.08]'}`}
+          >
+            <motion.div
+              animate={{ x: dnd.enabled ? 18 : 2 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className="w-4 h-4 rounded-full bg-white/80 absolute top-0.5"
+            />
+          </div>
+        </div>
+      </div>
+
+      {dnd.enabled && (
+        <div className="px-3 pb-3 space-y-2">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <Moon size={13} className="text-white/25" />
+            <input
+              type="time"
+              value={localStart}
+              onChange={e => handleTimeChange('start', e.target.value)}
+              className="flex-1 bg-transparent text-xs text-white/80 outline-none [color-scheme:dark]"
+            />
+            <span className="text-[10px] text-white/30">—</span>
+            <input
+              type="time"
+              value={localEnd}
+              onChange={e => handleTimeChange('end', e.target.value)}
+              className="flex-1 bg-transparent text-xs text-white/80 outline-none [color-scheme:dark]"
+            />
+          </div>
+          <p className="text-[10px] text-white/30 px-3">
+            {active ? 'Сейчас активно — push-уведомления отключены.' : 'Push-уведомления в это время будут скрыты.'}
+          </p>
+        </div>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-﻿package models
+package models
 
 import "time"
 
@@ -47,6 +47,12 @@ type User struct {
 	DNDUntil   *time.Time `json:"dndUntil"`
 	DNDMessage string     `json:"dndMessage" gorm:"size:256"`
 
+	// DND (scheduled) — suppress notifications inside a daily time window
+	// (start/end in "HH:MM" in the user's local time = UTC + timezoneOffsetMin)
+	DndEnabled           bool   `json:"dndEnabled,omitempty" gorm:"default:false"`
+	DndStart             string `json:"dndStart,omitempty" gorm:"size:5"`
+	DndEnd               string `json:"dndEnd,omitempty" gorm:"size:5"`
+	DndTimezoneOffsetMin int    `json:"dndTimezoneOffsetMin,omitempty" gorm:"default:0"`
 	// Mood Status
 	MoodStatus    string     `json:"moodStatus" gorm:"size:64"` // emoji or text status
 	MoodExpiresAt *time.Time `json:"moodExpiresAt"`

@@ -452,6 +452,45 @@ func GetOrCreateFavorites(c *fiber.Ctx) error {
 	return c.Status(201).JSON(chat)
 }
 
+// SetChatMute toggles the user's server-side mute for a chat
+// (PUT /api/chats/:id/mute, body {muted bool}). Verifies membership, persists
+// ChatMember.isMuted (single source of truth — push is suppressed for muted
+// chats, see NotifyChatMembersPush in push.go) and broadcasts chat:updated to
+// the user's connected devices so the UI stays in sync.
+func SetChatMute(c *fiber.Ctx) error {
+	chatID := c.Params("id")
+	userID, ok := c.Locals("userId").(string)
+	if !ok || userID == "" {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	var req struct {
+		Muted bool `json:"muted"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// Verify membership before muting.
+	var member models.ChatMember
+	if err := db.GetDB().Where("chat_id = ? AND user_id = ?", chatID, userID).First(&member).Error; err != nil {
+		return c.Status(403).JSON(fiber.Map{"error": "Not a member of this chat"})
+	}
+
+	if err := db.GetDB().Model(&models.ChatMember{}).
+		Where("chat_id = ? AND user_id = ?", chatID, userID).
+		Update("is_muted", req.Muted).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update mute status"})
+	}
+
+	ws.HubInstance.SendToUser(userID, mustWSMap("chat:updated", map[string]string{
+		"chatId": chatID,
+		"muted":  boolStr(req.Muted),
+	}))
+
+	return c.JSON(fiber.Map{"ok": true, "muted": req.Muted})
+}
+
 func MuteChat(c *fiber.Ctx) error {
 	chatID := c.Params("id")
 	userID := c.Locals("userId").(string)

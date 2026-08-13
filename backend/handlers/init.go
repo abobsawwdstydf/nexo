@@ -27,6 +27,8 @@ type UserSettingsJSON struct {
 	NotifyCalls      bool `json:"notifyCalls"`
 	NotifyFriends    bool `json:"notifyFriends"`
 	TwoFactorEnabled bool `json:"twoFactorEnabled"`
+	DND            DNDSettingsJSON `json:"dnd"`
+	MutedChatIDs   []string         `json:"mutedChatIds"`
 }
 
 type StoryGroupJSON struct {

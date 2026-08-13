@@ -1,7 +1,8 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { useInitStore } from '../stores/initStore';
+import { isDndActiveNow } from '../lib/dnd';
 import { api } from '../lib/api';
 import type { Chat, Message, UserBasic } from '../lib/types';
 import { enrichChat } from '../lib/enrichChat';
@@ -189,6 +190,8 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   selectedChatIdRef.current = selectedChatId;
   const chatsRef = useRef(chats);
   chatsRef.current = chats;
+  const appSettingsRef = useRef(useInitStore.getState().settings);
+  appSettingsRef.current = useInitStore(s => s.settings);
   const confettiFiredRef = useRef(false);
 
   useEffect(() => {
@@ -196,8 +199,13 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
     if (!socket?.connected) return;
 
     const onMessage = (msg: Message) => {
-      // Show toast only if this chat is NOT currently selected
-      if (msg.chatId !== selectedChatIdRef.current) {
+      // Show toast only if this chat is NOT currently selected, the chat is not
+      // muted and the user isn't inside their DND window (server already cuts
+      // push; here we mute in-app toast/sound the same way).
+      const settings = appSettingsRef.current;
+      const isMutedChat = (settings?.mutedChatIds ?? []).includes(msg.chatId);
+      const isDndQuiet = isDndActiveNow(settings);
+      if (msg.chatId !== selectedChatIdRef.current && !isMutedChat && !isDndQuiet) {
         const chat = chatsRef.current.find(c => c.id === msg.chatId);
         const name = chat?.name || msg.sender?.displayName || msg.sender?.username || 'Новое сообщение';
         toast.info(`✉️ ${name}`, msg.content || '');
