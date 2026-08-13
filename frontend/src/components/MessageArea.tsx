@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -48,7 +48,7 @@ import { NOTES_CHAT_ID, getNotesMessages, saveNotesMessage } from '../lib/api/no
 import { AI_CHAT_ID, AI_SENDER, loadAIHistory, getAIMessages, saveAIMessage, sendAIMessage } from '../lib/api/aiChat';
 import { normalizeMediaUrl } from '../lib/mediaUrl';
 import { getInitials } from '../lib/initials';
-import type { Chat, Message, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup, MediaItem } from '../lib/types';
+import type { Chat, Message, GifItem, ReplyKeyboardMarkup, InlineKeyboardMarkup, MediaItem, UploadedMedia } from '../lib/types';
 import type { SocketInterface } from '../lib/socket';
 import { useCallContext } from '../lib/callContext';
 import { ChatWallpaper } from './ChatWallpaper';
@@ -139,6 +139,16 @@ const ATTACHMENT_OPTIONS = [
   { icon: MapPin, label: 'Геопозиция', color: 'text-red-400' },
   { icon: Circle, label: 'Кружок', color: 'text-cyan-400' },
 ];
+
+/** Одна строка очереди загрузки в композере: файл, прогресс, отмена. */
+interface PendingUpload {
+  id: string;
+  file: File;
+  controller: AbortController;
+  progress: number;
+  status: 'uploading' | 'done';
+  media?: UploadedMedia;
+}
 
 interface MessageAreaProps {
   chat: Chat;
@@ -1139,6 +1149,15 @@ function MessageInput({
   const [liveSttText, setLiveSttText] = useState('');
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadTasks, setUploadTasks] = useState<PendingUpload[]>([]);
+  const uploadTasksRef = useRef<PendingUpload[]>([]);
+  const filesRef = useRef<File[]>([]);
+  const previewsRef = useRef<string[]>([]);
+  useEffect(() => { uploadTasksRef.current = uploadTasks; }, [uploadTasks]);
+  useEffect(() => { filesRef.current = selectedFiles; }, [selectedFiles]);
+  useEffect(() => { previewsRef.current = previewImages; }, [previewImages]);
+  // Отменяем все активные загрузки при размонтировании композера
+  useEffect(() => () => uploadTasksRef.current.forEach(t => t.controller.abort()), []);
   const [showPremium, setShowPremium] = useState(false);
   const [locationPreview, setLocationPreview] = useState<
     { lat: number; lng: number; status: 'locating' | 'ready' | 'error' } | null
@@ -1322,12 +1341,64 @@ function MessageInput({
     }
 
     setSelectedFiles(prev => [...prev, ...newFiles]);
+
+    // Сразу начинаем загрузку каждого прикреплённого файла: прогресс-бар,
+    // отмена через X, медиа вставляется в черновик по завершении.
+    const started: PendingUpload[] = [];
+    for (const file of newFiles) {
+      const controller = new AbortController();
+      const task: PendingUpload = {
+        id: `${file.name}_${file.size}_${file.lastModified}`,
+        file,
+        controller,
+        progress: 0,
+        status: 'uploading',
+      };
+      started.push(task);
+      api.uploadFileWithProgress(
+        file,
+        (pct) => setUploadTasks(prev => prev.map(t => (t.id === task.id ? { ...t, progress: pct } : t))),
+        controller.signal
+      )
+      .then(media => {
+        setUploadTasks(prev => prev.map(t => (t.id === task.id ? { ...t, status: 'done' as const, progress: 100, media } : t)));
+      })
+      .catch(err => {
+        setUploadTasks(prev => prev.filter(t => t.id !== task.id));
+        if (err instanceof DOMException && err.name === 'AbortError') return; // отменено пользователем
+        console.error('[Upload] Failed:', file.name, err);
+        toast.error('Не удалось загрузить «' + file.name + '»');
+        removeFileByRef(file);
+      });
+    }
+    setUploadTasks(prev => [...prev, ...started]);
+
     setShowAttach(false);
   };
 
+  // Удаляет файл из выбранных (и его превью), сохраняя синхронизацию
+  // массивов по индексам (превью только у изображений).
+  const removeFileByRef = (file: File) => {
+    const files = filesRef.current;
+    const idx = files.indexOf(file);
+    const wasImage = file.type.startsWith('image/');
+    const imgIdx = wasImage && idx >= 0 ? files.slice(0, idx).filter(f => f.type.startsWith('image/')).length : -1;
+    setSelectedFiles(prev => prev.filter(f => f !== file));
+    if (wasImage && imgIdx >= 0) {
+      setPreviewImages(prev => {
+        const next = prev.slice();
+        next.splice(imgIdx, 1);
+        return next;
+      });
+    }
+  };
+
   const removePreview = (index: number) => {
+    const task = uploadTasksRef.current[index];
+    task?.controller.abort();
     setPreviewImages(prev => prev.filter((_, i) => i !== index));
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadTasks(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleFileAllSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {

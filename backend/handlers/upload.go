@@ -22,6 +22,31 @@ func UploadDir() string {
 	return "../uploads"
 }
 
+// MIME types accepted for chat uploads. Do not trust a browser supplied
+// Content-Type alone: it is used only to disambiguate the WebM container
+// (audio or video). Both the multipart handler and the chunked upload
+// pipeline share this set.
+var allowedUploadTypes = map[string]bool{
+	"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true,
+	"video/mp4": true, "video/webm": true, "video/quicktime": true,
+	"audio/mpeg": true, "audio/ogg": true, "audio/wav": true, "audio/webm": true,
+	"application/pdf": true,
+}
+
+// Per-type upload size limits.
+func uploadLimitFor(contentType string) int64 {
+	switch {
+	case strings.HasPrefix(contentType, "image/"):
+		return 25 * 1024 * 1024 // images ≤ 25MB
+	case strings.HasPrefix(contentType, "video/"):
+		return 500 * 1024 * 1024 // videos ≤ 500MB
+	case strings.HasPrefix(contentType, "audio/"):
+		return 100 * 1024 * 1024 // audio ≤ 100MB
+	default:
+		return 55 * 1024 * 1024 // documents and other files ≤ 55MB
+	}
+}
+
 func UploadFile(c *fiber.Ctx) error {
 	if id, ok := c.Locals("userId").(string); !ok || id == "" {
 		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
@@ -30,20 +55,6 @@ func UploadFile(c *fiber.Ctx) error {
 	file, err := c.FormFile("file")
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "No file provided"})
-	}
-
-	// Validate file size (50MB max)
-	if file.Size > 50*1024*1024 {
-		return c.Status(400).JSON(fiber.Map{"error": "File too large (max 50MB)"})
-	}
-
-	// Validate MIME type. Do not trust a browser supplied Content-Type alone:
-	// it is used only to disambiguate the WebM container (audio or video).
-	allowedTypes := map[string]bool{
-		"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true,
-		"video/mp4": true, "video/webm": true, "video/quicktime": true,
-		"audio/mpeg": true, "audio/ogg": true, "audio/wav": true, "audio/webm": true,
-		"application/pdf": true,
 	}
 
 	src, err := file.Open()
@@ -60,7 +71,12 @@ func UploadFile(c *fiber.Ctx) error {
 	}
 	contentType := detectContentType(buf[:n], file.Filename, file.Header.Get("Content-Type"))
 
-	if !allowedTypes[contentType] {
+	// Per-type size limits (images ≤25MB, video ≤500MB, audio ≤100MB, other ≤55MB)
+	if file.Size > uploadLimitFor(contentType) {
+		return c.Status(413).JSON(fiber.Map{"error": "File too large for this type"})
+	}
+
+	if !allowedUploadTypes[contentType] {
 		return c.Status(400).JSON(fiber.Map{"error": "File type not allowed: " + contentType})
 	}
 
@@ -109,6 +125,12 @@ func UploadFile(c *fiber.Ctx) error {
 		Filename:       url.PathEscape(file.Filename),
 		Size:           size,
 		OriginalFormat: originalFormat,
+	}
+
+	// Derive thumbnails / formats / transcode via ffmpeg (non-fatal: on
+	// error the original file is kept as-is and served normally).
+	if err := ProcessMedia(savePath, media.ID, &media); err != nil {
+		log.Printf("[UPLOAD] ProcessMedia %s: %v", media.ID, err)
 	}
 
 	return c.Status(201).JSON(media)

@@ -1,4 +1,4 @@
-﻿import { getApiUrl } from '../../config';
+import { getApiUrl } from '../../config';
 
 export const getApiBase = (): string => {
   const url = getApiUrl();
@@ -108,8 +108,18 @@ export class ApiClient {
   }
 
   private async _doRequest<T>(endpoint: string, options: RequestInit & { timeout?: number } = {}, retried = false): Promise<T> {
-    const { timeout = 30_000, ...fetchOptions } = options;
+    const { timeout = 30_000, signal: externalSignal, ...fetchOptions } = options;
     const controller = new AbortController();
+    // Honour an externally-supplied signal (e.g. upload cancel/abort) without
+    // breaking the built-in timeout: both abort the same controller.
+    const onExternalAbort = () => controller.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+      }
+    }
     const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : undefined;
 
     const isFormData = fetchOptions.body instanceof FormData;
@@ -134,7 +144,9 @@ export class ApiClient {
       });
     } catch (err) {
       clearTimeout(timer);
+      if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
       if (err instanceof DOMException && err.name === 'AbortError') {
+        if (externalSignal?.aborted) throw err; // отменено вызывающим кодом — не таймаут
         throw new Error('Время ожидания запроса истекло');
       }
       if (err instanceof TypeError && err.message === 'Failed to fetch') {
@@ -143,6 +155,7 @@ export class ApiClient {
       throw err;
     }
     clearTimeout(timer);
+    if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Ошибка сервера' }));
