@@ -152,7 +152,7 @@ export default function AdminLoginPage() {
         >
           Выйти из панели
         </button>
-        <AdminPanel onClose={() => setScreen('email')} />
+        <AdminPanel onClose={() => setScreen('email')} client={adminApi} />
       </div>
     );
   }

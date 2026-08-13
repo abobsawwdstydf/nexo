@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert, TicketPercent, Plus, Pause, Play, Trash2, Copy, BarChart3 } from 'lucide-react';
 import { api } from '../lib/api';
+import type { ApiClient } from '../lib/api/core';
 import type { AdminReport, AdminFeedbackTicket, AdminPromoCode, AdminAnalyticsResponse } from '../lib/api/admin';
 import { toast } from '../lib/toast';
 
@@ -9,6 +10,8 @@ type Tab = 'reports' | 'feedback' | 'badges' | 'promos' | 'analytics';
 
 interface AdminPanelProps {
   onClose: () => void;
+  /** API-РєР»РёРµРЅС‚: adminApi РґР»СЏ Р°РІС‚РѕРЅРѕРјРЅРѕР№ СЃС‚СЂР°РЅРёС†С‹ /admin, api вЂ” РІРЅСѓС‚СЂРё РјРµСЃСЃРµРЅРґР¶РµСЂР°. */
+  client?: ApiClient;
 }
 
 function SectionHeader({ title, icon: Icon, onRefresh, loading }: {
@@ -48,7 +51,7 @@ function RefreshCwIcon() {
   );
 }
 
-export default function AdminPanel({ onClose }: AdminPanelProps) {
+export default function AdminPanel({ onClose, client = api }: AdminPanelProps) {
   const [tab, setTab] = useState<Tab>('reports');
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [feedback, setFeedback] = useState<AdminFeedbackTicket[]>([]);
@@ -70,11 +73,11 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
   const loadReports = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await api.getAdminReports();
+      const items = await client.getAdminReports();
       setReports(items);
     } catch (err) {
       console.error('Failed to load reports:', err);
-      toast.error('Не удалось загрузить жалобы');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р¶Р°Р»РѕР±С‹');
     } finally {
       setLoading(false);
     }
@@ -83,11 +86,11 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
   const loadFeedback = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await api.getAdminFeedback();
+      const items = await client.getAdminFeedback();
       setFeedback(items);
     } catch (err) {
       console.error('Failed to load feedback:', err);
-      toast.error('Не удалось загрузить обращения');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РѕР±СЂР°С‰РµРЅРёСЏ');
     } finally {
       setLoading(false);
     }
@@ -96,10 +99,10 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
   const loadPromos = useCallback(async () => {
     setPromosLoading(true);
     try {
-      setPromos(await api.getAdminPromoCodes());
+      setPromos(await client.getAdminPromoCodes());
     } catch (err) {
       console.error('Failed to load promos:', err);
-      toast.error('Не удалось загрузить промокоды');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РїСЂРѕРјРѕРєРѕРґС‹');
     } finally {
       setPromosLoading(false);
     }
@@ -108,10 +111,10 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
   const loadAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     try {
-      setAnalytics(await api.getAdminAnalytics());
+      setAnalytics(await client.getAdminAnalytics());
     } catch (err) {
       console.error('Failed to load analytics:', err);
-      toast.error('Не удалось загрузить аналитику');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р°РЅР°Р»РёС‚РёРєСѓ');
     } finally {
       setAnalyticsLoading(false);
     }
@@ -125,73 +128,73 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
   }, [tab, loadReports, loadFeedback, loadPromos]);
 
   const handleReply = async (chatId: string) => {
-    const content = window.prompt('Ответ пользователю:');
+    const content = window.prompt('РћС‚РІРµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ:');
     if (!content || !content.trim()) return;
     try {
-      await api.adminReplyFeedback(chatId, content.trim());
-      toast.success('Ответ отправлен');
+      await client.adminReplyFeedback(chatId, content.trim());
+      toast.success('РћС‚РІРµС‚ РѕС‚РїСЂР°РІР»РµРЅ');
       loadFeedback();
     } catch (err) {
       console.error('Failed to reply:', err);
-      toast.error('Не удалось отправить ответ');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РѕС‚РІРµС‚');
     }
   };
 
   const handleGrantBadge = async () => {
     if (!badgeTarget.trim() || !badgeUrl.trim()) {
-      toast.error('Укажи ID пользователя и URL бейджа');
+      toast.error('РЈРєР°Р¶Рё ID РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Рё URL Р±РµР№РґР¶Р°');
       return;
     }
     try {
-      await api.adminSetBadge({ targetId: badgeTarget.trim(), badgeType, badgeUrl: badgeUrl.trim() });
-      toast.success('Бейдж выдан');
+      await client.adminSetBadge({ targetId: badgeTarget.trim(), badgeType, badgeUrl: badgeUrl.trim() });
+      toast.success('Р‘РµР№РґР¶ РІС‹РґР°РЅ');
       setBadgeTarget('');
       setBadgeUrl('');
     } catch (err) {
       console.error('Failed to grant badge:', err);
-      toast.error('Не удалось выдать бейдж');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РґР°С‚СЊ Р±РµР№РґР¶');
     }
   };
 
   const handleClearBadge = async () => {
     if (!badgeTarget.trim()) {
-      toast.error('Укажи ID пользователя');
+      toast.error('РЈРєР°Р¶Рё ID РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ');
       return;
     }
     try {
-      await api.adminClearBadge(badgeTarget.trim());
-      toast.success('Бейдж снят');
+      await client.adminClearBadge(badgeTarget.trim());
+      toast.success('Р‘РµР№РґР¶ СЃРЅСЏС‚');
       setBadgeTarget('');
     } catch (err) {
       console.error('Failed to clear badge:', err);
-      toast.error('Не удалось снять бейдж');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРЅСЏС‚СЊ Р±РµР№РґР¶');
     }
   };
 
   const handleCreatePromo = async () => {
     if (!promoForm.code.trim()) {
-      toast.error('Укажи код промокода');
+      toast.error('РЈРєР°Р¶Рё РєРѕРґ РїСЂРѕРјРѕРєРѕРґР°');
       return;
     }
     if (promoForm.discountPercent < 1 || promoForm.discountPercent > 99) {
-      toast.error('Скидка: 1–99%');
+      toast.error('РЎРєРёРґРєР°: 1вЂ“99%');
       return;
     }
     setPromoSaving(true);
     try {
-      await api.adminCreatePromoCode({
+      await client.adminCreatePromoCode({
         code: promoForm.code.trim().toUpperCase(),
         discountPercent: promoForm.discountPercent,
         maxUses: promoForm.maxUses,
         active: promoForm.active,
         expiresAt: promoForm.expiresAt || undefined,
       });
-      toast.success('Промокод создан');
+      toast.success('РџСЂРѕРјРѕРєРѕРґ СЃРѕР·РґР°РЅ');
       setPromoForm({ code: '', discountPercent: 20, maxUses: 100, active: true, expiresAt: '' });
       loadPromos();
     } catch (err) {
       console.error('Failed to create promo:', err);
-      toast.error('Не удалось создать промокод');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РїСЂРѕРјРѕРєРѕРґ');
     } finally {
       setPromoSaving(false);
     }
@@ -199,35 +202,35 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
 
   const handleTogglePromo = async (p: AdminPromoCode) => {
     try {
-      await api.adminUpdatePromoCode(p.id, { active: !p.active });
+      await client.adminUpdatePromoCode(p.id, { active: !p.active });
       loadPromos();
     } catch {
-      toast.error('Не удалось обновить промокод');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ РїСЂРѕРјРѕРєРѕРґ');
     }
   };
 
   const handleDeletePromo = async (p: AdminPromoCode) => {
-    if (!window.confirm(`Удалить промокод ${p.code}?`)) return;
+    if (!window.confirm(`РЈРґР°Р»РёС‚СЊ РїСЂРѕРјРѕРєРѕРґ ${p.code}?`)) return;
     try {
-      await api.adminDeletePromoCode(p.id);
-      toast.success('Промокод удалён');
+      await client.adminDeletePromoCode(p.id);
+      toast.success('РџСЂРѕРјРѕРєРѕРґ СѓРґР°Р»С‘РЅ');
       loadPromos();
     } catch {
-      toast.error('Не удалось удалить промокод');
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РїСЂРѕРјРѕРєРѕРґ');
     }
   };
 
   const handleCopyPromo = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast.success('Код скопирован');
+    toast.success('РљРѕРґ СЃРєРѕРїРёСЂРѕРІР°РЅ');
   };
 
   const TABS: { id: Tab; label: string; icon: typeof Flag }[] = [
-    { id: 'reports', label: 'Жалобы', icon: Flag },
-    { id: 'feedback', label: 'Обратная связь', icon: MessageSquare },
-    { id: 'badges', label: 'Бейджи', icon: BadgeCheck },
-    { id: 'promos', label: 'Промокоды', icon: TicketPercent },
-    { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
+    { id: 'reports', label: 'Р–Р°Р»РѕР±С‹', icon: Flag },
+    { id: 'feedback', label: 'РћР±СЂР°С‚РЅР°СЏ СЃРІСЏР·СЊ', icon: MessageSquare },
+    { id: 'badges', label: 'Р‘РµР№РґР¶Рё', icon: BadgeCheck },
+    { id: 'promos', label: 'РџСЂРѕРјРѕРєРѕРґС‹', icon: TicketPercent },
+    { id: 'analytics', label: 'РђРЅР°Р»РёС‚РёРєР°', icon: BarChart3 },
   ];
 
   return (
@@ -252,8 +255,8 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
             <ShieldAlert size={17} className="text-red-300" />
           </div>
           <div className="flex-1">
-            <h2 className="text-base font-semibold text-white">Панель администратора</h2>
-            <p className="text-[11px] text-white/40">Модерация платформы</p>
+            <h2 className="text-base font-semibold text-white">РџР°РЅРµР»СЊ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°</h2>
+            <p className="text-[11px] text-white/40">РњРѕРґРµСЂР°С†РёСЏ РїР»Р°С‚С„РѕСЂРјС‹</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-white/70 transition-colors">
             <X size={18} />
@@ -281,29 +284,29 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
         <div className="flex-1 overflow-y-auto p-5">
           {tab === 'reports' && (
             <div>
-              <SectionHeader title="Жалобы на чаты и модерация" icon={Flag} onRefresh={loadReports} loading={loading} />
+              <SectionHeader title="Р–Р°Р»РѕР±С‹ РЅР° С‡Р°С‚С‹ Рё РјРѕРґРµСЂР°С†РёСЏ" icon={Flag} onRefresh={loadReports} loading={loading} />
               {reports.length === 0 ? (
-                <p className="text-xs text-white/30 text-center py-10">Жалоб пока нет</p>
+                <p className="text-xs text-white/30 text-center py-10">Р–Р°Р»РѕР± РїРѕРєР° РЅРµС‚</p>
               ) : (
                 <div className="space-y-2">
                   {reports.map(r => (
                     <div key={r.id} className="rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium text-white">
-                          {r.chatName || '(чат удалён)'}
+                          {r.chatName || '(С‡Р°С‚ СѓРґР°Р»С‘РЅ)'}
                         </span>
                         <span className="text-[11px] text-white/30 flex-shrink-0">
                           {new Date(r.createdAt).toLocaleString('ru-RU')}
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-white/50">
-                        Пожаловался: <span className="text-white/70">{r.actorName || r.actorId}</span>
-                        {' · '}Тип: <span className="text-white/70">{r.action}</span>
-                        {r.duration > 0 && <> · <span className="text-white/70">{r.duration} мин</span></>}
+                        РџРѕР¶Р°Р»РѕРІР°Р»СЃСЏ: <span className="text-white/70">{r.actorName || r.actorId}</span>
+                        {' В· '}РўРёРї: <span className="text-white/70">{r.action}</span>
+                        {r.duration > 0 && <> В· <span className="text-white/70">{r.duration} РјРёРЅ</span></>}
                       </div>
                       {r.reason && (
                         <p className="mt-2 text-xs text-white/60 bg-white/[0.04] rounded-xl px-3 py-2">
-                          «{r.reason}»
+                          В«{r.reason}В»
                         </p>
                       )}
                     </div>
@@ -315,21 +318,21 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
 
           {tab === 'feedback' && (
             <div>
-              <SectionHeader title="Обращения в поддержку" icon={MessageSquare} onRefresh={loadFeedback} loading={loading} />
+              <SectionHeader title="РћР±СЂР°С‰РµРЅРёСЏ РІ РїРѕРґРґРµСЂР¶РєСѓ" icon={MessageSquare} onRefresh={loadFeedback} loading={loading} />
               {feedback.length === 0 ? (
-                <p className="text-xs text-white/30 text-center py-10">Обращений пока нет</p>
+                <p className="text-xs text-white/30 text-center py-10">РћР±СЂР°С‰РµРЅРёР№ РїРѕРєР° РЅРµС‚</p>
               ) : (
                 <div className="space-y-2">
                   {feedback.map(t => (
                     <div key={t.chatId} className="rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-white">{t.name || 'Без названия'}</span>
+                        <span className="text-sm font-medium text-white">{t.name || 'Р‘РµР· РЅР°Р·РІР°РЅРёСЏ'}</span>
                         <span className="text-[11px] text-white/30 flex-shrink-0">
                           {new Date(t.lastAt).toLocaleString('ru-RU')}
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-white/40">
-                        Сообщений: {t.messageCount}
+                        РЎРѕРѕР±С‰РµРЅРёР№: {t.messageCount}
                         {t.lastMessage?.content && (
                           <p className="mt-1.5 text-white/60 bg-white/[0.05] rounded-xl px-3 py-2 line-clamp-2">
                             {t.lastMessage.content}
@@ -341,7 +344,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                         className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent/15 hover:bg-accent/25 text-accent text-xs font-medium transition-colors"
                       >
                         <MessageSquare size={12} />
-                        Ответить
+                        РћС‚РІРµС‚РёС‚СЊ
                       </button>
                     </div>
                   ))}
@@ -352,10 +355,10 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
 
           {tab === 'badges' && (
             <div>
-              <SectionHeader title="Выдача бейджей" icon={BadgeCheck} onRefresh={() => {}} loading={false} />
+              <SectionHeader title="Р’С‹РґР°С‡Р° Р±РµР№РґР¶РµР№" icon={BadgeCheck} onRefresh={() => {}} loading={false} />
               <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-3">
                 <div>
-                  <label className="block text-[11px] text-white/40 mb-1">ID пользователя (targetId)</label>
+                  <label className="block text-[11px] text-white/40 mb-1">ID РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (targetId)</label>
                   <input
                     value={badgeTarget}
                     onChange={e => setBadgeTarget(e.target.value)}
@@ -364,7 +367,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-white/40 mb-1">Тип бейджа</label>
+                  <label className="block text-[11px] text-white/40 mb-1">РўРёРї Р±РµР№РґР¶Р°</label>
                   <select
                     value={badgeType}
                     onChange={e => setBadgeType(e.target.value)}
@@ -376,7 +379,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] text-white/40 mb-1">URL бейджа</label>
+                  <label className="block text-[11px] text-white/40 mb-1">URL Р±РµР№РґР¶Р°</label>
                   <input
                     value={badgeUrl}
                     onChange={e => setBadgeUrl(e.target.value)}
@@ -390,14 +393,14 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-colors"
                   >
                     <BadgeCheck size={13} />
-                    Выдать бейдж
+                    Р’С‹РґР°С‚СЊ Р±РµР№РґР¶
                   </button>
                   <button
                     onClick={handleClearBadge}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 text-xs font-semibold transition-colors"
                   >
                     <SparkleIcon />
-                    Снять бейдж
+                    РЎРЅСЏС‚СЊ Р±РµР№РґР¶
                   </button>
                 </div>
               </div>
@@ -405,7 +408,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
           )}
         {tab === 'analytics' && (
           <div>
-            <SectionHeader title="Аналитика" icon={BarChart3} onRefresh={loadAnalytics} loading={analyticsLoading} />
+            <SectionHeader title="РђРЅР°Р»РёС‚РёРєР°" icon={BarChart3} onRefresh={loadAnalytics} loading={analyticsLoading} />
             {!analytics ? (
               <div className="space-y-3 animate-pulse">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -424,13 +427,13 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
 
         {tab === 'promos' && (
             <div>
-              <SectionHeader title="Промокоды на НуЧе" icon={TicketPercent} onRefresh={loadPromos} loading={promosLoading} />
+              <SectionHeader title="РџСЂРѕРјРѕРєРѕРґС‹ РЅР° РќСѓР§Рµ" icon={TicketPercent} onRefresh={loadPromos} loading={promosLoading} />
 
               {/* Create form */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-3 mb-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-[11px] text-white/40 mb-1">Код</label>
+                    <label className="block text-[11px] text-white/40 mb-1">РљРѕРґ</label>
                     <input
                       value={promoForm.code}
                       onChange={e => setPromoForm(p => ({ ...p, code: e.target.value.toUpperCase() }))}
@@ -439,7 +442,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-white/40 mb-1">Скидка, %</label>
+                    <label className="block text-[11px] text-white/40 mb-1">РЎРєРёРґРєР°, %</label>
                     <input
                       type="number"
                       min={1}
@@ -450,7 +453,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-white/40 mb-1">Лимит использований (0 = ∞)</label>
+                    <label className="block text-[11px] text-white/40 mb-1">Р›РёРјРёС‚ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёР№ (0 = в€ћ)</label>
                     <input
                       type="number"
                       min={0}
@@ -460,7 +463,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-white/40 mb-1">Действует до (опц.)</label>
+                    <label className="block text-[11px] text-white/40 mb-1">Р”РµР№СЃС‚РІСѓРµС‚ РґРѕ (РѕРїС†.)</label>
                     <input
                       type="date"
                       value={promoForm.expiresAt}
@@ -476,7 +479,7 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                         onChange={e => setPromoForm(p => ({ ...p, active: e.target.checked }))}
                         className="accent-amber-500"
                       />
-                      Активен
+                      РђРєС‚РёРІРµРЅ
                     </label>
                   </div>
                 </div>
@@ -486,13 +489,13 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-colors disabled:opacity-40"
                 >
                   <Plus size={13} />
-                  {promoSaving ? 'Создание...' : 'Создать промокод'}
+                  {promoSaving ? 'РЎРѕР·РґР°РЅРёРµ...' : 'РЎРѕР·РґР°С‚СЊ РїСЂРѕРјРѕРєРѕРґ'}
                 </button>
               </div>
 
               {/* List */}
               {promos.length === 0 ? (
-                <p className="text-xs text-white/30 text-center py-8">Промокодов пока нет</p>
+                <p className="text-xs text-white/30 text-center py-8">РџСЂРѕРјРѕРєРѕРґРѕРІ РїРѕРєР° РЅРµС‚</p>
               ) : (
                 <div className="space-y-2">
                   {promos.map(p => (
@@ -502,36 +505,36 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
                           <button
                             onClick={() => handleCopyPromo(p.code)}
                             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] font-mono text-sm font-semibold text-amber-300 transition-colors"
-                            title="Скопировать"
+                            title="РЎРєРѕРїРёСЂРѕРІР°С‚СЊ"
                           >
                             {p.code}
                             <Copy size={11} className="text-white/40" />
                           </button>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.active ? 'bg-green-500/15 text-green-400' : 'bg-white/[0.06] text-white/40'}`}>
-                            {p.active ? 'активен' : 'выкл'}
+                            {p.active ? 'Р°РєС‚РёРІРµРЅ' : 'РІС‹РєР»'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-semibold text-white/70">−{p.discountPercent}%</span>
+                          <span className="text-xs font-semibold text-white/70">в€’{p.discountPercent}%</span>
                           <span className="text-[10px] text-white/35">
-                            {p.usedCount}/{p.maxUses === 0 ? '∞' : p.maxUses}
+                            {p.usedCount}/{p.maxUses === 0 ? 'в€ћ' : p.maxUses}
                           </span>
                           {p.expiresAt && (
                             <span className="text-[10px] text-white/35">
-                              до {new Date(p.expiresAt).toLocaleDateString('ru-RU')}
+                              РґРѕ {new Date(p.expiresAt).toLocaleDateString('ru-RU')}
                             </span>
                           )}
                           <button
                             onClick={() => handleTogglePromo(p)}
                             className={`p-1.5 rounded-lg transition-colors ${p.active ? 'text-white/40 hover:text-white' : 'text-green-400 hover:text-green-300'}`}
-                            title={p.active ? 'Отключить' : 'Включить'}
+                            title={p.active ? 'РћС‚РєР»СЋС‡РёС‚СЊ' : 'Р’РєР»СЋС‡РёС‚СЊ'}
                           >
                             {p.active ? <Pause size={13} /> : <Play size={13} />}
                           </button>
                           <button
                             onClick={() => handleDeletePromo(p)}
                             className="p-1.5 rounded-lg text-white/40 hover:text-red-400 transition-colors"
-                            title="Удалить"
+                            title="РЈРґР°Р»РёС‚СЊ"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -550,8 +553,8 @@ export default function AdminPanel({ onClose }: AdminPanelProps) {
 }
 
 function formatBytes(bytes: number): string {
-  if (!bytes) return '0 Б';
-  const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+  if (!bytes) return '0 Р‘';
+  const units = ['Р‘', 'РљР‘', 'РњР‘', 'Р“Р‘', 'РўР‘'];
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const v = bytes / Math.pow(1024, i);
   return `${v >= 100 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
@@ -562,14 +565,14 @@ function AnalyticsView({ analytics }: { analytics: AdminAnalyticsResponse }) {
   const maxMessages = Math.max(...daily.map(d => d.messages), 1);
 
   const counters: [string, number, string?][] = [
-    ['Пользователи', totals.totalUsers],
-    ['Чаты', totals.totalChats],
-    ['Сообщения', totals.totalMessages],
-    ['Медиа', totals.totalMedia, formatBytes(totals.mediaSizeBytes)],
-    ['Истории', totals.totalStories],
-    ['Платежи', totals.totalPayments],
+    ['РџРѕР»СЊР·РѕРІР°С‚РµР»Рё', totals.totalUsers],
+    ['Р§Р°С‚С‹', totals.totalChats],
+    ['РЎРѕРѕР±С‰РµРЅРёСЏ', totals.totalMessages],
+    ['РњРµРґРёР°', totals.totalMedia, formatBytes(totals.mediaSizeBytes)],
+    ['РСЃС‚РѕСЂРёРё', totals.totalStories],
+    ['РџР»Р°С‚РµР¶Рё', totals.totalPayments],
     ['Premium', totals.premiumUsers],
-    ['Жалобы', totals.totalReports],
+    ['Р–Р°Р»РѕР±С‹', totals.totalReports],
   ];
 
   return (
@@ -590,14 +593,14 @@ function AnalyticsView({ analytics }: { analytics: AdminAnalyticsResponse }) {
       {/* 30-day histogram */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
         <div className="flex items-center justify-between gap-2 mb-4">
-          <h4 className="text-xs font-semibold text-white">Активность за 30 дней</h4>
-          <span className="text-[10px] text-white/35">высота — сообщения · число под столбцом — активные пользователи</span>
+          <h4 className="text-xs font-semibold text-white">РђРєС‚РёРІРЅРѕСЃС‚СЊ Р·Р° 30 РґРЅРµР№</h4>
+          <span className="text-[10px] text-white/35">РІС‹СЃРѕС‚Р° вЂ” СЃРѕРѕР±С‰РµРЅРёСЏ В· С‡РёСЃР»Рѕ РїРѕРґ СЃС‚РѕР»Р±С†РѕРј вЂ” Р°РєС‚РёРІРЅС‹Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»Рё</span>
         </div>
         <div className="flex items-end gap-[2px] h-24">
           {daily.map(d => (
             <div
               key={d.date}
-              title={`${d.date} · активные: ${d.activeUsers} · новые: ${d.newUsers} · сообщения: ${d.messages}`}
+              title={`${d.date} В· Р°РєС‚РёРІРЅС‹Рµ: ${d.activeUsers} В· РЅРѕРІС‹Рµ: ${d.newUsers} В· СЃРѕРѕР±С‰РµРЅРёСЏ: ${d.messages}`}
               className="flex-1 min-w-0 bg-gradient-to-t from-accent/40 to-accent/90 rounded-t-[3px] cursor-default"
               style={{ height: `${Math.max((d.messages / maxMessages) * 100, 2)}%` }}
             />
@@ -621,9 +624,9 @@ function AnalyticsView({ analytics }: { analytics: AdminAnalyticsResponse }) {
 
       {/* Top chats */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-        <h4 className="text-xs font-semibold text-white mb-3">Топ-10 чатов по сообщениям</h4>
+        <h4 className="text-xs font-semibold text-white mb-3">РўРѕРї-10 С‡Р°С‚РѕРІ РїРѕ СЃРѕРѕР±С‰РµРЅРёСЏРј</h4>
         {topChats.length === 0 ? (
-          <p className="text-xs text-white/30 text-center py-6">Сообщений пока нет</p>
+          <p className="text-xs text-white/30 text-center py-6">РЎРѕРѕР±С‰РµРЅРёР№ РїРѕРєР° РЅРµС‚</p>
         ) : (
           <div className="space-y-1.5">
             {topChats.map((ch, i) => (
