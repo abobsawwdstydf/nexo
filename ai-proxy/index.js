@@ -188,10 +188,6 @@ const KEYS = {
     () => ENV.GROQ_KEY_1 || '', () => ENV.GROQ_KEY_2 || '',
     () => ENV.GROQ_KEY_3 || '', () => ENV.GROQ_KEY_4 || '',
   ],
-  sambanova: [
-    () => ENV.SAMBANOVA_KEY_1 || '', () => ENV.SAMBANOVA_KEY_2 || '',
-    () => ENV.SAMBANOVA_KEY_3 || '', () => ENV.SAMBANOVA_KEY_4 || '',
-  ],
   mistral: [() => ENV.MISTRAL_KEY_1 || ''],
   openrouter: [
     () => ENV.OPENROUTER_KEY_1 || '', () => ENV.OPENROUTER_KEY_2 || '',
@@ -207,11 +203,10 @@ const PROV = {
   workersai: { url: '', model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast' },
   cerebras: { url: 'https://api.cerebras.ai/v1/chat/completions', model: 'gpt-oss-120b' },
   groq: { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile' },
-  sambanova: { url: 'https://api.sambanova.ai/v1/chat/completions', model: 'Meta-Llama-3.3-70B-Instruct' },
   mistral: { url: 'https://api.mistral.ai/v1/chat/completions', model: 'mistral-small-latest' },
   openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', model: 'openai/gpt-oss-120b:free' },
 };
-const ORDER = ['workersai', 'cerebras', 'groq', 'sambanova', 'mistral', 'openrouter'];
+const ORDER = ['workersai', 'cerebras', 'groq', 'mistral', 'openrouter'];
 const ki = {};
 
 // ── OpenAI-compatible API (/v1/chat/completions) ──────────────────────────
@@ -221,7 +216,6 @@ const MODELS_LIST = Object.keys(PROV).map((p) => ({ id: PROV[p].model, object: '
 function providerForModel(model) {
   const m = (model || '').toLowerCase();
   if (m.includes('gpt-oss')) return 'cerebras';
-  if (m.includes('meta-llama') || m.includes('sambanova')) return 'sambanova';
   if (m.includes('llama') || m.includes('groq')) return 'groq';
   if (m.includes('mistral')) return 'mistral';
   if (m.includes('openrouter') || m.includes('openai/')) return 'openrouter';

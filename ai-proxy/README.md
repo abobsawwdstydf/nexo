@@ -1,24 +1,23 @@
 # NEXO AI Proxy — Cloudflare Worker
 
-Бесплатный AI прокси с 6 провайдерами и автоматическим failover. Работает как OpenAI-совместимый шлюз с защитой по секрету.
+Бесплатный AI прокси с 5 провайдерами и автоматическим failover. Работает как OpenAI-совместимый шлюз с защитой по секрету.
 
 ## Провайдеры
 
-| # | Провайдер | Модель | Статус |
-|---|-----------|--------|--------|
-| 1 | Workers AI (Cloudflare) | @cf/meta/llama-3.3-70b-instruct-fp8-fast | работает |
-| 2 | Cerebras | gpt-oss-120b | ключи в коде |
-| 3 | Groq | llama-3.3-70b-versatile | ключи в коде |
-| 4 | SambaNova | Meta-Llama-3.3-70B-Instruct | работает |
-| 5 | Mistral | mistral-small-latest | ключ не задан |
-| 6 | OpenRouter | openai/gpt-oss-120b:free | ключи в коде |
+| # | Провайдер | Модель | Ключ |
+|---|-----------|--------|------|
+| 1 | Workers AI (Cloudflare) | @cf/meta/llama-3.3-70b-instruct-fp8-fast | не нужен (binding) |
+| 2 | Cerebras | gpt-oss-120b | `CEREBRAS_KEY_1..4` |
+| 3 | Groq | llama-3.3-70b-versatile | `GROQ_KEY_1..4` |
+| 4 | Mistral | mistral-small-latest | `MISTRAL_KEY_1` |
+| 5 | OpenRouter | openai/gpt-oss-120b:free | `OPENROUTER_KEY_1..4` |
 
-Ключи захардкожены в `KEYS` в `index.js` (кроме Mistral/FAL — берутся из env, см. `.dev.vars.example`).
+Все ключи — только env-биндинги (`npx wrangler secret put <NAME>`, локально — `ai-proxy/.dev.vars`, gitignored). Ключи в коде и истории git — запрещено.
 
 ## Failover порядок
 
 ```
-workersai → cerebras → groq → sambanova → mistral → openrouter
+workersai → cerebras → groq → mistral → openrouter
 ```
 
 ## Аутентификация
@@ -31,7 +30,7 @@ X-Proxy-Secret: <секрет>
 
 Либо OpenAI-совместимый вариант: `Authorization: Bearer <секрет>` (работает с официальными OpenAI SDK).
 
-Секрет захардкожен в `getSecret()` в `index.js`. Без него — `401 Unauthorized`.
+Секрет задаётся env-биндингом `SECRET` (wrangler secret). Без него — `401 Unauthorized`.
 
 ## API Endpoints
 
@@ -92,7 +91,6 @@ for await (const chunk of stream) {
 | model содержит | Провайдер |
 |----------------|-----------|
 | `gpt-oss` / `cerebras` | Cerebras |
-| `meta-llama` / `sambanova` | SambaNova |
 | `llama` / `groq` | Groq |
 | `mistral` | Mistral |
 | `openrouter` / `openai/` | OpenRouter |
