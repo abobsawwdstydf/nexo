@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"context"
@@ -529,6 +529,10 @@ nexo_up 1
 
 	// Bot API callback (нажатие inline-кнопки, авторизованный)
 	auth.Post("/bots/callback", handlers.BotCallback)
+
+	// Bot API inline-режим (композер: @bot <query>)
+	auth.Post("/bots/inline", handlers.BotInline)
+	auth.Post("/bots/inline/result", handlers.BotInlineResult)
 
 	// Username aliases (premium feature)
 	auth.Get("/users/me/aliases", handlers.GetUserAliases)

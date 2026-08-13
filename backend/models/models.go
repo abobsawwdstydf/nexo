@@ -1,4 +1,4 @@
-﻿package models
+package models
 
 import "time"
 
@@ -654,6 +654,16 @@ type BotChatState struct {
 	ChatID      string    `json:"-" gorm:"index;size:64"`
 	ReplyMarkup string    `json:"-" gorm:"type:text"` // reply-клавиатура JSON или ""
 	UpdatedAt   time.Time `json:"-" gorm:"autoUpdateTime"`
+}
+
+// InlineQueryResult — одноразовые результаты inline-запроса (TTL 10 минут).
+// Бот пишет их через answerInlineQuery, фронт забирает через /api/bots/inline.
+type InlineQueryResult struct {
+	InlineQueryID string    `json:"inlineQueryId" gorm:"primaryKey;size:64"`
+	BotID         string    `json:"-" gorm:"index;size:64"`
+	Query         string    `json:"-" gorm:"type:text"`
+	Results       string    `json:"-" gorm:"type:text"` // JSON-массив результатов (Telegram format)
+	CreatedAt     time.Time `json:"-" gorm:"autoCreateTime"`
 }
 
 // UsernameAlias — дополнительный юзернейм для premium (user/chat/bot)
