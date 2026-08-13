@@ -12,6 +12,7 @@ import { installUserStickers } from './userStickers';
 import { installStories } from './stories';
 import { installAdmin } from './admin';
 import { installInviteLinks } from './inviteLinks';
+import { installBackup } from './backup';
 
 const api = new ApiClient();
 
@@ -29,7 +30,7 @@ installUserStickers(api);
 installStories(api);
 installAdmin(api);
 installInviteLinks(api);
+installBackup(api);
 
 export { api };
 export default api;
-

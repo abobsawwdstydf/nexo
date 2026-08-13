@@ -30,6 +30,7 @@ import {
   Gamepad2,
   Cloud,
   PenLine,
+  Archive,
 } from 'lucide-react';
 import {
   ShareIcon as Share2,
@@ -474,6 +475,11 @@ function PrivacySettings() {
   const [twoFaError, setTwoFaError] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [codesSaved, setCodesSaved] = useState(false);
+  const [zipExportPass, setZipExportPass] = useState('');
+  const [zipImportPass, setZipImportPass] = useState('');
+  const [zipFile, setZipFile] = useState<File | null>(null);
+  const [zipExporting, setZipExporting] = useState(false);
+  const [zipImporting, setZipImporting] = useState(false);
 
   useEffect(() => {
     api.getInit().then((d) => {
@@ -586,6 +592,43 @@ function PrivacySettings() {
       toast.error('Ошибка экспорта данных');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleZipExport = async () => {
+    if (zipExportPass.length < 8) return;
+    setZipExporting(true);
+    try {
+      const blob = await api.exportDataZip(zipExportPass);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nexo-export-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Резервная копия скачана', 'Храните пароль в надёжном месте — без него архив не открыть');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Ошибка экспорта ZIP');
+    } finally {
+      setZipExporting(false);
+    }
+  };
+
+  const handleZipImport = async () => {
+    if (zipImportPass.length < 8 || !zipFile) return;
+    setZipImporting(true);
+    try {
+      const res = await api.importDataZip(zipFile, zipImportPass);
+      toast.success(
+        `Импортировано сообщений: ${res.importedMessages}`,
+        `Пропущено: ${res.skippedMessages}. Медиа: ${res.importedMedia}, недоступно: ${res.mediaUnavailable}. Обновите чат.`
+      );
+      setZipFile(null);
+      setZipImportPass('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Ошибка импорта ZIP');
+    } finally {
+      setZipImporting(false);
     }
   };
 
@@ -775,6 +818,55 @@ function PrivacySettings() {
           <ChevronRight size={12} className="text-white/15" />
         )}
       </motion.button>
+
+      {/* ─── Резервная копия (ZIP) ─── */}
+      <div className="px-3 py-3 space-y-2">
+        <div className="flex items-center gap-2 pt-1">
+          <Archive size={15} className="text-white/30" />
+          <span className="text-xs text-white/60 font-medium">Резервная копия (ZIP)</span>
+        </div>
+        <p className="text-[10px] text-white/25">Сообщения с медиа. Шифруется паролем (AES-256).</p>
+        <input
+          type="password"
+          value={zipExportPass}
+          onChange={e => setZipExportPass(e.target.value)}
+          placeholder="Пароль для архива (мин. 8 символов)"
+          className="w-full h-9 px-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none focus:border-accent/40"
+        />
+        <button
+          onClick={handleZipExport}
+          disabled={zipExporting || zipExportPass.length < 8}
+          className="w-full py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs text-white/70 transition-colors disabled:opacity-40"
+        >
+          {zipExporting ? 'Сборка архива...' : 'Скачать ZIP'}
+        </button>
+
+        <div className="h-px bg-white/[0.04] my-2" />
+
+        <input
+          type="password"
+          value={zipImportPass}
+          onChange={e => setZipImportPass(e.target.value)}
+          placeholder="Пароль архива для импорта"
+          className="w-full h-9 px-3 text-sm bg-white/[0.04] border border-white/[0.06] rounded-xl text-white/80 placeholder:text-white/20 outline-none focus:border-accent/40"
+        />
+        <input
+          type="file"
+          accept=".zip,application/zip"
+          onChange={e => setZipFile(e.target.files?.[0] || null)}
+          className="w-full text-xs text-white/50 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-white/[0.08] file:text-white/70 file:text-xs hover:file:bg-white/[0.12]"
+        />
+        <button
+          onClick={handleZipImport}
+          disabled={zipImporting || zipImportPass.length < 8 || !zipFile}
+          className="w-full py-2 rounded-xl bg-accent/80 hover:bg-accent text-xs text-white font-medium transition-colors disabled:opacity-40"
+        >
+          {zipImporting ? 'Импорт...' : 'Импортировать'}
+        </button>
+        <p className="text-[10px] text-white/25">
+          Импортируются только ваши сообщения в чаты, где вы участник. После импорта обновите чат.
+        </p>
+      </div>
 
       {/* Delete account */}
       {!confirmDelete ? (
@@ -1268,4 +1360,8 @@ export default function SettingsModal({ user, initialTab = 'general', onClose, o
     </motion.div>
   );
 }
+
+
+
+
 
