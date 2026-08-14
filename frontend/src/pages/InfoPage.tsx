@@ -21,22 +21,25 @@ export default function InfoPage({ onBack }: { onBack: () => void }) {
       transition={{ duration: 0.3 }}
       className="absolute inset-0 z-50 flex items-center justify-center px-4"
     >
-      {/* Background — серый, как на главной мессенджера */}
+      {/* Background — серый, как на главной мессенджера.
+          На мобильных блобы статичные (анимированный blur — дорого для GPU). */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden bg-black">
+        <div className="md:hidden absolute top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white opacity-[0.05] blur-[90px]" />
+        <div className="md:hidden absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 opacity-[0.04] blur-[70px]" />
         <motion.div
           animate={{ scale: [1, 1.15, 1], opacity: [0.04, 0.08, 0.04] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white blur-[140px]"
+          className="hidden md:block absolute top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white blur-[90px]"
         />
         <motion.div
           animate={{ scale: [1, 1.2, 1], opacity: [0.03, 0.06, 0.03] }}
           transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
-          className="absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 blur-[120px]"
+          className="hidden md:block absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 blur-[70px]"
         />
         <motion.div
           animate={{ scale: [1, 1.1, 1], opacity: [0.02, 0.05, 0.02] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 5 }}
-          className="absolute top-[40%] left-[40%] w-[350px] h-[350px] rounded-full bg-zinc-500 blur-[100px]"
+          className="hidden md:block absolute top-[40%] left-[40%] w-[350px] h-[350px] rounded-full bg-zinc-500 blur-[60px]"
         />
         <div
           className="absolute inset-0 opacity-[0.012]"

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -59,7 +60,7 @@ func applyPromoCode(code string, baseAmount int) (*models.PromoCode, int, error)
 
 	promo.UsedCount++
 
-	discount := baseAmount * promo.DiscountPercent / 100
+	discount := int(math.Round(float64(baseAmount) * float64(promo.DiscountPercent) / 100))
 	finalAmount := baseAmount - discount
 	if finalAmount < promoDiscountMinAmount {
 		finalAmount = promoDiscountMinAmount
@@ -108,7 +109,7 @@ func CheckPromoCode(c *fiber.Ctx) error {
 	}
 
 	baseAmount := getPremiumPrice(months)
-	discount := baseAmount * promo.DiscountPercent / 100
+	discount := int(math.Round(float64(baseAmount) * float64(promo.DiscountPercent) / 100))
 	finalAmount := baseAmount - discount
 	if finalAmount < promoDiscountMinAmount {
 		finalAmount = promoDiscountMinAmount

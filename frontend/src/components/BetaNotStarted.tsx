@@ -41,15 +41,18 @@ export function BetaNotStarted({ startTime, message, onTeamLogin }: BetaNotStart
   return (
     <div className="h-full w-full flex flex-col items-center justify-center px-6 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Мобильный статичный фон: анимированные blur-блобы дороги для GPU телефона */}
+        <div className="md:hidden absolute top-[15%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white opacity-[0.06] blur-[90px]" />
+        <div className="md:hidden absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 opacity-[0.05] blur-[70px]" />
         <motion.div
           animate={{ scale: [1, 1.15, 1], opacity: [0.05, 0.09, 0.05] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-[15%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white blur-[140px]"
+          className="hidden md:block absolute top-[15%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white blur-[90px]"
         />
         <motion.div
           animate={{ scale: [1, 1.2, 1], opacity: [0.04, 0.07, 0.04] }}
           transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
-          className="absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 blur-[120px]"
+          className="hidden md:block absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 blur-[70px]"
         />
       </div>
 

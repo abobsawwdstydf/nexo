@@ -781,6 +781,12 @@ func SearchUsers(c *fiber.Ctx) error {
 	if users == nil {
 		users = []models.User{}
 	}
+	// Only ever expose the public profile — never e-mail, E2E keys, DND
+	// settings, ban/premium flags or any other private field.
+	userID := c.Locals("userId").(string)
+	for i := range users {
+		users[i] = sanitizeUser(users[i], userID)
+	}
 	return c.JSON(users)
 }
 

@@ -167,11 +167,13 @@ interface MessageAreaProps {
 
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
 
@@ -380,7 +382,7 @@ function VideoNotePlayer({ thumbnail, decryptedUrl }: { thumbnail?: string | nul
     if (playing) {
       videoRef.current.pause();
     } else {
-      videoRef.current.play();
+      videoRef.current.play().catch(() => {});
     }
     setPlaying(!playing);
   };
@@ -642,7 +644,7 @@ const MessageBubble = memo(function MessageBubble({
             )}
           </button>
         )}
-        <div className={`max-w-[75%] ${hasVideoNote ? 'max-w-[160px]' : ''}`}>
+        <div className={hasVideoNote ? 'max-w-[160px]' : 'max-w-[75%]'}>
         {/* Reply quote */}
         {message.replyTo && (
           <div
@@ -1503,11 +1505,17 @@ function MessageInput({
   };
 
   const removePreview = (index: number) => {
+    // Синхронизированное удаление через removeFileByRef: убирает и превью,
+    // и файл из selectedFiles, и отменяет аплоад.
     const task = uploadTasksRef.current[index];
     task?.controller.abort();
-    setPreviewImages(prev => prev.filter((_, i) => i !== index));
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    setUploadTasks(prev => prev.filter((_, i) => i !== index));
+    const file = filesRef.current[index];
+    if (file) {
+      removeFileByRef(file);
+    } else {
+      setPreviewImages(prev => prev.filter((_, i) => i !== index));
+      setUploadTasks(prev => prev.filter((_, i) => i !== index));
+    }
   };
 
   const handleFileAllSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2988,6 +2996,17 @@ function TypingDots({ names }: { names: string[] }) {
 export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, onOpenChannelProfile, onOpenGroupProfile, focusMessageId }: MessageAreaProps) {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Рендер-виндовинг: на слабых устройствах не рендерим все сообщения чата,
+  // а только последние RENDER_LIMIT — старые подгружаются кнопкой.
+  const RENDER_LIMIT = 100;
+  const [renderWindow, setRenderWindow] = useState(RENDER_LIMIT);
+  useEffect(() => { setRenderWindow(RENDER_LIMIT); }, [chat.id]);
+  const visibleMessages = messages.length > renderWindow
+    ? messages.slice(messages.length - renderWindow)
+    : messages;
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -3000,6 +3019,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
   const [decryptedMediaUrls, setDecryptedMediaUrls] = useState<Record<string, string>>({});
   const decryptedMediaUrlsRef = useRef<Record<string, string>>({});
   const [flashMsgId, setFlashMsgId] = useState<string | null>(null);
+  const [jumpToId, setJumpToId] = useState<string | null>(null);
 
   // Jump to a message opened from global search (Ctrl+K): scroll to it and
   // flash a highlight once it is loaded into `messages`.
@@ -3016,6 +3036,24 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
     }, 350);
     return () => clearTimeout(t);
   }, [focusMessageId, messages]);
+
+  // Jump to a message picked from the in-chat search results.
+  useEffect(() => {
+    if (!jumpToId) return;
+    const t = setTimeout(() => {
+      const el = containerRef.current?.querySelector(`[data-mid="${jumpToId}"]`);
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        setFlashMsgId(jumpToId);
+      }
+      const t2 = setTimeout(() => {
+        setFlashMsgId(null);
+        setJumpToId(null);
+      }, 2500);
+      return () => clearTimeout(t2);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [jumpToId, messages]);
 
   // Revoke blob URLs of decrypted media when leaving the chat or unmounting,
   // otherwise every decrypted photo/video leaks its object URL forever.
@@ -3134,7 +3172,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
           // Mark the last incoming message as read so the sender sees checkmarks.
           if (!cancelled && data && data.length) {
             const lastIncoming = [...data].reverse().find(m => m.senderId !== user?.id);
-            if (lastIncoming) api.readMessage(chat.id, lastIncoming.id);
+            if (lastIncoming) api.readMessage(chat.id, lastIncoming.id).catch(err => console.error('[read]', err));
           }
         }
       } catch (err) {
@@ -3167,9 +3205,13 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
       if (status.isReady) {
         const stored = await import('../lib/e2e').then(m => m.getSessionInfo(chat.id));
         if (stored) setE2eFingerprint(stored.keyFingerprint);
+        // Сообщения могли загрузиться до готовности E2E-сессии и остаться
+        // зашифрованными — расшифровываем их повторно.
+        const msgs = await decryptLoadedMessages(messagesRef.current);
+        if (msgs.length) setMessages(msgs);
       }
     })();
-  }, [chat.id, chat.isSecret, chat.isE2E, user]);
+  }, [chat.id, chat.isSecret, chat.isE2E, user, decryptLoadedMessages]);
 
   // Sync e2eReadyRef whenever e2eReady changes
   useEffect(() => {
@@ -3508,7 +3550,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
         });
         // Mark incoming messages as read (Telegram-style), except local chats.
         if (decryptedMsg.senderId !== user?.id && chat.id !== NOTES_CHAT_ID && chat.id !== AI_CHAT_ID) {
-          api.readMessage(chat.id, decryptedMsg.id);
+          api.readMessage(chat.id, decryptedMsg.id).catch(err => console.error('[read]', err));
         }
         setAutoScroll(true);
       })();
@@ -3799,6 +3841,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
                         onClick={() => {
                           setSearchQuery('');
                           setSearchMode(false);
+                          setJumpToId(msg.id);
                         }}
                         className="w-full flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.04] transition-colors text-left"
                       >
@@ -3846,10 +3889,18 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
           </div>
         ) : (
           <div className="min-h-full flex flex-col justify-end">
+            {messages.length > visibleMessages.length && (
+              <button
+                onClick={() => setRenderWindow(w => Math.min(messages.length, w + 100))}
+                className="w-full py-2 text-[11px] text-white/35 hover:text-white/60 transition-colors"
+              >
+                ↑ Показать более ранние (осталось {messages.length - visibleMessages.length})
+              </button>
+            )}
             <AnimatePresence initial={false}>
-              {messages.map((msg, idx) => (
+              {visibleMessages.map((msg, idx) => (
                 <div key={msg.id} data-mid={msg.id}>
-                  {shouldShowDateSeparator(messages, idx) && (
+                  {shouldShowDateSeparator(visibleMessages, idx) && (
                     <DateSeparator dateStr={msg.createdAt} />
                   )}
                   <div className={`relative ${flashMsgId === msg.id ? 'rounded-xl bg-accent/10 ring-1 ring-accent/20' : ''}`}>

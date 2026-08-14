@@ -79,8 +79,8 @@ type YooKassaPaymentRequest struct {
 		Type      string `json:"type"`
 		ReturnURL string `json:"return_url"`
 	} `json:"confirmation"`
-	Capture  bool              `json:"capture"`
-	Receipt  string            `json:"receipt,omitempty"`
+	Capture  bool            `json:"capture"`
+	Receipt  json.RawMessage `json:"receipt,omitempty"`
 	Metadata map[string]string `json:"metadata"`
 }
 
@@ -387,6 +387,18 @@ func CreatePayment(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid premium period"})
 	}
 
+	// ─── Rate limit: не більше 3 створень платежів за годину ──────────────
+	// (перевіряється ДО застосування промокода, щоб не спалювати слоти)
+	var recentCount int64
+	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	db.GetDB().Model(&models.Payment{}).
+		Where("user_id = ? AND created_at > ?", userID, oneHourAgo).
+		Count(&recentCount)
+	if recentCount >= 3 {
+		logging.Log.Warn("[SECURITY] Payment rate limit hit", "user_id", userID, "count", recentCount)
+		return c.Status(429).JSON(fiber.Map{"error": "Too many payment attempts. Try again later."})
+	}
+
 	// ─── Промокод ──────────────────────────────────────────────────────
 	var promo *models.PromoCode
 	if req.PromoCode != "" {
@@ -412,17 +424,6 @@ func CreatePayment(c *fiber.Ctx) error {
 		}
 	} else {
 		req.GiftToUserID = "" // скидаємо для non-gift
-	}
-
-	// ─── Rate limit: не більше 3 створень платежів за годину ──────────────
-	var recentCount int64
-	oneHourAgo := time.Now().Add(-1 * time.Hour)
-	db.GetDB().Model(&models.Payment{}).
-		Where("user_id = ? AND created_at > ?", userID, oneHourAgo).
-		Count(&recentCount)
-	if recentCount >= 3 {
-		logging.Log.Warn("[SECURITY] Payment rate limit hit", "user_id", userID, "count", recentCount)
-		return c.Status(429).JSON(fiber.Map{"error": "Too many payment attempts. Try again later."})
 	}
 
 	// ─── Створення запиту до YooKassa ────────────────────────────────────
@@ -452,7 +453,7 @@ func CreatePayment(c *fiber.Ctx) error {
 	// ─── Фіскальний чек (54-ФЗ) ──────────────────────────────────────────
 	receiptJSON, receiptErr := buildReceipt(user, amount, req.PremiumMonths)
 	if receiptErr == nil {
-		ykReq.Receipt = receiptJSON
+		ykReq.Receipt = json.RawMessage(receiptJSON)
 	} else {
 		logging.Log.Warn("[YOOKASSA] Receipt skipped", "err", receiptErr)
 	}
@@ -460,10 +461,16 @@ func CreatePayment(c *fiber.Ctx) error {
 	body, err := json.Marshal(ykReq)
 	if err != nil {
 		logging.Log.Error("[YOOKASSA] Failed to marshal payment request", "err", err)
+		if promo != nil {
+			releasePromoCodeUse(promo.Code)
+		}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create payment request"})
 	}
 	httpReq, err := http.NewRequest("POST", "https://api.yookassa.ru/v3/payments", bytes.NewReader(body))
 	if err != nil {
+		if promo != nil {
+			releasePromoCodeUse(promo.Code)
+		}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create payment request"})
 	}
 
@@ -474,6 +481,9 @@ func CreatePayment(c *fiber.Ctx) error {
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
 		logging.Log.Error("[YOOKASSA] API request failed", "err", err)
+		if promo != nil {
+			releasePromoCodeUse(promo.Code)
+		}
 		return c.Status(502).JSON(fiber.Map{"error": "Payment service unavailable"})
 	}
 	defer resp.Body.Close()
@@ -486,6 +496,9 @@ func CreatePayment(c *fiber.Ctx) error {
 
 	if resp.StatusCode != 200 {
 		logging.Log.Error("[YOOKASSA] Payment creation failed", "status", resp.StatusCode, "body", string(respBody))
+		if promo != nil {
+			releasePromoCodeUse(promo.Code)
+		}
 		return c.Status(502).JSON(fiber.Map{"error": "Payment creation failed"})
 	}
 

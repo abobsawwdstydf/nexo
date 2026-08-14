@@ -1256,8 +1256,10 @@ function PremiumSettings() {
               const isSelected = selected === m;
               const roundedPrice = price ? Math.round(price) : null;
               const monthlyPrice = roundedPrice ? Math.round(roundedPrice / m) : null;
+              // Итоговая цена — из бэкенда (checkPromoCode.finalAmount), чтобы UI
+              // и чек ЮKassa всегда совпадали.
               const discounted = promoApplied && roundedPrice != null
-                ? Math.max(1, Math.round(roundedPrice * (100 - promoApplied.discountPercent) / 100))
+                ? promoApplied.finalAmount
                 : null;
               return (
                 <button
@@ -1298,7 +1300,7 @@ function PremiumSettings() {
             className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {paying ? 'Создание платежа...' : selected && prices[selected]
-              ? `Купить за ${(promoApplied ? Math.max(1, Math.round(prices[selected] * (100 - promoApplied.discountPercent) / 100)) : Math.round(prices[selected])).toLocaleString('ru-RU')} ₽`
+              ? `Купить за ${(promoApplied ? promoApplied.finalAmount : Math.round(prices[selected])).toLocaleString('ru-RU')} ₽`
               : 'Выберите тариф'}
           </button>
         </>

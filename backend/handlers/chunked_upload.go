@@ -38,6 +38,7 @@ type chunkSession struct {
 	Ext       string
 	CreatedAt time.Time
 	Path      string
+	mu        sync.Mutex // сериализует запись партов/complete/cancel
 }
 
 var (
@@ -144,6 +145,9 @@ func ChunkUploadPart(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Forbidden"})
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	index, err := strconv.Atoi(c.FormValue("index"))
 	if err != nil || index < 0 {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid chunk index"})
@@ -208,6 +212,10 @@ func ChunkComplete(c *fiber.Ctx) error {
 	if s.UserID != userID {
 		return c.Status(403).JSON(fiber.Map{"error": "Forbidden"})
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.Received != s.Size {
 		return c.Status(400).JSON(fiber.Map{"error": "Incomplete upload", "received": s.Received, "size": s.Size})
 	}
@@ -299,6 +307,10 @@ func ChunkCancel(c *fiber.Ctx) error {
 	if s.UserID != userID {
 		return c.Status(403).JSON(fiber.Map{"error": "Forbidden"})
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	os.Remove(s.Path)
 	chunkSessions.Delete(uploadID)
 	return c.JSON(fiber.Map{"ok": true})

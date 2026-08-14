@@ -40,21 +40,25 @@ const FONT = "'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica 
 function MessengerBackground() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {/* Ambient blobs */}
+      {/* Мобильная статичная подложка: анимированные blur-блобы — слишком
+          дорогая композиция для GPU телефона (−10000 FPS) */}
+      <div className="md:hidden absolute top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white opacity-[0.05] blur-[90px]" />
+      <div className="md:hidden absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 opacity-[0.04] blur-[70px]" />
+      {/* Ambient blobs (desktop only) */}
       <motion.div
         animate={{ scale: [1, 1.15, 1], opacity: [0.04, 0.08, 0.04] }}
         transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white blur-[140px]"
+        className="hidden md:block absolute top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-white blur-[90px]"
       />
       <motion.div
         animate={{ scale: [1, 1.2, 1], opacity: [0.03, 0.06, 0.03] }}
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
-        className="absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 blur-[120px]"
+        className="hidden md:block absolute bottom-[20%] -right-[5%] w-[400px] h-[400px] rounded-full bg-zinc-400 blur-[70px]"
       />
       <motion.div
         animate={{ scale: [1, 1.1, 1], opacity: [0.02, 0.05, 0.02] }}
         transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 5 }}
-        className="absolute top-[40%] left-[40%] w-[350px] h-[350px] rounded-full bg-zinc-500 blur-[100px]"
+        className="hidden md:block absolute top-[40%] left-[40%] w-[350px] h-[350px] rounded-full bg-zinc-500 blur-[60px]"
       />
       {/* Grid overlay */}
       <div
@@ -258,14 +262,6 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   }, []);
 
   // ─── Handlers ─────────────────────────────────────────────────────────
-  const handleSearch = useCallback(() => {
-    setSearchQuery('');
-    const input = chatListRef.current?.querySelector('input[type="text"]') as HTMLInputElement | null;
-    if (input) {
-      input.focus();
-      input.select();
-    }
-  }, []);
 
   const handleSelectChat = useCallback((chatId: string) => {
     setSelectedChatId(chatId);
@@ -317,7 +313,11 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
   const handleChatLeft = useCallback((chatId: string) => {
     setGroupProfileChat(null);
     setChannelProfileChat(null);
-    setSelectedChatId(prev => (prev === chatId ? null : prev));
+    setSelectedChatId(prev => {
+      if (prev !== chatId) return prev;
+      const next = chatsRef.current.filter(c => c.id !== chatId);
+      return next[0]?.id ?? null;
+    });
     setMobileView('list');
     setChats(prev => prev.filter(c => c.id !== chatId));
     useAuthStore.getState().checkAuth();

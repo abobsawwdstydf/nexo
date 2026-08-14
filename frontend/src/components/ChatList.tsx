@@ -39,7 +39,7 @@ interface ChatListProps {
 
 const CATEGORIES = [
   { id: 'all', label: 'Все' },
-  { id: 'news', label: 'Новости', badge: 2 },
+  { id: 'news', label: 'Новости' },
   { id: 'personal', label: 'Личные' },
   { id: 'groups', label: 'Группы' },
   { id: 'channels', label: 'Каналы' },
@@ -375,11 +375,6 @@ export function ChatList({
               }`}
             >
               <span>{cat.label}</span>
-              {cat.badge && (
-                <span className="w-4 h-4 rounded-full bg-accent text-[9px] font-bold text-white flex items-center justify-center">
-                  {cat.badge}
-                </span>
-              )}
             </button>
           );
         })}

@@ -284,7 +284,7 @@ export function StoryCreateModal({ onClose, onCreated }: StoryCreateModalProps) 
             <Lock size={14} />
             Секретная история
           </span>
-          <span className={`relative w-8 h-4.5 rounded-full transition-colors ${secret ? 'bg-accent' : 'bg-white/15'}`}>
+          <span className={`relative w-8 h-4 rounded-full transition-colors ${secret ? 'bg-accent' : 'bg-white/15'}`}>
             <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all ${secret ? 'translate-x-3.5' : ''}`} />
           </span>
         </button>

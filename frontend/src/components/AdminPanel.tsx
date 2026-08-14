@@ -187,7 +187,10 @@ export default function AdminPanel({ onClose, client = api }: AdminPanelProps) {
         discountPercent: promoForm.discountPercent,
         maxUses: promoForm.maxUses,
         active: promoForm.active,
-        expiresAt: promoForm.expiresAt || undefined,
+        // type="date" даёт "YYYY-MM-DD"; бэкенд ждёт RFC3339
+        expiresAt: promoForm.expiresAt
+          ? new Date(promoForm.expiresAt + 'T00:00:00').toISOString()
+          : undefined,
       });
       toast.success('Промокод создан');
       setPromoForm({ code: '', discountPercent: 20, maxUses: 100, active: true, expiresAt: '' });

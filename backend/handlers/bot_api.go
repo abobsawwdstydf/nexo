@@ -989,6 +989,12 @@ func BotFile(c *fiber.Ctx) error {
 	if _, err := loadBotByToken(token); err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
 	}
+	// file_path уже содержит "uploads/<file>" — убираем дублирующий префикс
+	// и защищаемся от path traversal.
+	path = strings.TrimPrefix(path, "uploads/")
+	if strings.Contains(path, "..") {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid path"})
+	}
 	return c.Redirect("/uploads/"+path, http.StatusFound)
 }
 

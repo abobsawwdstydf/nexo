@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -227,6 +228,26 @@ func SendMessage(c *fiber.Ctx) error {
 	// Blocked users must not be able to message you in a 1-on-1 chat.
 	if isPersonalChatBlocked(chatID, userID) {
 		return c.Status(403).JSON(fiber.Map{"error": "You cannot message this user"})
+	}
+
+	// Slow mode: текстовые сообщения ограничены по частоте (интервал в секундах).
+	if req.Type == "" || req.Type == "text" {
+		var chat models.Chat
+		if result := db.GetDB().First(&chat, "id = ?", chatID); result.Error == nil && chat.SlowModeInterval > 0 {
+			var lastMsg models.Message
+			if result := db.GetDB().Where("chat_id = ? AND sender_id = ?", chatID, userID).
+				Order("created_at DESC").First(&lastMsg); result.Error == nil {
+				elapsed := time.Since(lastMsg.CreatedAt).Seconds()
+				if elapsed < float64(chat.SlowModeInterval) {
+					remaining := float64(chat.SlowModeInterval) - elapsed
+					return c.Status(429).JSON(fiber.Map{
+						"error":       "Slow mode: wait " + strconv.FormatFloat(remaining, 'f', 0, 64) + "s",
+						"code":        "slow_mode",
+						"retry_after": int(remaining),
+					})
+				}
+			}
+		}
 	}
 
 	if req.Type == "" {
@@ -957,7 +978,7 @@ func GetSearchHistory(c *fiber.Ctx) error {
 // timer on an existing message. Only the author may do this.
 func SetMessageSelfDestruct(c *fiber.Ctx) error {
 	userID := c.Locals("userId").(string)
-	messageID := c.Params("id")
+	messageID := c.Params("messageId")
 
 	var req struct {
 		Seconds int `json:"seconds"`
