@@ -3,7 +3,16 @@ import { ApiClient, getApiBase } from './core';
 
 export interface AdminAnalyticsTotals {
   totalUsers: number;
+  totalBanned: number;
+  onlineNow: number;
+  totalVerified: number;
+  totalAdmins: number;
   totalChats: number;
+  totalGroups: number;
+  totalChannels: number;
+  totalPersonals: number;
+  totalE2E: number;
+  totalSecret: number;
   totalMessages: number;
   totalMedia: number;
   mediaSizeBytes: number;

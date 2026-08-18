@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert, TicketPercent, Plus, Pause, Play, Trash2, Copy, BarChart3 } from 'lucide-react';
+import {
+  X, Flag, MessageSquare, BadgeCheck, Send, ShieldAlert, TicketPercent, Plus, Pause, Play, Trash2, Copy, BarChart3,
+  Users, UserX, Activity, Crown, ShieldCheck, MessagesSquare, Users2, Radio, UserRound, Lock, EyeOff, Image as ImageIcon,
+  HardDrive, History, CreditCard, UserPlus, Sparkles,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import type { ApiClient } from '../lib/api/core';
 import type { AdminReport, AdminFeedbackTicket, AdminPromoCode, AdminAnalyticsResponse } from '../lib/api/admin';
@@ -414,12 +418,20 @@ export default function AdminPanel({ onClose, client = api }: AdminPanelProps) {
             <SectionHeader title="Аналитика" icon={BarChart3} onRefresh={loadAnalytics} loading={analyticsLoading} />
             {!analytics ? (
               <div className="space-y-3 animate-pulse">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-28 rounded-3xl bg-white/[0.04] border border-white/[0.06]" />
+                  ))}
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {Array.from({ length: 8 }).map((_, i) => (
+                  {Array.from({ length: 12 }).map((_, i) => (
                     <div key={i} className="h-20 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
                   ))}
                 </div>
-                <div className="h-44 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="h-44 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
+                  <div className="h-44 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
+                </div>
                 <div className="h-32 rounded-2xl bg-white/[0.04] border border-white/[0.06]" />
               </div>
             ) : (
@@ -563,78 +575,203 @@ function formatBytes(bytes: number): string {
   return `${v >= 100 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
 }
 
+interface CounterCard {
+  label: string;
+  value: number;
+  hint?: string;
+  icon: typeof Users;
+  gradient: string;
+  text?: string;
+  pulse?: boolean;
+}
+
+function StatCard({ label, value, hint, icon: Icon, gradient, text, pulse }: CounterCard) {
+  return (
+    <div className="group rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-200">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-white/40">{label}</span>
+        <span className={`w-6 h-6 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
+          <Icon size={12} className={text ?? 'text-white'} />
+        </span>
+      </div>
+      <div className={`text-xl font-bold mt-1 tabular-nums tracking-tight ${text ?? 'text-white'}`}>
+        {value.toLocaleString('ru-RU')}
+      </div>
+      {hint && <div className="text-[10px] text-white/35 mt-0.5">{hint}</div>}
+    </div>
+  );
+}
+
+function HeroStat({ label, value, icon: Icon, gradient, text, pulse, sub }: CounterCard & { sub: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] px-5 py-4 bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
+      <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br ${gradient} opacity-15 blur-2xl pointer-events-none`} />
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-white/45">{label}</span>
+        <span className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-lg`}>
+          <Icon size={15} className={text ?? 'text-white'} />
+        </span>
+      </div>
+      <div className={`text-3xl font-extrabold mt-2 tabular-nums tracking-tight ${text ?? 'text-white'}`}>
+        {value.toLocaleString('ru-RU')}
+        {pulse && <span className="inline-flex items-center gap-1 ml-3 align-middle">
+          <motion.span
+            className="w-2 h-2 rounded-full bg-green-400"
+            animate={{ opacity: [1, 0.2, 1], scale: [1, 0.8, 1] }}
+            transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+          />
+          <span className="text-[10px] font-medium text-green-400/90 uppercase tracking-wider">live</span>
+        </span>}
+      </div>
+      <div className="text-[11px] text-white/35 mt-1">{sub}</div>
+    </div>
+  );
+}
+
 function AnalyticsView({ analytics }: { analytics: AdminAnalyticsResponse }) {
   const { totals, daily, topChats } = analytics;
   const maxMessages = Math.max(...daily.map(d => d.messages), 1);
+  const maxNewUsers = Math.max(...daily.map(d => d.newUsers), 1);
 
-  const counters: [string, number, string?][] = [
-    ['Пользователи', totals.totalUsers],
-    ['Чаты', totals.totalChats],
-    ['Сообщения', totals.totalMessages],
-    ['Медиа', totals.totalMedia, formatBytes(totals.mediaSizeBytes)],
-    ['Истории', totals.totalStories],
-    ['Платежи', totals.totalPayments],
-    ['Premium', totals.premiumUsers],
-    ['Жалобы', totals.totalReports],
+  const today = daily[daily.length - 1];
+  const yesterday = daily[daily.length - 2];
+  const todayDelta = today && yesterday
+    ? Math.round(((today.messages - yesterday.messages) / Math.max(yesterday.messages, 1)) * 100)
+    : null;
+
+  const card: CounterCard[] = [
+    { label: 'Пользователи', value: totals.totalUsers, icon: Users, gradient: 'from-sky-500/40 to-blue-600/40', hint: `${today?.newUsers ?? 0} новых за сегодня` },
+    { label: 'Верифицированные', value: totals.totalVerified, icon: BadgeCheck, gradient: 'from-cyan-400/30 to-teal-500/40', text: 'text-cyan-300' },
+    { label: 'Админы', value: totals.totalAdmins, icon: ShieldCheck, gradient: 'from-indigo-500/30 to-violet-500/40', text: 'text-indigo-300' },
+    { label: 'Premium', value: totals.premiumUsers, icon: Crown, gradient: 'from-amber-400/30 to-yellow-500/40', text: 'text-amber-300' },
+    { label: 'Чаты', value: totals.totalChats, icon: MessagesSquare, gradient: 'from-emerald-500/30 to-teal-500/40', text: 'text-emerald-300' },
+    { label: 'Группы', value: totals.totalGroups, icon: Users2, gradient: 'from-emerald-400/30 to-green-500/40', text: 'text-emerald-300' },
+    { label: 'Каналы', value: totals.totalChannels, icon: Radio, gradient: 'from-purple-500/30 to-fuchsia-500/40', text: 'text-purple-300' },
+    { label: 'Личные', value: totals.totalPersonals, icon: UserRound, gradient: 'from-slate-400/30 to-slate-500/40', text: 'text-slate-300' },
+    { label: 'E2E-чаты', value: totals.totalE2E, icon: Lock, gradient: 'from-sky-400/30 to-blue-500/40', text: 'text-sky-300' },
+    { label: 'Секретные', value: totals.totalSecret, icon: EyeOff, gradient: 'from-rose-500/30 to-red-500/40', text: 'text-rose-300' },
+    { label: 'Сообщения', value: totals.totalMessages, icon: MessageSquare, gradient: 'from-blue-500/30 to-indigo-500/40', text: 'text-blue-300', hint: todayDelta !== null ? `${todayDelta >= 0 ? '+' : ''}${todayDelta}% к вчера` : undefined },
+    { label: 'Медиа', value: totals.totalMedia, icon: ImageIcon, gradient: 'from-pink-500/30 to-rose-500/40', text: 'text-pink-300', hint: formatBytes(totals.mediaSizeBytes) },
+    { label: 'Истории', value: totals.totalStories, icon: History, gradient: 'from-orange-400/30 to-amber-500/40', text: 'text-orange-300' },
+    { label: 'Платежи', value: totals.totalPayments, icon: CreditCard, gradient: 'from-lime-500/30 to-green-500/40', text: 'text-lime-300' },
+    { label: 'Жалобы', value: totals.totalReports, icon: Flag, gradient: 'from-red-500/30 to-orange-500/40', text: 'text-red-300' },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Counters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {counters.map(([label, value, hint]) => (
-          <div key={label} className="rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
-            <div className="text-[11px] text-white/40">{label}</div>
-            <div className="text-xl font-bold text-white mt-0.5 tabular-nums">
-              {value.toLocaleString('ru-RU')}
-            </div>
-            {hint && <div className="text-[10px] text-white/35">{hint}</div>}
-          </div>
-        ))}
+      {/* Live hero stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <HeroStat
+          label="Онлайн сейчас" value={totals.onlineNow} icon={Activity} gradient="from-green-500/40 to-emerald-600/40"
+          text="text-green-300" pulse sub={`${totals.totalUsers > 0 ? Math.round((totals.onlineNow / totals.totalUsers) * 100) : 0}% от всех пользователей`}
+        />
+        <HeroStat
+          label="Заблокировано" value={totals.totalBanned} icon={UserX} gradient="from-red-500/40 to-rose-600/40"
+          text="text-red-300" sub={`${totals.totalUsers > 0 ? Math.round((totals.totalBanned / totals.totalUsers) * 100) : 0}% от всех пользователей`}
+        />
+        <HeroStat
+          label="Активность сегодня" value={today?.activeUsers ?? 0} icon={Sparkles} gradient="from-violet-500/40 to-purple-600/40"
+          text="text-violet-300" sub={`${today?.newUsers ?? 0} новых · ${today?.messages ?? 0} сообщений`}
+        />
       </div>
 
-      {/* 30-day histogram */}
-      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <h4 className="text-xs font-semibold text-white">Активность за 30 дней</h4>
-          <span className="text-[10px] text-white/35">высота — сообщения · число под столбцом — активные пользователи</span>
+      {/* All counters */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {card.map(c => <StatCard key={c.label} {...c} />)}
+      </div>
+
+      {/* 30-day histograms */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h4 className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <MessageSquare size={13} className="text-blue-300" />
+              Сообщения за 30 дней
+            </h4>
+            <span className="text-[10px] text-white/35">активные — числом под столбцом</span>
+          </div>
+          <div className="flex items-end gap-[2px] h-24">
+            {daily.map(d => (
+              <div
+                key={d.date}
+                title={`${d.date} · активные: ${d.activeUsers} · новые: ${d.newUsers} · сообщения: ${d.messages}`}
+                className="flex-1 min-w-0 bg-gradient-to-t from-blue-500/25 to-blue-400/90 rounded-t-[3px] cursor-default hover:from-blue-500/50 hover:to-blue-300 transition-colors"
+                style={{ height: `${Math.max((d.messages / maxMessages) * 100, 2)}%` }}
+              />
+            ))}
+          </div>
+          <div className="flex gap-[2px] mt-1.5">
+            {daily.map(d => (
+              <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/45 tabular-nums">
+                {d.activeUsers > 0 ? d.activeUsers : ''}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-[2px] mt-1.5">
+            {daily.map((d, i) => (
+              <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/25 tabular-nums">
+                {i % 5 === 4 || i === daily.length - 1 ? `${d.date.slice(8)}.${d.date.slice(5, 7)}` : ''}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex items-end gap-[2px] h-24">
-          {daily.map(d => (
-            <div
-              key={d.date}
-              title={`${d.date} · активные: ${d.activeUsers} · новые: ${d.newUsers} · сообщения: ${d.messages}`}
-              className="flex-1 min-w-0 bg-gradient-to-t from-accent/40 to-accent/90 rounded-t-[3px] cursor-default"
-              style={{ height: `${Math.max((d.messages / maxMessages) * 100, 2)}%` }}
-            />
-          ))}
-        </div>
-        <div className="flex gap-[2px] mt-1.5">
-          {daily.map(d => (
-            <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/45 tabular-nums">
-              {d.activeUsers > 0 ? d.activeUsers : ''}
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-[2px] mt-1.5">
-          {daily.map((d, i) => (
-            <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/25 tabular-nums">
-              {i % 5 === 4 || i === daily.length - 1 ? `${d.date.slice(8)}.${d.date.slice(5, 7)}` : ''}
-            </div>
-          ))}
+
+        <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h4 className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <UserPlus size={13} className="text-emerald-300" />
+              Новые пользователи за 30 дней
+            </h4>
+            <span className="text-[10px] text-white/35">сумма: {daily.reduce((s, d) => s + d.newUsers, 0).toLocaleString('ru-RU')}</span>
+          </div>
+          <div className="flex items-end gap-[2px] h-24">
+            {daily.map(d => (
+              <div
+                key={d.date}
+                title={`${d.date} · новых: ${d.newUsers}`}
+                className="flex-1 min-w-0 bg-gradient-to-t from-emerald-500/25 to-emerald-400/90 rounded-t-[3px] cursor-default hover:from-emerald-500/50 hover:to-emerald-300 transition-colors"
+                style={{ height: `${Math.max((d.newUsers / maxNewUsers) * 100, 2)}%` }}
+              />
+            ))}
+          </div>
+          <div className="flex gap-[2px] mt-1.5">
+            {daily.map(d => (
+              <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/45 tabular-nums">
+                {d.newUsers > 0 ? d.newUsers : ''}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-[2px] mt-1.5">
+            {daily.map((d, i) => (
+              <div key={d.date} className="flex-1 min-w-0 text-center text-[8px] leading-none text-white/25 tabular-nums">
+                {i % 5 === 4 || i === daily.length - 1 ? `${d.date.slice(8)}.${d.date.slice(5, 7)}` : ''}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Top chats */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-        <h4 className="text-xs font-semibold text-white mb-3">Топ-10 чатов по сообщениям</h4>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h4 className="text-xs font-semibold text-white flex items-center gap-1.5">
+            <MessagesSquare size={13} className="text-purple-300" />
+            Топ-10 чатов по сообщениям
+          </h4>
+          <span className="text-[10px] text-white/35">обновлено {new Date(analytics.generatedAt).toLocaleString('ru-RU')}</span>
+        </div>
         {topChats.length === 0 ? (
           <p className="text-xs text-white/30 text-center py-6">Сообщений пока нет</p>
         ) : (
           <div className="space-y-1.5">
             {topChats.map((ch, i) => (
               <div key={ch.chatId} className="flex items-center gap-3 rounded-xl px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
-                <span className="w-5 text-center text-[11px] font-semibold text-white/30 tabular-nums">{i + 1}</span>
+                <span className={`w-6 h-6 shrink-0 flex items-center justify-center rounded-lg text-[10px] font-bold tabular-nums ${
+                  i === 0 ? 'bg-amber-400/15 text-amber-300'
+                  : i === 1 ? 'bg-slate-300/15 text-slate-200'
+                  : i === 2 ? 'bg-orange-400/15 text-orange-300'
+                  : 'bg-white/[0.06] text-white/35'
+                }`}>{i + 1}</span>
                 <span className="flex-1 min-w-0 truncate text-xs text-white/80">{ch.name}</span>
                 <span className="text-[11px] text-white/50 tabular-nums">{ch.messageCount.toLocaleString('ru-RU')}</span>
               </div>

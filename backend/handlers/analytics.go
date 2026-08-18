@@ -16,7 +16,16 @@ const analyticsDays = 30
 
 type analyticsTotals struct {
 	TotalUsers     int64 `json:"totalUsers"`
+	TotalBanned    int64 `json:"totalBanned"`
+	OnlineNow      int64 `json:"onlineNow"`
+	TotalVerified  int64 `json:"totalVerified"`
+	TotalAdmins    int64 `json:"totalAdmins"`
 	TotalChats     int64 `json:"totalChats"`
+	TotalGroups    int64 `json:"totalGroups"`
+	TotalChannels  int64 `json:"totalChannels"`
+	TotalPersonals int64 `json:"totalPersonals"`
+	TotalE2E       int64 `json:"totalE2E"`
+	TotalSecret    int64 `json:"totalSecret"`
 	TotalMessages  int64 `json:"totalMessages"`
 	TotalMedia     int64 `json:"totalMedia"`
 	MediaSizeBytes int64 `json:"mediaSizeBytes"`
@@ -74,7 +83,43 @@ func GetAdminAnalytics(c *fiber.Ctx) error {
 	if err := db.GetDB().Model(&models.User{}).Count(&resp.Totals.TotalUsers).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
 	}
+	if err := db.GetDB().Model(&models.User{}).
+		Where("is_banned = ?", true).Count(&resp.Totals.TotalBanned).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.User{}).
+		Where("is_online = ?", true).Count(&resp.Totals.OnlineNow).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.User{}).
+		Where("is_verified = ?", true).Count(&resp.Totals.TotalVerified).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.User{}).
+		Where("is_admin = ?", true).Count(&resp.Totals.TotalAdmins).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
 	if err := db.GetDB().Model(&models.Chat{}).Count(&resp.Totals.TotalChats).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.Chat{}).
+		Where("type = ?", "group").Count(&resp.Totals.TotalGroups).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.Chat{}).
+		Where("type = ?", "channel").Count(&resp.Totals.TotalChannels).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.Chat{}).
+		Where("type = ?", "personal").Count(&resp.Totals.TotalPersonals).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.Chat{}).
+		Where("is_e2e = ?", true).Count(&resp.Totals.TotalE2E).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
+	}
+	if err := db.GetDB().Model(&models.Chat{}).
+		Where("is_secret = ?", true).Count(&resp.Totals.TotalSecret).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to load analytics"})
 	}
 	if err := db.GetDB().Model(&models.Message{}).Count(&resp.Totals.TotalMessages).Error; err != nil {
