@@ -31,10 +31,11 @@ var publicPrefixes = []string{
 
 func BetaGuard() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		if IsBetaEnded() || BetaEndedManually() {
+		// До официального релиза (25.08) платформа закрыта; после релиза доступ открыт всем.
+		if (IsBetaEnded() || BetaEndedManually()) && !IsReleasePassed() {
 			return c.Status(403).JSON(fiber.Map{
 				"error":   "beta_ended",
-				"message": "Бета закончена, ждите официального релиза",
+				"message": "Бета закончена. Релиз Нексо — 25 августа в 6:00 (МСК)",
 			})
 		}
 

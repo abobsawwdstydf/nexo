@@ -20,7 +20,7 @@ function plural(n: number, one: string, few: string, many: string) {
 export function BetaNotStarted({ startTime, message, onTeamLogin }: BetaNotStartedProps) {
   const target = useMemo(() => {
     const t = new Date(startTime);
-    return isNaN(t.getTime()) ? new Date('2026-08-06T06:00:00+03:00') : t;
+    return isNaN(t.getTime()) ? new Date('2026-08-25T03:00:00Z') : t;
   }, [startTime]);
 
   const [now, setNow] = useState(() => Date.now());
@@ -70,7 +70,7 @@ export function BetaNotStarted({ startTime, message, onTeamLogin }: BetaNotStart
         />
         <h1 className="text-2xl font-bold text-white/95 tracking-wide mb-2">Нексо</h1>
         <p className="text-sm text-white/50 leading-relaxed mb-8">
-          {message || 'Нексо откроется 6 августа в 6:00 (МСК)'}
+          {message || 'Релиз Нексо — 25 августа в 6:00 (МСК)'}
         </p>
 
         <div className="flex items-center gap-2 font-mono">
@@ -93,7 +93,7 @@ export function BetaNotStarted({ startTime, message, onTeamLogin }: BetaNotStart
         </div>
 
         <p className="text-[12px] text-white/30 mt-8">
-          {plural(days, 'день', 'дня', 'дней')} до открытия
+          {plural(days, 'день', 'дня', 'дней')} до релиза
         </p>
 
         {onTeamLogin && (

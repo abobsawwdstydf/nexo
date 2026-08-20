@@ -768,6 +768,11 @@ func botLeaveChat(c *fiber.Ctx, bot models.Bot) error {
 	if req.ChatID == "" {
 		return tgErr(c, 400, "Bad Request: chat_id is required")
 	}
+	// Бот должен быть установлен в этот чат, иначе любой бот-токен
+	// сможет спамить системные сообщения в произвольный чат.
+	if _, ok := checkBotInstalled(bot.ID, req.ChatID); !ok {
+		return tgErr(c, 400, "Bad Request: bot is not installed in this chat")
+	}
 	db.GetDB().Where("bot_id = ? AND chat_id = ?", bot.ID, req.ChatID).Delete(&models.BotInstallation{})
 	db.GetDB().Where("id = ?", bot.ID+":"+req.ChatID).Delete(&models.BotChatState{})
 	msg := models.Message{

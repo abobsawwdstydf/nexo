@@ -21,10 +21,12 @@ interface E2EInitOptions {
 const ONE_TIME_KEY_COUNT = 20;
 
 export class E2ESessionManager {
-  private initialized = false;
+  private initializedFor: string | null = null;
 
   async initialize(userId: string): Promise<void> {
-    if (this.initialized) return;
+    // Инициализация привязана к аккаунту: при переключении на другого
+    // пользователя нужно заново выгрузить его key bundle (one-time prekeys).
+    if (this.initializedFor === userId) return;
 
     let keyPair = loadIdentityKeyPair(userId);
     if (!keyPair) {
@@ -70,7 +72,7 @@ export class E2ESessionManager {
             deviceId,
           });
         }
-        this.initialized = true;
+        this.initializedFor = userId;
         return;
       }
     } catch {
@@ -89,7 +91,7 @@ export class E2ESessionManager {
       deviceId,
     });
 
-    this.initialized = true;
+    this.initializedFor = userId;
   }
 
   async establishSession({ userId, chatId, otherUserId }: E2EInitOptions): Promise<boolean> {

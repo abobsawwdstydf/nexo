@@ -15,6 +15,8 @@ type BetaStatus struct {
 	Ended          bool   `json:"ended"`
 	StartTime      string `json:"startTime"`
 	EndTime        string `json:"endTime"`
+	ReleaseTime    string `json:"releaseTime"`
+	ReleasePassed  bool   `json:"releasePassed"`
 	DaysLeft       int    `json:"daysLeft"`
 	ContactTG      string `json:"contactTg"`
 	ContactTT      string `json:"contactTt"`
@@ -37,19 +39,21 @@ func GetBetaStatus(c *fiber.Ctx) error {
 	}
 
 	status := BetaStatus{
-		Active:    active,
-		Started:   started,
-		Ended:     ended,
-		StartTime: beta.StartTime.Format(time.RFC3339),
-		EndTime:   beta.EndTime.Format(time.RFC3339),
-		DaysLeft:  daysLeft,
-		ContactTG: beta.ContactTG,
-		ContactTT: beta.ContactTT,
-		Message:   "Это бета-версия. Если вы нашли баг, пишите мне в тг " + beta.ContactTG + " или в тиктоке " + beta.ContactTT,
+		Active:        active,
+		Started:       started,
+		Ended:         ended,
+		StartTime:     beta.StartTime.Format(time.RFC3339),
+		EndTime:       beta.EndTime.Format(time.RFC3339),
+		ReleaseTime:   beta.ReleaseTime.Format(time.RFC3339),
+		ReleasePassed: beta.IsReleasePassed(),
+		DaysLeft:      daysLeft,
+		ContactTG:     beta.ContactTG,
+		ContactTT:     beta.ContactTT,
+		Message:       "Это бета-версия. Если вы нашли баг, пишите мне в тг " + beta.ContactTG + " или в тиктоке " + beta.ContactTT,
 	}
 
 	if ended {
-		status.BlockedMessage = "Бета закончена, ждите официального релиза"
+		status.BlockedMessage = "Релиз Нексо — 25 августа в 6:00 (МСК)"
 	} else if !started {
 		status.BlockedMessage = beta.StartMessage
 	}

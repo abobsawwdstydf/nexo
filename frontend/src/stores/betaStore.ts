@@ -7,6 +7,8 @@ interface BetaStatus {
   ended: boolean;
   startTime: string;
   endTime: string;
+  releaseTime: string;
+  releasePassed: boolean;
   daysLeft: number;
   contactTg: string;
   contactTt: string;
@@ -23,8 +25,10 @@ interface BetaStore {
 
 // Локальный фолбэк: если сервер недоступен, считаем статус на клиенте.
 // Бета: с 10 августа 06:00 МСК (03:00 UTC) до 17 августа 06:00 МСК = 7 дней.
+// Релиз: 25 августа 06:00 МСК (03:00 UTC).
 const BETA_START = Date.parse('2026-08-10T03:00:00Z');
 const BETA_END = Date.parse('2026-08-17T03:00:00Z');
+const RELEASE = Date.parse('2026-08-25T03:00:00Z');
 
 function localStatus(): BetaStatus {
   const now = Date.now();
@@ -38,12 +42,14 @@ function localStatus(): BetaStatus {
     ended,
     startTime: new Date(BETA_START).toISOString(),
     endTime: new Date(BETA_END).toISOString(),
+    releaseTime: new Date(RELEASE).toISOString(),
+    releasePassed: now >= RELEASE,
     daysLeft,
     contactTg: '@haker_one',
     contactTt: '@nexo.su',
     message:
       'Это бета-версия. Если вы нашли баг, пишите мне в тг @haker_one или в тиктоке @nexo.su',
-    blockedMessage: started ? undefined : 'Нексо откроется 10 августа в 6:00 (МСК)',
+    blockedMessage: started ? 'Релиз Нексо — 25 августа в 6:00 (МСК)' : 'Нексо откроется 10 августа в 6:00 (МСК)',
   };
 }
 

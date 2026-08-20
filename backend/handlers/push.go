@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -82,6 +84,17 @@ func GetVapidPublicKey(c *fiber.Ctx) error {
 
 // SavePushSubscription upserts a device subscription for a user.
 func SavePushSubscription(userID string, sub webpush.Subscription, userAgent string) error {
+	// SECURITY: endpoint — это URL, на который сервер потом сам сделает
+	// HTTP-запрос (webpush). Разрешаем только https и публичные хосты,
+	// чтобы подписку нельзя было использовать как SSRF-примитив.
+	ep, err := url.Parse(sub.Endpoint)
+	if err != nil || ep.Scheme != "https" || ep.Hostname() == "" {
+		return fmt.Errorf("invalid push endpoint")
+	}
+	if err := validatePublicHost(ep.Hostname()); err != nil {
+		return fmt.Errorf("invalid push endpoint host")
+	}
+
 	// Delete duplicates with the same endpoint (device re-subscribed)
 	db.GetDB().Where("user_id = ? AND endpoint = ?", userID, sub.Endpoint).Delete(&models.PushSubscription{})
 

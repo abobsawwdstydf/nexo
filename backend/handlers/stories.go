@@ -229,10 +229,12 @@ func DeleteStory(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Can only delete your own stories"})
 	}
 
-	if err := db.GetDB().Delete(&story).Error; err != nil {
+	// Сначала обёртки ключей, потом сама история — иначе при ошибке удаления
+	// обёртки остаются осиротевшими в БД.
 	if err := db.GetDB().Where("story_id = ?", storyID).Delete(&models.StoryKeyWrap{}).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete story key wraps"})
 	}
+	if err := db.GetDB().Delete(&story).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete story"})
 	}
 	return c.JSON(fiber.Map{"ok": true})

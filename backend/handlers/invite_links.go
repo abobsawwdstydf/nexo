@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"nexo/db"
 	"nexo/models"
@@ -192,13 +193,25 @@ func JoinInvite(c *fiber.Ctx) error {
 		UserID: userID,
 		Role:   "member",
 	}
-	if err := db.GetDB().Create(&member).Error; err != nil {
+if err := db.GetDB().Create(&member).Error; err != nil {
 		logging.Log.Error("[invite] failed to add member", "err", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to join"})
 	}
 
-	db.GetDB().Model(&models.InviteLink{}).Where("id = ?", link.ID).Update("uses", link.Uses+1)
-	db.GetDB().Model(&models.Chat{}).Where("id = ?", chat.ID).Update("subscribers_count", chat.SubscribersCount+1)
+	// Атомарно инкрементируем счётчик и одновременно занимаем слот лимита:
+	// UPDATE ... WHERE uses < max_uses защищает от гонки двух параллельных join.
+	used := db.GetDB().Model(&models.InviteLink{}).
+		Where("id = ? AND (max_uses = 0 OR uses < max_uses)", link.ID).
+		Update("uses", gorm.Expr("uses + 1"))
+	if used.Error != nil {
+		logging.Log.Error("[invite] failed to bump uses", "err", used.Error)
+	}
+	if used.RowsAffected == 0 {
+		// Лимит исчерпан между проверкой и вставкой — откатываем членство.
+		db.GetDB().Where("chat_id = ? AND user_id = ?", link.ChatID, userID).Delete(&models.ChatMember{})
+		return c.Status(410).JSON(fiber.Map{"error": "invite_expired", "message": "Ссылка-приглашение недействительна"})
+	}
+	db.GetDB().Model(&models.Chat{}).Where("id = ?", chat.ID).Update("subscribers_count", gorm.Expr("subscribers_count + 1"))
 	ws.HubInstance.JoinChat(chat.ID, userID)
 
 	return c.JSON(fiber.Map{"chatId": chat.ID, "alreadyMember": false})

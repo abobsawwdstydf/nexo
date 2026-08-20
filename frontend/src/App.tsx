@@ -8,7 +8,6 @@ import { AudioClickWrapper } from './lib/useClickSound';
 import { ToastContainer } from './components/ToastContainer';
 import { CallProvider } from './lib/callContext';
 import { BetaBanner } from './components/BetaBanner';
-import { BetaEnded } from './components/BetaEnded';
 import { BetaNotStarted } from './components/BetaNotStarted';
 import { DevFab } from './components/DevFab';
 import { usePerformanceMode } from './hooks/usePerformanceMode';
@@ -86,14 +85,15 @@ export default function App() {
     setShowInfo(false);
   };
 
-  // Beta ended — block everything
-  if (beta?.ended) {
+  // Бета закончилась, релиз ещё не наступил — таймер до релиза (25 августа, 6:00 МСК)
+  if (beta?.ended && !beta.releasePassed) {
     return (
       <ErrorBoundary>
         <AudioClickWrapper>
-          <div className="h-full w-full flex flex-col relative">
-            <BetaEnded />
-          </div>
+          <BetaNotStarted
+            startTime={beta.releaseTime}
+            message={beta.blockedMessage || 'Релиз Нексо — 25 августа в 6:00 (МСК)'}
+          />
         </AudioClickWrapper>
       </ErrorBoundary>
     );

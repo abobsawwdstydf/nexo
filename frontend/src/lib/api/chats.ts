@@ -26,7 +26,9 @@ declare module './core' {
 export function installChats(api: ApiClient): void {
   // ─── Chats ────────────────────────────────────────────────────────
   api.getChats = async () => {
-    return api.request<Chat[]>('/chats');
+    // Бэк отдаёт конверт {items,total,page,pageSize,hasMore} — разворачиваем в массив.
+    const res = await api.request<{ items?: Chat[] }>('/chats');
+    return res.items ?? [];
   };
 
   // Generic create — backend only exposes POST /chats (type: personal | group | channel).

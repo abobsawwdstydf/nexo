@@ -48,6 +48,16 @@ const (
 	aesKeyBytes      = 32
 )
 
+// allowedMediaExt — расширения медиафайлов, допустимые при импорте архива.
+// Всё остальное (html, svg, js, exe и т.п.) в uploads/ не пишется.
+var allowedMediaExt = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
+	".webp": true, ".heic": true, ".heif": true, ".avif": true,
+	".mp4": true, ".webm": true, ".mov": true, ".mkv": true,
+	".mp3": true, ".ogg": true, ".wav": true, ".m4a": true,
+	".opus": true, ".aac": true, ".flac": true, ".3gp": true,
+}
+
 // ─── Формат архива ─────────────────────────────────────────────────────────
 
 // structure.json (единственный файл архива в открытом виде):
@@ -696,9 +706,15 @@ func ImportAccountZip(c *fiber.Ctx) error {
                         media.URL = newURL
                         continue
                     }
-                    if data, ok := mediaInArchive[fn]; ok {
-                        ext := filepath.Ext(fn)
-                        newName := helpers.GenerateID() + ext
+if data, ok := mediaInArchive[fn]; ok {
+						ext := strings.ToLower(filepath.Ext(fn))
+						// Whitelist расширений: архив с иным содержимым
+						// (например .html/.svg с вредоносным скриптом) не пишем.
+						if !allowedMediaExt[ext] {
+							counters.mediaUnavailable++
+							continue
+						}
+						newName := helpers.GenerateID() + ext
                         dest := filepath.Join(UploadDir(), newName)
                         if err := os.WriteFile(dest, data, 0644); err != nil {
                             logging.Log.Error("[IMPORT] failed to write media", "user_id", userID, "name", newName, "err", err)

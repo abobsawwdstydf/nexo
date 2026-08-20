@@ -2851,7 +2851,7 @@ function ForwardModal({
     } else {
       api.getChats()
         .then(data => {
-          const chatArray: Chat[] = Array.isArray(data) ? data : ((data as any)?.chats ?? []);
+          const chatArray: Chat[] = Array.isArray(data) ? data : ((data as any)?.items ?? (data as any)?.chats ?? []);
           setChats(chatArray);
         })
         .catch(console.error)
@@ -3148,6 +3148,7 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setAutoScroll(true); // новый чат — сразу вниз к последним сообщениям
 
     async function load() {
       try {
@@ -3530,21 +3531,19 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
         setMessages(prev => {
           if (prev.some(m => m.id === decryptedMsg.id)) return prev;
           const now = Date.now();
-          const isDuplicateOptimistic = prev.some(m =>
+          // Заменяем серверным только ПЕРВОЕ оптимистичное сообщение с тем же
+          // содержимым от того же отправителя (два одинаковых подряд не должны
+          // схлопываться в одно).
+          const idx = prev.findIndex(m =>
             m.id.startsWith('opt_') &&
             m.senderId === decryptedMsg.senderId &&
             m.content === decryptedMsg.content &&
             now - new Date(m.createdAt).getTime() < 5000
           );
-          if (isDuplicateOptimistic) {
-            return prev.map(m =>
-              m.id.startsWith('opt_') &&
-              m.senderId === decryptedMsg.senderId &&
-              m.content === decryptedMsg.content &&
-              now - new Date(m.createdAt).getTime() < 5000
-                ? decryptedMsg
-                : m
-            );
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = decryptedMsg;
+            return next;
           }
           return [...prev, decryptedMsg];
         });
@@ -3552,7 +3551,12 @@ export function MessageArea({ chat, onBack, onOpenProfile, onOpenCommentsChat, o
         if (decryptedMsg.senderId !== user?.id && chat.id !== NOTES_CHAT_ID && chat.id !== AI_CHAT_ID) {
           api.readMessage(chat.id, decryptedMsg.id).catch(err => console.error('[read]', err));
         }
-        setAutoScroll(true);
+        // Автоскролл только если юзер уже внизу — иначе не выдёргиваем его из истории.
+        const el = containerRef.current;
+        if (el) {
+          const threshold = 100;
+          setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < threshold);
+        }
       })();
     };
     addListener('message:new', newMessageHandler);

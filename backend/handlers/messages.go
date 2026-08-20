@@ -739,7 +739,13 @@ func SearchMessages(c *fiber.Ctx) error {
 		// Attachment filters: EXISTS subquery on the media table, works for both
 		// the LIKE branch and the FTS branch (which joins messages_fts).
 		if mediaType != "" {
-			q = q.Where("EXISTS (SELECT 1 FROM media m WHERE m.message_id = messages.id AND m.type = ?)", mediaType)
+			// Аплоадер пишет media.type="image" (upload.go), а чип поиска
+			// называет категорию "photo" — маппим, иначе «Фото» не находит ничего.
+			dbType := mediaType
+			if mediaType == "photo" {
+				dbType = "image"
+			}
+			q = q.Where("EXISTS (SELECT 1 FROM media m WHERE m.message_id = messages.id AND m.type = ?)", dbType)
 		} else {
 			q = q.Where("EXISTS (SELECT 1 FROM media m WHERE m.message_id = messages.id)")
 		}

@@ -131,6 +131,18 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
     return () => window.removeEventListener(NOTES_CHANGED_EVENT, handler);
   }, []);
 
+  // Invite links: #join/CODE — открыть модалку входа по приглашению
+  useEffect(() => {
+    const parseHash = () => {
+      const h = window.location.hash;
+      const m = h.match(/^#join\/(.+)$/);
+      if (m && m[1]) setJoinCode(decodeURIComponent(m[1]));
+    };
+    parseHash();
+    window.addEventListener('hashchange', parseHash);
+    return () => window.removeEventListener('hashchange', parseHash);
+  }, []);
+
   const savedMessagesChat = useMemo<Chat>(() => ({
     id: NOTES_CHAT_ID,
     type: 'personal',
@@ -198,7 +210,9 @@ export default function MessengerPage({ onInfoClick }: { onInfoClick?: () => voi
 
   useEffect(() => {
     const socket = getSocket();
-    if (!socket?.connected) return;
+    // Регистрируем листенеры сразу: Socket.IO ставит обработчики до подключения,
+    // поэтому ранний выход здесь терял бы события при свежем логине (CONNECTING).
+    if (!socket) return;
 
     const onMessage = (msg: Message) => {
       // Show toast only if this chat is NOT currently selected, the chat is not

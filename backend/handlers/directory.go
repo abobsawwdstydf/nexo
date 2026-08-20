@@ -78,7 +78,7 @@ func SubscribeToChannel(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to subscribe"})
 	}
 	db.GetDB().Model(&models.Chat{}).Where("id = ?", chatID).
-		Update("subscribers_count", chat.SubscribersCount+1)
+		Update("subscribers_count", gorm.Expr("subscribers_count + 1"))
 
 	db.GetDB().Preload("Members.User").First(&chat, "id = ?", chatID)
 	chatJSON := chatToJSON(chat, userID)
